@@ -15,4 +15,8 @@ At some point, I put some time into fixing that, but I cannot find that code (ye
 
 I recall having this compile / run on MacOS Classic, OS/2, BeOS (yes, with the unfinished 1.4 Java port), Windows, Linux, and a few other obscure OS's back in the day.
 
+
+I took the time to convert it to a maven 3.0.3 (or greater) project, link it against the most recent version of MUSCLE [https://public.msli.com/lcs/muscle/index.html], 6.05 as of this writing, and update the code so it would at least compile. :-)
+
+
 Enjoy!
