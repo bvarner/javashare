@@ -14,3 +14,9 @@ hs_err_pid*
 # Tools, IDEs, desktops
 *.iml
 .DS_Store
+/target/
+nb*.xml
+
+# MUSCLE source code
+src/main/java/com/meyer
+src/main/java/com/jcraft
