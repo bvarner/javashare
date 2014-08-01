@@ -215,9 +215,12 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 		
 		// Servers
 		serverList = new String[1];
-		currentServerName = "";
 		serverList = MusclePreferenceReader.getStrings(programPrefsMessage, "servers", serverList);
 		currentServerName = serverList[MusclePreferenceReader.getInt(programPrefsMessage, "curServer", 0)];
+		if (currentServerName == null) {
+			currentServerName = "";
+			serverList[0] = "";
+		}
 		
 		// Nicknames
 		nickList = new String[1];
