@@ -23,18 +23,8 @@ public class Application {
 	 *  execution is handed over to the MainFrame's event thread. Yippie!
 	 */
 	public Application() {
-		blv.swing.SplashScreen splashFrame = null;
-		try {
-			splashFrame = blv.swing.SplashScreen.createSplashScreen("Images/JavaShare.gif");
-		} catch (NoClassDefFoundError ncdfe){
-		}
 		MainFrame  mainFrame  = new MainFrame();
-		
 		mainFrame.show();
-		
-		if (splashFrame != null){
-			splashFrame.dispose();
-		}
 	}
 
 
