@@ -1,6 +1,6 @@
 package org.beShare;
 
-import org.beShare.gui.MainFrame;
+import org.beShare.gui.ShareFrame;
 
 import javax.swing.*;
 
@@ -13,7 +13,7 @@ import javax.swing.*;
  */
 public class Application {
 	/**
-	 *  Application Main - Creates a new instace of mainFrame Application.
+	 *  Application Main - Creates a new instance of mainFrame Application.
 	 *
 	 * @param  args  Description of Parameter
 	 */
@@ -21,8 +21,8 @@ public class Application {
 
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                MainFrame mainFrame = new MainFrame();
-                mainFrame.show();
+                ShareFrame shareFrame = new ShareFrame();
+                shareFrame.show();
             }
         });
 	}

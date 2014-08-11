@@ -458,7 +458,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 									getStringArrFromVect(onLoginVect));
 			programPrefsMessage.setStrings("aliasKeys", getKeysAsStringArr(aliasTable));
 			programPrefsMessage.setStrings("aliasElements", getElementsAsStringArr(aliasTable));
-			Rectangle frameBounds = ((MainFrame)this.getRootPane().getParent()).getBounds();
+			Rectangle frameBounds = ((ShareFrame)this.getRootPane().getParent()).getBounds();
 			Rect fBounds = new Rect(frameBounds.x, frameBounds.y, 
 									frameBounds.width,
 									frameBounds.height);
@@ -918,7 +918,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	 */
 	public void updateFrameTitle(){
 		try{
-			((MainFrame)this.getRootPane().getParent()).setTitle(
+			((ShareFrame)this.getRootPane().getParent()).setTitle(
 					AppPanel.pubVersion + " @" +	currentServerName);
 		} catch (Exception exc){
 		}

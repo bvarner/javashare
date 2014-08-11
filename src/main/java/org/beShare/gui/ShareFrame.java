@@ -33,7 +33,7 @@ import java.io.IOException;
 	@author Bryan Varner
 	@version 1.3
 */
-public class MainFrame extends JFrame implements WindowListener{
+public class ShareFrame extends JFrame implements WindowListener{
 	Tranto		networkIO = null;
 	AppPanel	mainPanel;
 	Object		menuBar;
@@ -42,7 +42,7 @@ public class MainFrame extends JFrame implements WindowListener{
 		Default constructor Creates a new mainPanel, and Tranto.
 		It then connects the two together.
 	*/
-	public MainFrame(){
+	public ShareFrame(){
 		super(AppPanel.pubVersion);
 		
 		ImageIcon JavaShareIcon = AppPanel.loadImage("Images/BeShare.gif", this);
