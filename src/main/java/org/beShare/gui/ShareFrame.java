@@ -96,17 +96,10 @@ public class ShareFrame extends JFrame implements WindowListener{
 		
 		networkIO = new Tranto(mainPanel);
 		
-		// For Mac OS versions, use a regular AWT menu bar.
-		if (System.getProperty("os.name").startsWith("Mac OS")){
-			menuBar = new AWTMenuBar(mainPanel, false);
-			mainPanel.setListenToMenu((AWTMenuBar)menuBar);
-			this.setMenuBar((AWTMenuBar)menuBar);
-		} else {
-			// If it's not Mac OS we use a Swing Menu bar and attach it to the frame.
-			menuBar = new SwingMenuBar(mainPanel, false);
-			this.setJMenuBar((SwingMenuBar)menuBar);
-			mainPanel.setListenToMenu((SwingMenuBar)menuBar);
-		}
+        // If it's not Mac OS we use a Swing Menu bar and attach it to the frame.
+        menuBar = new SwingMenuBar(mainPanel, false);
+        this.setJMenuBar((SwingMenuBar)menuBar);
+        mainPanel.setListenToMenu((SwingMenuBar)menuBar);
 		mainPanel.setNetworkInterface(networkIO);
 		this.getContentPane().add(mainPanel);
 		// Set the frames title to have the starting (default) server.
