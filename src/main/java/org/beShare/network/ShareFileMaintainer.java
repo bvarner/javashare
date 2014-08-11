@@ -16,7 +16,7 @@ import java.util.Vector;
 
 /**
  * The piece of JavaShare that monitors the shared directory and sends the
- * necessary data to the Tranto interface. :-)
+ * necessary data to the JavaShareTransceiver interface. :-)
  *
  * @author Bryan Varner
  * @version 1.0 - 8.2.2002
@@ -27,7 +27,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 	
 	Vector	fileList;
 	
-	Tranto	connection;
+	JavaShareTransceiver connection;
 	
 	Timer	updateTimer;
 	
@@ -42,7 +42,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 	 * <code>connection</code> as the interface to send the file list to, and 
 	 * <code>prefsMessage</code> to read the settings from.
 	 */
-	public ShareFileMaintainer(Tranto connection, Message prefsMessage){
+	public ShareFileMaintainer(JavaShareTransceiver connection, Message prefsMessage){
 		this.connection = connection;
 		this.prefs = prefsMessage;
 		fileList = new Vector();
@@ -209,7 +209,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 					// See if we bailed out before the full size(), something didn't match.
 					if (x < fileList.size()) {
 						fileList = new Vector(oldFileList);
-						// Re-send fileList to tranto!
+						// Re-send fileList to JavaShareTransceiver!
 						uploadList();
 						serverName = connection.getServerName();
 					}

@@ -4,6 +4,7 @@
 package org.beShare.gui;
 
 import org.beShare.data.LocalUserDataStore;
+import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -23,7 +24,7 @@ import java.awt.event.FocusListener;
  */
 
 public class LocalUserPanel extends JPanel implements ActionListener, FocusListener {
-	LocalUserDataStore	userDataStore;
+	JavaShareTransceiver	transceiver;
 	
 	JTextField 			serverText;
 	DropMenu			serverMenu;
@@ -41,19 +42,19 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 	/**
 	 * Constructor for Application
 	 */
-	public LocalUserPanel(LocalUserDataStore lUserData, boolean isApplet){
+	public LocalUserPanel(final JavaShareTransceiver transceiver, final boolean isApplet){
 		super();
 		this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-		userDataStore = lUserData;
+		this.transceiver = transceiver;
 		
 		if (! isApplet) {
 			// Server Text and Combo Box construction.
 			serverMenu = new DropMenu("Server:");
-			if (! userDataStore.getServerName().equals(""))
-				serverMenu.addItem(userDataStore.getServerName());
+			if (! transceiver.getServerName().equals(""))
+				serverMenu.addItem(transceiver.getServerName());
 			
 			// Setup the server Menu
-			serverText = new JTextField(userDataStore.getServerName(), 20);
+			serverText = new JTextField(transceiver.getServerName(), 20);
 			
 			serverMenu.addActionListener(this);
 			serverText.addActionListener(this);
@@ -66,8 +67,8 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 		
 		// User Name Combo and Text construction.
 		userNameMenu = new DropMenu("Name:");
-		userNameText = new JTextField(userDataStore.getLocalUserName(), 10);
-		userNameMenu.addItem(userDataStore.getLocalUserName());
+		userNameText = new JTextField(transceiver.getLocalUserName(), 10);
+		userNameMenu.addItem(transceiver.getLocalUserName());
 		
 		userNameMenu.addActionListener(this);
 		userNameText.addActionListener(this);
@@ -75,8 +76,8 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 		
 		// User Status menu and text construction.
 		userStatusMenu = new DropMenu("Status:");
-		userStatusMenu.addItem(userDataStore.getLocalUserStatus());
-		userStatusText = new JTextField(userDataStore.getLocalUserStatus(), 10);
+		userStatusMenu.addItem(transceiver.getLocalUserStatus());
+		userStatusText = new JTextField(transceiver.getLocalUserStatus(), 10);
 		
 		userStatusMenu.addActionListener(this);
 		userStatusText.addActionListener(this);
@@ -256,9 +257,9 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 								&& (serverMenu.getSelectedIndex() != -1))
 		{
 			String selMenu = (String)serverMenu.getSelectedItem();
-			if(selMenu != userDataStore.getServerName()){
+			if(selMenu != transceiver.getServerName()){
 				serverText.setText(selMenu);
-				userDataStore.setServerName(selMenu);
+				transceiver.setServerName(selMenu);
 			}
 		}
 		// The ServerText has had a Return Pressed.
@@ -279,16 +280,16 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 				serverMenu.setSelectedIndex(
 						serverMenu.getItemCount() - 1);
 			}
-			if(!serverText.getText().equals(userDataStore.getServerName())) {
-				userDataStore.setServerName(serverText.getText());
+			if(!serverText.getText().equals(transceiver.getServerName())) {
+				transceiver.setServerName(serverText.getText());
 			}
 		}
 		// The UserName Menu has Changed
 		else if (e.getSource() == userNameMenu){
 			String selMenu = (String)userNameMenu.getSelectedItem();
-			if(selMenu != userDataStore.getLocalUserName()){
+			if(selMenu != transceiver.getLocalUserName()){
 				userNameText.setText(selMenu);
-				userDataStore.setLocalUserName(selMenu);
+				transceiver.setLocalUserName(selMenu);
 			}
 		}
 		// The UserName Text Field had a return pressed
@@ -309,16 +310,16 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 				userNameMenu.setSelectedIndex(
 						userNameMenu.getItemCount() - 1);
 			}
-			if(! userNameText.getText().equals(userDataStore.getLocalUserName())){
-				userDataStore.setLocalUserName(userNameText.getText());
+			if(! userNameText.getText().equals(transceiver.getLocalUserName())){
+				transceiver.setLocalUserName(userNameText.getText());
 			}
 		}
 		// The User Status menu has changed
 		else if (e.getSource() == userStatusMenu){
 			String selStatus = (String)userStatusMenu.getSelectedItem();
-			if(selStatus != userDataStore.getLocalUserStatus()){
+			if(selStatus != transceiver.getLocalUserStatus()){
 				userStatusText.setText(selStatus);
-				userDataStore.setLocalUserStatus(selStatus);
+				transceiver.setLocalUserStatus(selStatus);
 				setHereStatus(userStatusMenu.getSelectedIndex());
 			}
 		// The user Status Text Box had a return pressed.
@@ -338,8 +339,8 @@ public class LocalUserPanel extends JPanel implements ActionListener, FocusListe
 				userStatusMenu.setSelectedIndex(
 						userStatusMenu.getItemCount() - 1);
 			}
-			if(! userStatusText.getText().equals(userDataStore.getLocalUserStatus())){
-				userDataStore.setLocalUserStatus(userStatusText.getText());
+			if(! userStatusText.getText().equals(transceiver.getLocalUserStatus())){
+				transceiver.setLocalUserStatus(userStatusText.getText());
 			}
 		}
 		if ((! isAway()) && (userStatusMenu.getSelectedIndex() != -1)){

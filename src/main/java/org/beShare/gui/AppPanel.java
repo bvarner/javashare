@@ -20,7 +20,7 @@
  * 12.17.2002 - Updated the name completion and related functions to parse names for url [label]
  *				I've also commented out the lines that add file sharing to the application.
  *				I'll be making a 1.3 preliminary release soon.
- *				Seems there may still be a bug In Tranto with regards to uploading the user name to the server.
+ *				Seems there may still be a bug In JavaShareTransceiver with regards to uploading the user name to the server.
  * 12.19.2002 - Added addServers() and removeServers().
  *				Implemented the user Table Column Sorting Preference.
  *				Removed some un-needed instance variables.
@@ -57,7 +57,7 @@ import gnu.regexp.REException;
 import org.beShare.data.*;
 import org.beShare.event.*;
 import org.beShare.gui.prefPanels.JavaSharePrefListener;
-import org.beShare.network.Tranto;
+import org.beShare.network.JavaShareTransceiver;
 import org.beShare.sound.AppletSoundThreadManager;
 import org.beShare.sound.ApplicationSoundThreadManager;
 import org.beShare.sound.SystemBeep;
@@ -79,7 +79,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 												ChatMessageListener,
 												ActionListener,
 												UserHashAccessor,
-												LocalUserDataStore,
 												JavaSharePrefListener
 {
 	public static final String buildVersion = "2.0 a2 ";
@@ -87,9 +86,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	public static final String pubVersion = applicationName + buildVersion;
 	
 	public static final String AutoUpdateURL = "http://beshare.tycomsystems.com/servers.txt";
-	
-	public static final int		startingPortNumber = 7000;
-	public static final int		portRange = 50;
 	
 	private static Hashtable	imageCache = new Hashtable();
 	
@@ -102,7 +98,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	boolean						saveUserSort;
 	boolean						appletMode;
 	LocalUserPanel				localUserInfo;
-	Tranto						muscleNetIO;
+	JavaShareTransceiver        muscleNetIO;
 	AboutDialog					aboutJavaShare;
 	
 	TransferPanel				transPan;
@@ -112,10 +108,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	Object						menuBar;
 	Vector						chatMessageListenerVect;
 	Vector						soundTriggerListenerVect;
-	
-	String						localUserName;
-	String						localUserStatus;
-	String						currentServerName;
 	
 	Vector						autoPrivVect;
 	Vector						watchPatVect;
@@ -133,17 +125,12 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 		</code> any fields that are required but are not present are filled in
 		with default values.
 	*/
-	public AppPanel(Message prefsMessage){
-		programPrefsMessage = prefsMessage;
-		
-		// Ok, Install ID Time! Wheeee!!!!
-		if (!programPrefsMessage.hasField("installid")){
-			int maxint = 2147483647;
-			long installID = (((long)(Math.random() * maxint)) << 32)|((long)(Math.random() * maxint));
-			programPrefsMessage.setLong("installid", installID);
-		}
-		
-		// Add support for the beoslaf.jar
+	public AppPanel(final JavaShareTransceiver muscleNetIO, final Message prefsMessage){
+        this.programPrefsMessage = prefsMessage;
+
+        this.muscleNetIO = muscleNetIO;
+
+        // Add support for the beoslaf.jar
 		try {
 			ClassLoader.getSystemClassLoader().loadClass("com.sun.java.swing.plaf.beos.BeOSLookAndFeel");
 			UIManager.installLookAndFeel(new UIManager.LookAndFeelInfo("BeOS R5", "com.sun.java.swing.plaf.beos.BeOSLookAndFeel"));
@@ -160,7 +147,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 			}
 		}
 		
-		prefsFrame = new PrefsFrame(this, programPrefsMessage);
+		this.prefsFrame = new PrefsFrame(this, programPrefsMessage);
 		
 		String[] aboutText = {"JavaShare 2",
 								"Version " + buildVersion,
@@ -190,14 +177,13 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 								"      Alan Ellis",
 								"      Silent Computing"};
 		ImageIcon javaShareIcon = loadImage("Images/BeShare.gif", this);
-		aboutJavaShare = new AboutDialog(this,
+		this.aboutJavaShare = new AboutDialog(this,
 				"About JavaShare 2",
 				true, aboutText, javaShareIcon, 2, 20);
 		
 		String[] serverList = null;
 		String[] nickList = null;
 		String[] statusList = null;
-		int hereStatus = 0;
 		// Retreive the SOCKS settings.
 		if(programPrefsMessage.hasField("socksServer") &&
 			programPrefsMessage.hasField("socksPort"))
@@ -215,60 +201,49 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 		
 		// Servers
 		serverList = new String[1];
-		currentServerName = "";
+        serverList[0] = "beshare.tycomsystems.com";
 		serverList = MusclePreferenceReader.getStrings(programPrefsMessage, "servers", serverList);
-		currentServerName = serverList[MusclePreferenceReader.getInt(programPrefsMessage, "curServer", 0)];
+		muscleNetIO.setServerName(serverList[MusclePreferenceReader.getInt(programPrefsMessage, "curServer", 0)]);
 		
 		// Nicknames
 		nickList = new String[1];
-		hereStatus = 0;
-		localUserName = "Binky";
+        nickList[0] = "Binky";
 		nickList = MusclePreferenceReader.getStrings(programPrefsMessage, "nicks", nickList);
-		hereStatus = MusclePreferenceReader.getInt(programPrefsMessage, "curNick", hereStatus);
-		if (hereStatus < nickList.length)
-			localUserName = nickList[hereStatus];
-		
+        muscleNetIO.setLocalUserName(nickList[MusclePreferenceReader.getInt(programPrefsMessage, "curNick", 0)]);
+
 		// Status
 		statusList = new String[1];
 		statusList[0] = "Here";
-		localUserStatus = "";
 		statusList = MusclePreferenceReader.getStrings(programPrefsMessage, "status", statusList);
-		localUserStatus = statusList[MusclePreferenceReader.getInt(programPrefsMessage, "curStatus", 0)];
-		
+        muscleNetIO.setLocalUserStatus(statusList[MusclePreferenceReader.getInt(programPrefsMessage, "curStatus", 0)]);
+
+        this.localUserInfo = new LocalUserPanel(muscleNetIO, false);
+        this.localUserInfo.setHereStatus(MusclePreferenceReader.getInt(programPrefsMessage, "curStatus", 0));
+        this.localUserInfo.setAwayStatus(MusclePreferenceReader.getInt(programPrefsMessage, "awayStatus", 0));
+
 		// Minibrowser
 		boolean useMiniBrowser = MusclePreferenceReader.getBoolean(programPrefsMessage, "miniBrowser", false);
 		
 		this.setLayout(new BorderLayout());
 		chatMessageListenerVect = new Vector();
 		soundTriggerListenerVect = new Vector();
-		localUserInfo = new LocalUserPanel(this, false);
-		localUserInfo.setHereStatus(hereStatus);
-		
-		// Set up our Preferences!
-		localUserInfo.setAwayStatus(MusclePreferenceReader.getInt(programPrefsMessage, "awayStatus", 0));
-		
+
 		// add our list data to the localUserInfo...
-		if(serverList != null){
-			for(int x = 0; x < serverList.length; x++){
-				if(! serverList[x].equals(currentServerName))
-						localUserInfo.addServerName(serverList[x]);
-			}
-		}
-		
-		if(nickList != null){
-			for(int x = 0; x < nickList.length; x++){
-				if(! nickList[x].equals(localUserName))
-						localUserInfo.addUserName(nickList[x]);
-			}
-		}
-		
-		if(statusList != null){
-			for (int x = 0; x < statusList.length; x++){
-				if(! statusList[x].equals(localUserStatus))
-						localUserInfo.addStatus(statusList[x]);
-			}
-		}
-		
+        for(int x = 0; x < serverList.length; x++){
+            if(! serverList[x].equals(muscleNetIO.getServerName()))
+                    localUserInfo.addServerName(serverList[x]);
+        }
+
+        for(int x = 0; x < nickList.length; x++){
+            if(! nickList[x].equals(muscleNetIO.getLocalUserName()))
+                    localUserInfo.addUserName(nickList[x]);
+        }
+
+        for (int x = 0; x < statusList.length; x++){
+            if(! statusList[x].equals(muscleNetIO.getLocalUserStatus()))
+                    localUserInfo.addStatus(statusList[x]);
+        }
+
 		// Load the auto-priv regular expressions.
 		autoPrivVect = new Vector();
 		String[] strPrivs = null;
@@ -361,28 +336,42 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 		
 		userHashTable = new Hashtable();
 		
-		muscleNetIO = null;
 		menuBar = null;
 		appletMode = false;
 		this.add(localUserInfo, BorderLayout.NORTH);
 		
 		this.add(chatterPanel, BorderLayout.CENTER);
-		
-		SwingUtilities.updateComponentTreeUI(this);
-		
-		fireLogNewMessage(new ChatMessage("","Welcome to JavaShare 2" +
-											"\nType /help for a list of " +
-											"commands.", false,
-									ChatMessage.LOG_INFORMATION_MESSAGE));
-	}
-	
-	/**
-	 *	Default Constructor for Application
-	 *  Creates a new AppPanel from a message containing the default settings.
-	 */
-	public AppPanel(){
-		this(BeShareDefaultSettings.createDefaultSettings());
-	}
+
+        // If we're not an applet, add the file-sharing bits.
+        if (!appletMode){
+            transPan = new TransferPanel(this.muscleNetIO, programPrefsMessage, this);
+            prefsFrame.addFileTransferPrefs(programPrefsMessage, transPan);
+
+            queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+            queryChatSplit.add(transPan);
+            queryChatSplit.add(chatterPanel);
+
+            this.remove(chatterPanel);
+            this.add(queryChatSplit, BorderLayout.CENTER);
+        }
+
+        SwingUtilities.updateComponentTreeUI(this);
+
+        this.muscleNetIO.addJavaShareEventListener(this);
+
+        fireLogNewMessage(new ChatMessage("","Welcome to JavaShare 2" +
+                "\nType /help for a list of " +
+                "commands.", false,
+                ChatMessage.LOG_INFORMATION_MESSAGE));
+
+
+        this.muscleNetIO.setServerPort(2960);
+        if(programPrefsMessage.getBoolean("autoLogin", false)){
+            muscleNetIO.connect();
+        }
+
+
+    }
 	
 	/**
 	 *	Constructor for use with the Applet
@@ -390,18 +379,13 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	 *  It then re-creates any objects that require changes to run in an
 	 *  Applet context. Also adds an AppletSoundThreadManager.
 	 */
-	public AppPanel(String defaultName, String defaultStatus,
-						String defaultServer, JApplet sndSource){
-		this(BeShareDefaultSettings.createDefaultAppletSettings(defaultName,
-					defaultStatus, defaultServer));
-		// Remove the stuff we don't want.
-		
-		// LoacalUserPanel needs to be applet mode
+	public AppPanel(final JavaShareTransceiver muscleNetIO, final String defaultName, final String defaultStatus, final String defaultServer, final JApplet sndSource){
+		this(muscleNetIO, BeShareDefaultSettings.createDefaultAppletSettings(defaultName, defaultStatus, defaultServer));
+
+        // LoacalUserPanel needs to be applet mode
 		this.remove(localUserInfo);
-		localUserInfo = new LocalUserPanel(this, true);
+		localUserInfo = new LocalUserPanel(muscleNetIO, true);
 		this.add(localUserInfo, BorderLayout.NORTH);
-		
-		currentServerName = defaultServer;
 		
 		appletMode = true;
 		addSoundEventListener(new AppletSoundThreadManager(sndSource));
@@ -666,35 +650,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	}
 	
 	/**
-		Sets the connection to send data out on.
-		@param mi the Tranto to send data out on
-	*/
-	public void setNetworkInterface(Tranto mi){
-		muscleNetIO = mi;
-		
-		// If we aren't in applet mode, add the file-sharing stuff with this Tranto interface.
-		if (!appletMode){
-			transPan = new TransferPanel(muscleNetIO, programPrefsMessage, this);
-			prefsFrame.addFileTransferPrefs(programPrefsMessage, transPan);
-			
-			queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-			queryChatSplit.add(transPan);
-			queryChatSplit.add(chatterPanel);
-			
-			this.remove(chatterPanel);
-			this.add(queryChatSplit, BorderLayout.CENTER);
-		}
-		muscleNetIO.setServerName(getServerName());
-		muscleNetIO.setServerPort(2960);
-		try {
-			if(programPrefsMessage.getBoolean("autoLogin")){
-				muscleNetIO.connect();
-			}
-		} catch (Exception e){
-		}
-	}
-	
-	/**
 		Returns the ChatPanel object.
 		@return the ChatPanel child for this frame
 	*/
@@ -738,11 +693,12 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	}
 	
 	/**
-		Searches the User table for a SessionID which matchs the supplied
-		Name.
-		@param startsWithName A String that starts with the name of a user.
-		@return The SessionID of that user, if one, or "" if no match is found.
-	*/
+	 * Searches the User table for a SessionID which matches the supplied
+	 * Name.
+     *
+     * @param startsWithName A String that starts with the name of a user.
+     * @return The SessionID of that user, if one, or "" if no match is found.
+	 */
 	public String findSessionByName(String startsWithName){
 		// first let's try exact matches there are times when
 		// startsWithname IS the name.
@@ -789,16 +745,16 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	}
 	
 	/**
-		Searches the User Table for a name that matches the supplied SessionID.
-		@param sessionID The SessionID to resolve a name for
-		@return The Name of user matching sessionID, or an empty "" String.
-	*/
+	 * Searches the User Table for a name that matches the supplied SessionID.
+	 * @param sessionID The SessionID to resolve a name for
+	 * @return The Name of user matching sessionID, or an empty "" String.
+	 */
 	public String findNameBySession(String sessionID){
 		if (userHashTable.containsKey(sessionID)){
 			return ((BeShareUser)userHashTable.get(sessionID)).getName();
 		} else {
 			if(sessionID.equals("")){
-				return getLocalUserName();
+				return muscleNetIO.getLocalUserName();
 			} else {
 				return "";
 			}
@@ -806,12 +762,13 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	}
 	
 	/**
-		Searches through the user Table for names starting with the supplied
-		string. If it finds one, it returns the rest of the name, not the entire
-		name.
-		@param partialName The Beginning of a name.
-		@return The Missing Remainder of the name or an empty "" String
-	*/
+	 * Searches through the user Table for names starting with the supplied
+	 * string. If it finds one, it returns the rest of the name, not the entire
+	 * name.
+     *
+     * @param partialName The Beginning of a name.
+     * @return The Missing Remainder of the name or an empty "" String
+     */
 	public String findCompletedName(String partialName){
 		if (partialName.equals(""))
 			return "";
@@ -838,53 +795,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 			}
 		}
 		return completedName;
-	}
-	
-	/**
-		Sets the local user's name, and registers the new value with
-		the network interface and userPanel.
-		@param user The new User Name
-	*/
-	public void setLocalUserName(String user){
-		localUserName = user;
-		muscleNetIO.setLocalUserName(localUserName, startingPortNumber);
-		localUserInfo.setUserName(localUserName);
-		fireLogNewMessage(new ChatMessage("", "Your name has been"
-			+ " changed to " + localUserName, false, 
-			ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
-	}
-	
-	/**
-		Sets the local user Status and registeres the new value with the
-		network intervace and userPanel.
-		@param status The new Status for the local user.
-	*/
-	public void setLocalUserStatus(String status){
-		localUserStatus = status;
-		localUserInfo.setUserStatus(localUserStatus);
-		muscleNetIO.setLocalUserStatus(localUserStatus);
-		fireLogNewMessage(new ChatMessage("", "Your Status has been"
-			+ " changed to: " + localUserStatus, false, 
-			ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
-	}
-	
-	/**
-		Sest the Server Name and registeres the change with the network
-		interface and userPanel.
-		@param server The name of the server to open connections to.
-	*/
-	public void setServerName(String server){
-		currentServerName = server;
-		muscleNetIO.setServerName(currentServerName);
-		localUserInfo.setServerName(currentServerName);
-		if (muscleNetIO.isConnected()){
-			muscleNetIO.connect();
-		}
-		localUserInfo.setUserStatus(localUserStatus);
-		fireLogNewMessage(new ChatMessage("", "Active server"
-			+ " changed to: " + currentServerName, false,
-			ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
-		updateFrameTitle();
 	}
 	
 	/**
@@ -919,32 +829,9 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	public void updateFrameTitle(){
 		try{
 			((ShareFrame)this.getRootPane().getParent()).setTitle(
-					AppPanel.pubVersion + " @" +	currentServerName);
+					AppPanel.pubVersion + " @" + muscleNetIO.getServerName());
 		} catch (Exception exc){
 		}
-	}
-	
-	/**
-		Gets the local user Name
-		@return The Local Users name.
-	*/
-	public String getLocalUserName(){
-		return localUserName;
-	}
-	
-	/**
-		@return the Local users status.
-	*/
-	public String getLocalUserStatus(){
-		return localUserStatus;
-	}
-	
-	/**
-		@return The name of the server all active connections will be 
-		opened to.
-	*/
-	public String getServerName(){
-		return currentServerName;
 	}
 	
 	/**
@@ -1355,7 +1242,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 			// Transform them into Log Local User chats, and send them
 			// to the panels, but NOT the MuscleInterface
 			newMessage.setType(ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE);
-			newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + getLocalUserName());
+			newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + muscleNetIO.getLocalUserName());
 			fireLogNewMessage(newMessage);
 		} else if (newMessage.getMessage().startsWith("/")){
 			// Get command message here.
@@ -1376,7 +1263,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 					newMessage.setMessage(commandLine.substring(findNameBySession(targetSession).length()).trim());
 					muscleNetIO.sendTextMessage(newMessage.getMessage(), targetSession.trim());
 					if(newMessage.getType() == ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE){
-						newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + getLocalUserName() + " -> (" + findNameBySession(targetSession.trim()) + ")");
+						newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + muscleNetIO.getLocalUserName() + " -> (" + findNameBySession(targetSession.trim()) + ")");
 						newMessage.setLocalMessage(true);
 					}
 					newMessage.setPrivate(true);
@@ -1394,7 +1281,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 						newMessage.setMessage(commandLine.substring(targetSession.length()).trim());
 						muscleNetIO.sendTextMessage(newMessage.getMessage(), targetSession.trim());
 						if(newMessage.getType() == ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE){
-							newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + getLocalUserName() + " -> (" + findNameBySession(targetSession.trim()) + ")");
+							newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + muscleNetIO.getLocalUserName() + " -> (" + findNameBySession(targetSession.trim()) + ")");
 							newMessage.setLocalMessage(true);
 						}
 						newMessage.setPrivate(true);
@@ -1543,9 +1430,9 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 						newMessage.getMessage(), false
 						, ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE, true, newMessage.getTargetID()));
 			} else if (command.equals("/NICK")){
-				setLocalUserName(commandLine);
+                muscleNetIO.setLocalUserName(commandLine);
 			} else if (command.equals("/STATUS")){
-				setLocalUserStatus(commandLine);
+                muscleNetIO.setLocalUserStatus(commandLine);
 			} else if (command.equals("/CLEAR")){
 				fireLogNewMessage(new ChatMessage(newMessage.getSession(), ""
 				, false, ChatMessage.LOG_CLEAR_LOG_MESSAGES, false,
@@ -1579,7 +1466,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 						,false,	ChatMessage.LOG_INFORMATION_MESSAGE));
 			} else if (command.equals("/CONNECT")){
 				if (! commandLine.toUpperCase().equals("/CONNECT")){
-					setServerName(commandLine);
+                    muscleNetIO.setServerName(commandLine);
 				}
 				muscleNetIO.connect();
 			} else if (command.equals("/QUIT")){
@@ -1588,7 +1475,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 				muscleNetIO.disconnect();
 				chatterPanel.clearUserTable();
 			} else if (command.equals("/SERVER")){
-				setServerName(commandLine);
+				muscleNetIO.setServerName(commandLine);
 			} else if (command.equals("/SERVERINFO")){
 				// Sends out a serverinfo message
 				muscleNetIO.getServerInfo();
@@ -1738,7 +1625,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 			muscleNetIO.sendTextMessage(newMessage.getMessage().trim(), "*");
 			// put our session ID and name into the session of any message I type.
 			if(newMessage.getType() == ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE){
-				newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + getLocalUserName());
+				newMessage.setSession("(" + muscleNetIO.getLocalSessionID() + ") " + muscleNetIO.getLocalUserName());
 			}
 			fireLogNewMessage(newMessage);
 		}
@@ -1750,30 +1637,42 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	public void javaShareEventPerformed(JavaShareEvent bse){
 		switch (bse.getType()){
 			case JavaShareEvent.CONNECTION_ATTEMPT: {
-			} break;
+                localUserInfo.setServerName(muscleNetIO.getServerName());
+                fireLogNewMessage(new ChatMessage("", "Active server"
+                        + " changed to: " + muscleNetIO.getServerName(), false,
+                        ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
+                updateFrameTitle();
+			    break;
+            }
 			case JavaShareEvent.CONNECTION_DISCONNECT: {
 				userHashTable.clear();
 				chatterPanel.clearUserTable();
-			} break;
+                break;
+			}
+            case JavaShareEvent.LOCAL_USER_NAME: {
+                // TODO: Add the localUserInfo as a listener to the JavaShareTransceiver.
+                localUserInfo.setUserName(muscleNetIO.getLocalUserName());
+                fireLogNewMessage(new ChatMessage("", "Your name has been"
+                        + " changed to " + muscleNetIO.getLocalUserName(), false,
+                        ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
+
+                break;
+            }
+            case JavaShareEvent.LOCAL_USER_STATUS: {
+                // TODO: Add the localUserInfo as a listener to the JavaShareTransceiver.
+                localUserInfo.setUserStatus(muscleNetIO.getLocalUserStatus());
+                fireLogNewMessage(new ChatMessage("", "Your Status has been"
+                        + " changed to: " + muscleNetIO.getLocalUserStatus(), false,
+                        ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
+                break;
+            }
 			case JavaShareEvent.SERVER_CONNECTED: {
-				muscleNetIO.beShareSubscribe();
-				
-				// Determine what setLocalUserName to use.
-				if (programPrefsMessage.hasField("installid")) {
-					try {
-						muscleNetIO.setLocalUserName(getLocalUserName(), startingPortNumber, programPrefsMessage.getLong("installid"));
-					} catch (Exception e){
-						muscleNetIO.setLocalUserName(getLocalUserName(), startingPortNumber);
-					}
-				} else
-					muscleNetIO.setLocalUserName(getLocalUserName(), startingPortNumber);
-				muscleNetIO.setLocalUserStatus(getLocalUserStatus());
-				
 				try {
 					muscleNetIO.setUploadBandwidth(programPrefsMessage.getString("uploadLabel"),
 													programPrefsMessage.getInt("uploadValue"));
 				} catch (Exception e){
 				}
+
 				// Do the login commands!
 				for(int x = 0; x < onLoginVect.size(); x++){
 					// Send the commands out as if you typed them!
@@ -1784,18 +1683,22 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 								, true
 								, ""));
 				}
-				if (transPan != null)
-					transPan.resetShareList();
-			} break;
+				if (transPan != null) {
+                    transPan.resetShareList();
+                }
+                break;
+			}
 			case JavaShareEvent.SERVER_DISCONNECTED: {
 				userHashTable.clear();
 				chatterPanel.clearUserTable();
-			} break;
+                break;
+			}
 			case JavaShareEvent.UNKNOWN_MUSCLE_MESSAGE: {
 				fireLogNewMessage(new ChatMessage("", "Unknown MUSCLE" +
 					" message received.", false,
 					ChatMessage.LOG_INFORMATION_MESSAGE, true, ""));
-			} break;
+                break;
+			}
 			case JavaShareEvent.CHAT_MESSAGE: {
 				ChatMessage temp = (ChatMessage)bse.getSource();
 				// If this message matches the ignore pattern, why do anything
@@ -1830,7 +1733,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 				// name was said, and fires a SoundEvent if it was.
 				try {
 					if((! temp.isPrivate())
-						&& (temp.getMessage().indexOf(getLocalUserName()) != -1)
+						&& (temp.getMessage().indexOf(muscleNetIO.getLocalUserName()) != -1)
 						&& programPrefsMessage.getBoolean("sndUName"))
 					{
 						fireSoundEvent(new
@@ -1850,19 +1753,22 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 				} catch (Exception e){
 				}
 				fireLogNewMessage(temp);
-			} break;
+                break;
+			}
 			case JavaShareEvent.PING_RECEIVED: {
-			} break;
+                break;
+			}
 			case JavaShareEvent.USER_DISCONNECTED: {
-				BeShareUser tempUser = bse.getUser();
-				fireLogNewMessage(new ChatMessage("", "User #"
-					+ tempUser.getConnectID() + " (a.k.a. "
-					+ findNameBySession(tempUser.getConnectID()) + 
-					") has disconnected.", false,
-					ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
-				userHashTable.remove(tempUser.getConnectID());
-				chatterPanel.removeUser(tempUser);
-			} break;
+                BeShareUser tempUser = bse.getUser();
+                fireLogNewMessage(new ChatMessage("", "User #"
+                        + tempUser.getConnectID() + " (a.k.a. "
+                        + findNameBySession(tempUser.getConnectID()) +
+                        ") has disconnected.", false,
+                        ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
+                userHashTable.remove(tempUser.getConnectID());
+                chatterPanel.removeUser(tempUser);
+                break;
+            }
 			case JavaShareEvent.USER_CONNECTED: {
 				BeShareUser tempUser = bse.getUser();
 				// Determine if it's an add or an update.
@@ -1884,7 +1790,8 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 						tempUser.getConnectID() + " is now connected.", false,
 						ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
 				}
-			} break;
+                break;
+			}
 			case JavaShareEvent.USER_STATUS_CHANGE: {
 				BeShareUser tempUser = bse.getUser();
 				if (userHashTable.containsKey(tempUser.getConnectID())){
@@ -1909,7 +1816,8 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 						") is now " + tempUser.getStatus() + ".", false,
 						ChatMessage.LOG_USER_EVENT_MESSAGE, true, ""));
 				}
-			} break;
+                break;
+			}
 			case JavaShareEvent.USER_UPLOAD_STATS_CHANGE: {
 				BeShareUser tempUser = bse.getUser();
 				if (userHashTable.containsKey(tempUser.getConnectID())){
@@ -1927,7 +1835,8 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 					userHashTable.put(tempUser.getConnectID(), tempUser);
 					chatterPanel.addUser(tempUser);
 				}
-			} break;
+                break;
+			}
 			case JavaShareEvent.USER_BANDWIDTH_CHANGE: {
 				BeShareUser tempUser = bse.getUser();
 				if (userHashTable.containsKey(tempUser.getConnectID())){
@@ -1943,7 +1852,8 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 					userHashTable.put(tempUser.getConnectID(), tempUser);
 					chatterPanel.addUser(tempUser);
 				}
-			} break;
+                break;
+			}
 			case JavaShareEvent.USER_FIREWALL_CHANGE: {
 				BeShareUser tempUser = bse.getUser();
 				if (userHashTable.containsKey(tempUser.getConnectID())){
@@ -1956,7 +1866,8 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 					userHashTable.put(tempUser.getConnectID(), tempUser);
 					chatterPanel.addUser(tempUser);
 				}
-			} break;
+                break;
+			}
 			case JavaShareEvent.USER_FILE_COUNT_CHANGE: {
 				BeShareUser tempUser = bse.getUser();
 				if (userHashTable.containsKey(tempUser.getConnectID())){
@@ -1969,13 +1880,16 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 					userHashTable.put(tempUser.getConnectID(), tempUser);
 					chatterPanel.addUser(tempUser);
 				}
-			} break;
+                break;
+			}
 			case JavaShareEvent.FILE_INFO_ADD_TO_RESULTS: {
 				transPan.addResult((SharedFileInfoHolder)bse.getSource());
-			} break;
+                break;
+			}
 			case JavaShareEvent.FILE_INFO_REMOVE_RESULTS: {
 				transPan.removeResult((SharedFileInfoHolder)bse.getSource());
-			} break;
+                break;
+			}
 		}
 	}
 	

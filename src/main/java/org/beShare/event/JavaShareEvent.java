@@ -6,20 +6,15 @@ import java.util.EventObject;
 
 /**
 	JavaShareEvent
-	
-	Last Update: 2-28-2002
-	
+
 	@author Bryan Varner
 	@version 1.0
 */
 
-public class JavaShareEvent extends EventObject{
+public class JavaShareEvent extends EventObject {
 	int				 	eventType;
 	BeShareUser			eventUser;
-	String				eventSourceServer;
-	String				localName;
-	String				localSession;
-	
+
 	public final static int CONNECTION_ATTEMPT = 0;
 	public final static int CONNECTION_DISCONNECT = 1;
 	public final static int SERVER_CONNECTED = 2;
@@ -36,17 +31,15 @@ public class JavaShareEvent extends EventObject{
 	public final static int USER_FILE_COUNT_CHANGE = 13;
 	public final static int FILE_INFO_ADD_TO_RESULTS = 14;
 	public final static int FILE_INFO_REMOVE_RESULTS = 15;
-	
+	public final static int LOCAL_USER_STATUS = 16;
+    public final static int LOCAL_USER_NAME = 17;
+
 	/**
 		Creates a new BeShare event with object <code>source</code> and <code
 		>type</code>.
 	*/
 	public JavaShareEvent(Object source, int type){
-		super(source);
-		eventType = type;
-		eventSourceServer = null;
-		localName = null;
-		localSession = null;
+        this(source, type, null);
 	}
 	
 	/**
@@ -54,30 +47,13 @@ public class JavaShareEvent extends EventObject{
 		>type</code>, as well as a defined <code>user</code> and <code
 		>sourceServer</code>
 	*/
-	public JavaShareEvent(Object source, int type, BeShareUser user,
-							String sourceServer){
+	public JavaShareEvent(Object source, int type, BeShareUser user){
 		super(source);
 		eventType = type;
 		eventUser = user;
-		eventSourceServer = sourceServer;
 	}
 	
-	/**
-		Creates a new BeShare event with object <code>source</code> and <code
-		>type</code>, as well as a defined <code>user</code> and <code
-		>sourceServer</code>
-	*/	
-	public JavaShareEvent(Object source, int type, BeShareUser user,
-							String sourceServer, String lName,
-							String lSession){
-		super(source);
-		eventType = type;
-		eventUser = user;
-		eventSourceServer = sourceServer;
-		localName = lName;
-		localSession = lSession;
-	}
-	
+
 	/**
 		@return the message type.
 	*/
@@ -90,26 +66,5 @@ public class JavaShareEvent extends EventObject{
 	*/
 	public BeShareUser getUser(){
 		return eventUser;
-	}
-	
-	/**
-		@return A string representing the server the event originated from.
-	*/
-	public String getServer(){
-		return eventSourceServer;
-	}
-	
-	/**
-		@return the local users name.
-	*/
-	public String getLocalName(){
-		return localName;
-	}
-	
-	/**
-		@return the Local users session.
-	*/
-	public String getLocalSession(){
-		return localSession;
 	}
 }

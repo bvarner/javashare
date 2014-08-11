@@ -12,8 +12,8 @@ import com.meyer.muscle.support.Rect;
 import com.meyer.muscle.support.UnflattenFormatException;
 import org.beShare.data.BeShareDefaultSettings;
 import org.beShare.data.MusclePreferenceReader;
+import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ServerAutoUpdate;
-import org.beShare.network.Tranto;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,12 +34,12 @@ import java.io.IOException;
 	@version 1.3
 */
 public class ShareFrame extends JFrame implements WindowListener{
-	Tranto		networkIO = null;
+	JavaShareTransceiver networkIO = null;
 	AppPanel	mainPanel;
 	Object		menuBar;
 	Message		prefsMessage;
 	/**
-		Default constructor Creates a new mainPanel, and Tranto.
+		Default constructor Creates a new mainPanel, and JavaShareTransceiver.
 		It then connects the two together.
 	*/
 	public ShareFrame(){
@@ -52,8 +52,8 @@ public class ShareFrame extends JFrame implements WindowListener{
 		String prefsFile = System.getProperty("user.home") 
 							+ System.getProperty("file.separator")
 							+ ".JavaShare2Prefs.dat";
-		// Set these obects up to null so we know if stuff works or not, and
-		// have a value (null) to compare them to.
+        networkIO = new JavaShareTransceiver();
+
 		mainPanel = null;
 		FileInputStream fileStream = null;
 		DataInputStream prefsInStream = null;
@@ -82,25 +82,23 @@ public class ShareFrame extends JFrame implements WindowListener{
 				// We'll just re-set it to a default new Message, and carry on.
 				prefsMessage = new Message();
 			}
-			mainPanel = new AppPanel(prefsMessage);
+			mainPanel = new AppPanel(networkIO, prefsMessage);
 		} else {
 			prefsMessage = BeShareDefaultSettings.createDefaultSettings();
 		}
+
 		// If the attempt above to create an AppPanel from a Message fails, or
 		// if something barfed before that, mainPanel will be Null, In this case
 		// We'll just create the default Window, and hope it saves properly in
 		// the future.
 		if (mainPanel == null){
-			mainPanel = new AppPanel();
+			mainPanel = new AppPanel(networkIO, BeShareDefaultSettings.createDefaultSettings());
 		}
-		
-		networkIO = new Tranto(mainPanel);
-		
+
         // If it's not Mac OS we use a Swing Menu bar and attach it to the frame.
         menuBar = new SwingMenuBar(mainPanel, false);
         this.setJMenuBar((SwingMenuBar)menuBar);
         mainPanel.setListenToMenu((SwingMenuBar)menuBar);
-		mainPanel.setNetworkInterface(networkIO);
 		this.getContentPane().add(mainPanel);
 		// Set the frames title to have the starting (default) server.
 		mainPanel.updateFrameTitle();
@@ -123,14 +121,11 @@ public class ShareFrame extends JFrame implements WindowListener{
 		}
 		
 		// Auto-Server List update
-		try {
-			if (prefsMessage.getBoolean("autoUpdServers")) {
-				// Now start the auto-update thread. Muhuhahaha.
-				ServerAutoUpdate autoUpdate = new ServerAutoUpdate(mainPanel);
-				autoUpdate.run();
-			}
-		} catch (MessageException me) {
-		}
+        if (prefsMessage.getBoolean("autoUpdServers", true)) {
+            // Now start the auto-update thread. Muhuhahaha.
+            ServerAutoUpdate autoUpdate = new ServerAutoUpdate(mainPanel);
+            autoUpdate.run();
+        }
 	}
 	
 	/**

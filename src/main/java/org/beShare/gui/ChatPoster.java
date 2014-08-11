@@ -20,7 +20,7 @@ import java.util.Vector;
 						The result here has been the elimination of the multi
 						-threaded text posting issues, and a _dramatic_ speed
 						increase. The time it takes for a message to pass from
-						Tranto to the time it takes
+                        JavaShareTransceiver to the time it takes
 						ChatDocument to append it is on average 30
 						Milliseconds on a 1Ghz Pentium III running Win2k.
 						Previous to this it was averaging around 60-80

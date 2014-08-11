@@ -46,43 +46,38 @@ public class ServerAutoUpdate extends Thread {
 	public void run() {
 		try {
 			URL updateURL = new URL(pnl.AutoUpdateURL);
-			
-			Object text = updateURL.getContent();
-			if (text == null)
-				return;
-			
-			if (text instanceof InputStream) {
-				InputStream serverStream = (InputStream)text;
-				
-				byte[] inChars = new byte[64];
-				int read;
-				StringBuffer serverText = new StringBuffer();
-				while ((read = serverStream.read(inChars)) != -1) {
-					String instr = new String(inChars, 0, read);
-					serverText.append(instr);
-				}
-				serverStream.close();
-				
-				StringTokenizer st = new StringTokenizer(serverText.toString(), "\n");
-				while(st.hasMoreTokens()){
-					String token = st.nextToken();
-					if(token.startsWith("beshare_addserver")){
-						StringTokenizer tt = new StringTokenizer(token, "#=");
-						while(tt.hasMoreTokens()){
-							tt.nextToken();
-							serverList.addElement(tt.nextToken().trim());
-							tt.nextToken();
-						}
-					} else if (token.startsWith("beshare_removeserver")){
-						StringTokenizer tt = new StringTokenizer(token, "#=");
-						while(tt.hasMoreTokens()){
-							tt.nextToken();
-							removeList.addElement(tt.nextToken().trim());
-							tt.nextToken();
-						}
-					}
-				}
-			}
+
+			InputStream serverStream = updateURL.openStream();
+
+            System.out.println("Updating server list.");
+            byte[] inChars = new byte[64];
+            int read;
+            StringBuffer serverText = new StringBuffer();
+            while ((read = serverStream.read(inChars)) != -1) {
+                String instr = new String(inChars, 0, read);
+                serverText.append(instr);
+            }
+            serverStream.close();
+
+            StringTokenizer st = new StringTokenizer(serverText.toString(), "\n");
+            while(st.hasMoreTokens()){
+                String token = st.nextToken();
+                if(token.startsWith("beshare_addserver")){
+                    StringTokenizer tt = new StringTokenizer(token, "#=");
+                    while(tt.hasMoreTokens()){
+                        tt.nextToken();
+                        serverList.addElement(tt.nextToken().trim());
+                        tt.nextToken();
+                    }
+                } else if (token.startsWith("beshare_removeserver")){
+                    StringTokenizer tt = new StringTokenizer(token, "#=");
+                    while(tt.hasMoreTokens()){
+                        tt.nextToken();
+                        removeList.addElement(tt.nextToken().trim());
+                        tt.nextToken();
+                    }
+                }
+            }
 		} catch (IOException ioe) {
 			System.out.println(ioe.toString());
 		}

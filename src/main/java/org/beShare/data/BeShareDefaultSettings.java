@@ -10,19 +10,17 @@ import com.meyer.muscle.message.Message;
  */
 public class BeShareDefaultSettings {
 	/**
-	 *  Constructor for the BeShareDefaultSettings object
-	 */
-	public BeShareDefaultSettings() { }
-
-
-	/**
 	 *  Description of the Method
 	 *
 	 * @return    a Message contianing the default settings.
 	 */
 	public final static Message createDefaultSettings() {
 		Message   defaults  = new Message();
-		String[]  servers   = {""};
+
+        long installID = (((long)(Math.random() * Integer.MAX_VALUE)) << 32)|((long)(Math.random() * Integer.MAX_VALUE));
+        defaults.setLong("installid", installID);
+
+        String[]  servers   = {""};
 		defaults.setStrings("servers", servers);
 		defaults.setInt("curServer", 0);
 		String[]  users     = {"Binky"};
@@ -134,7 +132,7 @@ public class BeShareDefaultSettings {
 	/**
 	 * Used to add the FileSharing prefs to a save file from a previous version.
 	 */
-	public final static void appendFileTransferSettings(Message defaults){
+	public final static Message appendFileTransferSettings(Message defaults){
 		
 		// Added during File-sharing implementation.
 		defaults.setBoolean("fileSharingEnabled", true);
@@ -205,6 +203,8 @@ public class BeShareDefaultSettings {
 		defaults.setString(".js .mocha", "application/x-javascript");
 		defaults.setString(".pl", "application/x-perl");
 		defaults.setString(".so", "");
+
+        return defaults;
 	}
 	
 	/**
@@ -215,11 +215,16 @@ public class BeShareDefaultSettings {
 	 * @param  server   Default server
 	 * @return          a Message containing the default settings.
 	 */
-	public final static Message createDefaultAppletSettings(String uname,
-			String ustatus,
-			String server) {
+	public final static Message createDefaultAppletSettings(final String uname,
+                                                            final String ustatus,
+                                                            final String server)
+    {
 		Message   defaults  = new Message();
-		String[]  servers   = {""};
+
+        long installID = (((long)(Math.random() * Integer.MAX_VALUE)) << 32)|((long)(Math.random() * Integer.MAX_VALUE));
+        defaults.setLong("installid", installID);
+
+        String[]  servers   = {""};
 		defaults.setStrings("servers", servers);
 		defaults.setInt("curServer", 0);
 		String[]  users     = {uname};

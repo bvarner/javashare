@@ -14,13 +14,13 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	String			baseDownloadPath;
 	String			baseSharedPath;
 	
-	Tranto			connection;
+	JavaShareTransceiver connection;
 	Message			prefsMessage;
 	
 	/**
 	 * Constructor - not much to see here, really.
 	 */
-	public TransferManager(Tranto connection, Message prefsMessage){
+	public TransferManager(JavaShareTransceiver connection, Message prefsMessage){
 		this.connection = connection;
 		this.prefsMessage = prefsMessage;
 		

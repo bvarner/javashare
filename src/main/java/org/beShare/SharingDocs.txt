@@ -1,5 +1,5 @@
 SharedFileWriter - A Runnable class which will be created to retreive data from a specific port,
-		and write it to a given file. Tranto will construct and destroy these as necessary
+		and write it to a given file. JavaShareTransceiver will construct and destroy these as necessary
 
 SharedFileReader - A Runnable class which will read a file, and then write the data to the specified port.
 		This class performs the opposite of the SharedFileWriter.
@@ -8,6 +8,6 @@ SharePanel - Responsible for showing the results of the current query, as well a
 
 
 
-Tranto will be responsible for listening to incomming requests and initiatings outgoing requests for files.
+JavaShareTransceiver will be responsible for listening to incomming requests and initiatings outgoing requests for files.
 It will spawn new SharedFileWriters and SharedFileReaders for each request and register these with the current
 ProgressPanel. The ProgressPanel is bound to the AppPanel via the SharePanel.

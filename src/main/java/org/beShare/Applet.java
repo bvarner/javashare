@@ -2,7 +2,7 @@ package org.beShare;
 
 import org.beShare.gui.AppPanel;
 import org.beShare.gui.SwingMenuBar;
-import org.beShare.network.Tranto;
+import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,7 +18,7 @@ import java.awt.event.ActionListener;
  * @version    1.0
  */
 public class Applet extends JApplet implements ActionListener {
-	Tranto  				networkIO;
+	JavaShareTransceiver networkIO;
 	AppPanel				mainPanel;
 	SwingMenuBar			menuBar;
 	
@@ -42,14 +42,14 @@ public class Applet extends JApplet implements ActionListener {
 		if(userStatus == null) {
 			userStatus = "Here";
 		}
+        // Initialize the network interface
+        networkIO = new JavaShareTransceiver();
 		// Create the main Panel
-		mainPanel = new AppPanel(userName, userStatus, serverName, this);
-		// Initialize the network interface
-		networkIO = new Tranto(mainPanel);
+		mainPanel = new AppPanel(networkIO, userName, userStatus, serverName, this);
+
 		// Create the menubar
 		menuBar = new SwingMenuBar(mainPanel, true);
 		// Hook them all together! and let it rip!
-		mainPanel.setNetworkInterface(networkIO);
 		mainPanel.setListenToMenu(menuBar);
 
 		this.getContentPane().add(mainPanel);

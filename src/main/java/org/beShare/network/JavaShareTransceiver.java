@@ -1,39 +1,3 @@
-/* Change Log:
-	Class Started: 1-30-2002
-	History
-	-------
-	1.0 - Finished impelmenting all chat functions.
-	1.0.1 - Began transition to JavaShareEvents.
-	1.0.2 - Made the move from ActionEvents to JavaShareEvents, also added
-			Vector to hold registered listeners, and iterates through
-			the vector when firing messages off. Now more than one target
-			can receive messages.
-	1.0.3 - Received Pings are now sent to the proper target(s).
-	1.0.4 - ServerInfo function added.
-	1.0.5 - setUploadBandwidth method was added.
-	1.0.6 - convertFromUTFEight and convertToUTFEight methods added. All
-			Incomming and outgoing Text is now converted with the appropriate
-			method before being sent..
-	1.0.7 - Began implementing the necessary functions for File-Sharing. This is
-			where things will get tricky, and fun!
-	1.1   - Removed all UTF-8 conversion functions. I've submitted patches to MUSCLE
-			which allow it to send UTF-8. All conversion is now done by the MUSCLE
-			classes themselves. Updated the version message to reflect the new versioning.
-	1.1.1 - Included the new versioning information in the 'name' message sent during the
-			the connect stage.
-	2.0 a1 - Renamed the class to what it should have been. Tranto. :-) Also getting ready
-			for file-sharing.
-	2.0 a2 - connected boolean now actuall reflects the current connection status.
-			firewalled boolean now exists. and get/set Firewall now works. About time, eh?
-	2.0 a4 - Query support, removal and updating of subscribed non-name node (file info nodes).
-	2.0 a5 - Fixed bug with setInstallId. That function is now gone. Integrated into another setLocalUserName.
-			The installid was over-writing the existing data from the beshare/name node.
-	2.0 a6 - Added ConnectionCheck class and the activity monitor variables.
-	2.0 a7 - Added AutoReconnector class and the variables to track re-connects.
-			Reworked a lot on the messageReceived() Disconnect tag section.
-	2.0 a8 - 1.17.2003 MAJOR refactoring. muscleMessageReceived is toast, replaced by the 
-			leaner, meaner, cleaner muscleMessageHandler().
-*/
 package org.beShare.network;
 
 import com.meyer.muscle.client.MessageTransceiver;
@@ -49,35 +13,31 @@ import org.beShare.event.JavaShareEvent;
 import org.beShare.event.JavaShareEventListener;
 import org.beShare.gui.AppPanel;
 
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Vector;
 
 /**
-	Tranto - This class handles all incomming/outgoing Muscle messages
-	and then sends the appropriate JavaShareEvents to any registered listener.
-	
-	This class maintains the connection between the muscle server, and the UI.
-	The UI makes calls directly to the applications object of this class,
-	while this class fires JavaShareEvents off to the UI.
-	
-	The idea here is that this class will hold all network functions,
-	so that a GUI can be implemented in a modular form on top of it.
-	
-	@author Bryan Varner
-	@version 2.0 a8
-*/
-
-public class Tranto implements MessageListener, StorageReflectConstants, TypeConstants
+ * JavaShareTransceiver - This class handles all incomming/outgoing Muscle messages
+ * and then sends the appropriate JavaShareEvents to any registered listener.
+ *
+ * @author Bryan Varner
+ */
+public class JavaShareTransceiver implements MessageListener, StorageReflectConstants, TypeConstants
 {
 	public final String MUSCLE_INTERFACE_VERSION = AppPanel.applicationName + " " + AppPanel.buildVersion;
-	
-	private String 				serverName;
+
+    public static final int		startingPortNumber = 7000;
+    public static final int		portRange = 50;
+
+    private String 				serverName;
 	private int 				serverPort;
-	private MessageTransceiver 	beShareTransceiver =
-			new MessageTransceiver(new MessageQueue(this));
+	private MessageTransceiver 	beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
 			
-	private String 		localSessionID = "";
+	private String 		        localSessionID = "";
+    private String              localUserName;
+    private String              localUserStatus;
+    private int                 localUserPort = startingPortNumber;
+    private long                localUserInstallId;
 	
 	private Object 		serverConnect;
 	private Object 		serverDisconnect;
@@ -112,9 +72,8 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 	/**
 	 * 	Default contstructor - Creates a new BeShare muscle interface
 	 * 	with no server or port , and does not connect.
-	 * 	@param bse the JavaShareEventListener
 	 */
-	public Tranto(JavaShareEventListener bse){
+	public JavaShareTransceiver() {
 		serverName = "";
 		serverPort = 2960;
 		beShareEventListenerVect = new Vector();
@@ -123,27 +82,9 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 		firewalled = false;
 		queryActive = false;
 		pingCount = 0;
-		this.addJavaShareEventListener(bse);
 		autoRecon = null;
 		connectionTest = new ConnectionCheck();
 		connectionTest.start();
-	}
-	
-	/**
-	* Creates a new BeShare muscle interface. Creates interface and connects to
-	* server.
-	* @param bse The JavaShareEventListener
-	* @param serverName The name of the server to connect to
-	* @param serverPort the port of the server to connect to
-	*/
-	public Tranto(JavaShareEventListener bse,
-								String serverName,
-								int serverPort)
-	{
-		this(bse);
-		serverName = serverName;
-		serverPort = serverPort;
-		connect();
 	}
 	
 	/**
@@ -166,8 +107,14 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 	 *	Sets the name of the server to connect to.
 	 *	@param sName - the Name of the server to connect to.
 	 */
-	public void setServerName(String sName) {
-		serverName = sName;
+	public void setServerName(final String sName) {
+        boolean connectAfter = (connected && !sName.equalsIgnoreCase(serverName));
+
+        this.serverName = sName;
+
+        if (connectAfter) {
+            connect();
+        }
 	}
 	
 	/**
@@ -266,7 +213,7 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 	 *	to us on <code>port</code> so we can transfer a file from them.
 	 */
 	public void sendConnectBackRequestMessage(String targetSessionID, int port){
-		System.out.println("Tranto: Sending Connectback request");
+		System.out.println("JavaShareTransceiver: Sending Connectback request");
 		
 		Message cbackMsg = new Message(NET_CLIENT_CONNECT_BACK_REQUEST);
 		String target = "/*/" + targetSessionID + "/beshare";
@@ -274,7 +221,7 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 		cbackMsg.setString("session", getLocalSessionID());
 		cbackMsg.setInt("port", port);
 		beShareTransceiver.sendOutgoingMessage(cbackMsg);
-		System.out.println("Tranto: Connectback request Sent.");
+		System.out.println("JavaShareTransceiver: Connectback request Sent.");
 	}
 	
 	/**
@@ -300,9 +247,9 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 		serverConnect = new Object();
 		serverDisconnect = new Object();
 		fireJavaShareEvent(new JavaShareEvent(this,
-				JavaShareEvent.CONNECTION_ATTEMPT));
+                JavaShareEvent.CONNECTION_ATTEMPT));
 		beShareTransceiver.connect(serverName, serverPort,
-				serverConnect, serverDisconnect);
+                serverConnect, serverDisconnect);
 	}
 	
 	/**
@@ -328,9 +275,9 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 	/**
 	 *	Sends a message subscribing to the BeShare nodes.
 	 */
-	public void beShareSubscribe(){
+	private void beShareSubscribe(){
 		beShareTransceiver.sendOutgoingMessage(
-				new Message(PR_COMMAND_GETPARAMETERS));
+                new Message(PR_COMMAND_GETPARAMETERS));
 		// set up a subscription to the beShare tree.
 		Message queryMsg = new Message(PR_COMMAND_SETPARAMETERS);
 		queryMsg.setBoolean("SUBSCRIBE:beshare/*", true);
@@ -377,58 +324,70 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 		beShareTransceiver.sendOutgoingMessage(infoMessage);
 		requestedServerInfo = true;
 	}
-	
-	/**
-	 *	Uploads UserName information to the MUSCLE server
-	 *	@param uName The Users handle
-	 *	@param port the port they use for filesharing.
-	 */
-	public void setLocalUserName(String uName, int port){
-		Message nameMessage = new Message();
-		nameMessage.setString("name", uName);
-		nameMessage.setInt("port", port);
-		nameMessage.setString("version_name", AppPanel.applicationName);
-		nameMessage.setString("version_num", "v" + AppPanel.buildVersion);
-		setDataNodeValue("beshare/name", nameMessage);
-	}
-	
+
+    public void setLocalUserName(final String name) {
+        setLocalUserName(name, this.localUserPort, this.localUserInstallId);
+    }
+
 	/**
 	 *	Uploads UserName information to the MUSCLE server
 	 *	@param uName The Users handle
 	 *	@param port the port they use for filesharing.
 	 *  @param installid the unique identifier for this install.
 	 */
-	public void setLocalUserName(String uName, int port, long installid){
-		Message nameMessage = new Message();
-		nameMessage.setString("name", uName);
-		nameMessage.setInt("port", port);
-		nameMessage.setString("version_name", AppPanel.applicationName);
-		nameMessage.setString("version_num", "v" + AppPanel.buildVersion);
-		nameMessage.setLong("installid", installid);
-		setDataNodeValue("beshare/name", nameMessage);
+	public void setLocalUserName(final String uName, final int port, final long installid){
+        this.localUserName = uName;
+        this.localUserPort = port;
+        this.localUserInstallId = installid;
+
+        if (connected) {
+            Message nameMessage = new Message();
+            nameMessage.setString("name", this.localUserName);
+            nameMessage.setInt("port", this.localUserPort);
+            nameMessage.setLong("installid", this.localUserInstallId);
+            nameMessage.setString("version_name", AppPanel.applicationName);
+            nameMessage.setString("version_num", "v" + AppPanel.buildVersion);
+            setDataNodeValue("beshare/name", nameMessage);
+        }
+        fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.LOCAL_USER_NAME));
 	}
-	
+
+    public String getLocalUserName() {
+        return this.localUserName;
+    }
+
 	/**
 	 *	Uploads Bandwidth information to the MUSCLE server
 	 *	@param lbl String label 'T1', 'Cable', ...
 	 *	@param bps The speed of the connection.
 	 */
 	public void setUploadBandwidth(String lbl, int bps){
-		Message bwMessage = new Message();
-		bwMessage.setString("label", lbl);
-		bwMessage.setInt("bps", bps);
-		setDataNodeValue("beshare/bandwidth", bwMessage);
+        if (connected) {
+            Message bwMessage = new Message();
+            bwMessage.setString("label", lbl);
+            bwMessage.setInt("bps", bps);
+            setDataNodeValue("beshare/bandwidth", bwMessage);
+        }
 	}
 
 	/**
 	 *	Uploads the local user status to the MUSCLE server
 	 *	@param uStatus The Users current status
 	 */
-	public void setLocalUserStatus(String uStatus){
-		Message statusMessage = new Message();
-		statusMessage.setString("userstatus", uStatus);
-		setDataNodeValue("beshare/userstatus", statusMessage);
+	public void setLocalUserStatus(final String uStatus){
+        this.localUserStatus = uStatus;
+
+        if (connected) {
+            Message statusMessage = new Message();
+            statusMessage.setString("userstatus", this.localUserStatus);
+            setDataNodeValue("beshare/userstatus", statusMessage);
+        }
+        fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.LOCAL_USER_STATUS));
 	}
+
+    public String getLocalUserStatus() {
+        return this.localUserStatus;
+    }
 
 	/**
 	 * Uploads the file-listing to the MUSCLE server. This is a
@@ -507,8 +466,14 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 				autoRecon.interrupt();
 				autoRecon = null;
 			}
-			fireJavaShareEvent(new JavaShareEvent(this,
-					JavaShareEvent.SERVER_CONNECTED));
+
+            // Send our current User information to the server.
+            beShareSubscribe();
+            setLocalUserName(localUserName);
+            setLocalUserStatus(localUserStatus);
+
+            // Tell the UI to update.
+            fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.SERVER_CONNECTED));
 		} else if (message == serverDisconnect){
 			if (autoRecon == null) {
 				autoRecon = new AutoReconnector();
@@ -602,7 +567,7 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 							// The User was removed
 							fireJavaShareEvent(
 								new JavaShareEvent(this, JavaShareEvent.USER_DISCONNECTED,
-									new BeShareUser(sessionIDFromNode(removedNodes[x])), getServerName()));
+									new BeShareUser(sessionIDFromNode(removedNodes[x]))));
 						} else if (getPathDepth(removedNodes[x]) == FILE_INFO_DEPTH) {
 							// Files were removed
 							SharedFileInfoHolder holder = new SharedFileInfoHolder();
@@ -664,25 +629,25 @@ public class Tranto implements MessageListener, StorageReflectConstants, TypeCon
 								user.setFileCount(userNameNode.getInt("filecount"));
 							if (updatedNode.equals("name"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_CONNECTED, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_CONNECTED, user));
 							else if (updatedNode.equals("userstatus"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_STATUS_CHANGE, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_STATUS_CHANGE, user));
 							else if (updatedNode.equals("uploadstats"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_UPLOAD_STATS_CHANGE, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_UPLOAD_STATS_CHANGE, user));
 							else if (updatedNode.equals("bandwidth"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_BANDWIDTH_CHANGE, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_BANDWIDTH_CHANGE, user));
 							else if (updatedNode.equals("fires"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_FIREWALL_CHANGE, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_FIREWALL_CHANGE, user));
 							else if (updatedNode.equals("files"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_FIREWALL_CHANGE, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_FIREWALL_CHANGE, user));
 							else if (updatedNode.equals("filecount"))
 								fireJavaShareEvent(
-									new JavaShareEvent(this, JavaShareEvent.USER_FILE_COUNT_CHANGE, user, getServerName()));
+									new JavaShareEvent(this, JavaShareEvent.USER_FILE_COUNT_CHANGE, user));
 						} else if (getPathDepth(fieldName) == FILE_INFO_DEPTH && queryActive) {
 							Message fileInfo = message.getMessage(fieldName);
 							SharedFileInfoHolder holder = new SharedFileInfoHolder();

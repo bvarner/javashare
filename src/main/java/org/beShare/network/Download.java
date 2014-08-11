@@ -8,7 +8,6 @@ import org.beShare.gui.AppPanel;
 
 import java.io.*;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.nio.channels.ServerSocketChannel;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -31,7 +30,7 @@ public class Download extends Transfer {
 	boolean			firewalledTransfer;
 	boolean			firewallSocketBound;
 	int				firewallListenPort;
-	Tranto			network;
+	JavaShareTransceiver network;
 	
 	// Local file information.
 	String			localFileBasePath;
@@ -42,7 +41,7 @@ public class Download extends Transfer {
 	/**
 	 * Creates a new download thread to do some work.
 	 */
-	public Download(String[] files, String hostIP, int port, String localFileBasePath, String remoteUserName, String remoteSessionID, boolean firewalled, Tranto network){
+	public Download(String[] files, String hostIP, int port, String localFileBasePath, String remoteUserName, String remoteSessionID, boolean firewalled, JavaShareTransceiver network){
 		super();
 		this.files = files;
 		this.hostIP = hostIP;
@@ -52,7 +51,7 @@ public class Download extends Transfer {
 		this.localFileBasePath = localFileBasePath;
 		this.network = network;
 		this.firewalledTransfer = firewalled;
-		firewallListenPort = AppPanel.startingPortNumber;
+		firewallListenPort = JavaShareTransceiver.startingPortNumber;
 		fileSlave = null;
 	}
 	

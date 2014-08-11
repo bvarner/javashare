@@ -54,7 +54,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	JButton					btnDownloadFiles;
 	JButton					btnRemoveDownload;
 	
-	Tranto					connection;
+	JavaShareTransceiver connection;
 	Message					prefsMessage;
 	UserHashAccessor		userData;
 	
@@ -68,7 +68,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	JList					lstTransfers;
 	DefaultListModel		transferList;
 	
-	public TransferPanel(Tranto connection, Message prefsMessage, UserHashAccessor userData){
+	public TransferPanel(JavaShareTransceiver connection, Message prefsMessage, UserHashAccessor userData){
 		this.connection = connection;
 		this.prefsMessage = prefsMessage;
 		this.userData = userData;
@@ -209,10 +209,10 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 		if (enabled){
 			sharedFileLister.resetShareList();
 			sharedFileLister.updateList();
-			// Have tranto start listening for transfers.
+			// Have JavaShareTransceiver start listening for transfers.
 		} else {
 			sharedFileLister.sharingDisabled();
-			// Have tranto stop listening for transfers.
+			// Have JavaShareTransceiver stop listening for transfers.
 		}
 	}
 	
@@ -317,7 +317,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	}
 	
 	/**
-	 * Resets the tranto query info. This also parses the text of txtQuery to build the query.
+	 * Resets the JavaShareTransceiver query info. This also parses the text of txtQuery to build the query.
 	 */
 	private void resetQuery(){
 		queryModel.clearTable();
