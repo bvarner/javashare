@@ -29,17 +29,7 @@ import java.util.*;
 
 /**
  *	AppPanel.java - JavaShare 2's main hub panel.
- *					This class handles the translation of incomming
- *					JavaShareEvents into ChatMessages or other froms of
- *					data handling.
- *					
- *					This class does a _LOT_ it's eaiser to understand if you break it down into the various
- *					interfaces it implements.
- *					
- *					This class is responsible for so much, you can honestly say
- *					it's the guts, heart, and soul of the program.
  *
- *	@version 2.0
  *	@author Bryan Varner
  */
 public class AppPanel extends JPanel implements JavaShareEventListener,
@@ -63,7 +53,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	
 	ChatPanel					chatterPanel;
 	boolean						saveUserSort;
-	boolean						appletMode;
 	LocalUserPanel				localUserInfo;
 	JavaShareTransceiver        muscleNetIO;
 	AboutDialog					aboutJavaShare;
@@ -304,23 +293,19 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 		userHashTable = new Hashtable();
 		
 		menuBar = null;
-		appletMode = false;
 		this.add(localUserInfo, BorderLayout.NORTH);
 		
 		this.add(chatterPanel, BorderLayout.CENTER);
 
-        // If we're not an applet, add the file-sharing bits.
-        if (!appletMode){
-            transPan = new TransferPanel(this.muscleNetIO, programPrefsMessage, this);
-            prefsFrame.addFileTransferPrefs(programPrefsMessage, transPan);
+        transPan = new TransferPanel(this.muscleNetIO, programPrefsMessage, this);
+        prefsFrame.addFileTransferPrefs(programPrefsMessage, transPan);
 
-            queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-            queryChatSplit.add(transPan);
-            queryChatSplit.add(chatterPanel);
+        queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        queryChatSplit.add(transPan);
+        queryChatSplit.add(chatterPanel);
 
-            this.remove(chatterPanel);
-            this.add(queryChatSplit, BorderLayout.CENTER);
-        }
+        this.remove(chatterPanel);
+        this.add(queryChatSplit, BorderLayout.CENTER);
 
         SwingUtilities.updateComponentTreeUI(this);
 
@@ -339,24 +324,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 
 
     }
-	
-	/**
-	 *	Constructor for use with the Applet
-	 *  Creates a new AppPanel from a message containing the default settings.
-	 *  It then re-creates any objects that require changes to run in an
-	 *  Applet context. Also adds an AppletSoundThreadManager.
-	 */
-	public AppPanel(final JavaShareTransceiver muscleNetIO, final String defaultName, final String defaultStatus, final String defaultServer, final JApplet sndSource){
-		this(muscleNetIO, BeShareDefaultSettings.createDefaultAppletSettings(defaultName, defaultStatus, defaultServer));
-
-        // LoacalUserPanel needs to be applet mode
-		this.remove(localUserInfo);
-		localUserInfo = new LocalUserPanel(muscleNetIO, true);
-		this.add(localUserInfo, BorderLayout.NORTH);
-		
-		appletMode = true;
-		addSoundEventListener(new AppletSoundThreadManager(sndSource));
-	}
 	
 	/**
 		Retreives all prefrences, saves them in a <code>Message</code> and
@@ -622,13 +589,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 	*/
 	public ChatPanel getChatPanel(){
 		return chatterPanel;
-	}
-	
-	/**
-		Sets the applet flag.
-	*/
-	public void setAppletMode(boolean b){
-		appletMode = b;
 	}
 	
 	/**
@@ -1262,40 +1222,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 				}
 			} else if (command.equals("/AWAY")){
 				localUserInfo.setAwayStatus(!localUserInfo.isAway());
-			} else if (command.equals("/SPAWN") && appletMode){
-				// Create the new frame.
-				JFrame newParent = new JFrame("JavaShare2 Applet Edition - "
-												+ muscleNetIO.getServerName());
-				// Find the applet - this navigates the class heirarchy.
-				org.beShare.Applet appletParent = (org.beShare.Applet)this.getRootPane().getParent();
-				appletParent.remove(this);
-				newParent.getContentPane().add(this);
-				
-				newParent.setJMenuBar(appletParent.getJMenuBar());
-				appletParent.setJMenuBar(null);
-				
-				newParent.pack();
-				newParent.show();
-				
-				// Create the new Stuff..
-				JLabel spawnedLabel = new JLabel("JavaShare 2 is now in" +
-												" Spawned Applet Mode. Closing" +
-												" this window will close" +
-												" JavaShare 2.", JLabel.CENTER);
-				JButton unSpawn = new JButton("Un-Spawn");
-				unSpawn.addActionListener(appletParent);
-				appletParent.getContentPane().setLayout(new BorderLayout());
-				JPanel btnPanel = new JPanel();
-				btnPanel.add(unSpawn);
-				JPanel lblPanel = new JPanel();
-				lblPanel.add(spawnedLabel);
-				appletParent.getContentPane().add(lblPanel, BorderLayout.NORTH);
-				appletParent.getContentPane().add(btnPanel, BorderLayout.CENTER);
-				// Re-do the applets layout.
-				appletParent.validate();
-				// Don't forget to set appletMode = false so they can't do this
-				// again.
-				appletMode = false;
 			} else if (command.equals("/AWAYMSG")){
 				if(! commandLine.toUpperCase().equals("/AWAYMSG")){
 					localUserInfo.setAwayStatus(commandLine);

@@ -40,22 +40,24 @@ public class MimePrefs extends JPanel implements ActionListener {
 		originalExtension = new String();
 		
 		prefs = prefMessage;
-		
-		listData = new DefaultListModel();
+
+        // Default list model with ignores null or empty additions.
+		listData = new DefaultListModel() {
+            @Override
+            public void addElement(Object element) {
+                if (element == null || "".equals(element)) {
+                    return;
+                }
+                super.addElement(element);
+            }
+        };
 		
 		do {
-			try {
-				String[] filetypes = prefs.getStrings("fileExtensions");
-				for (int x = 0; x < filetypes.length; x++){
-					listData.addElement(new TypeListItem(filetypes[x], prefs.getString(filetypes[x])));
-				}
-				break;
-			} catch (FieldNotFoundException fnfe){
-				BeShareDefaultSettings.appendFileTransferSettings(prefs);
-				continue;
-			} catch (Exception e){
-				break;
-			}
+            String[] filetypes = prefs.getStrings("fileExtensions", new String[0]);
+            for (int x = 0; x < filetypes.length; x++){
+                listData.addElement(new TypeListItem(filetypes[x], prefs.getString(filetypes[x], "")));
+            }
+            break;
 		} while(true);
 		
 		typeList = new JList(listData);
