@@ -13,17 +13,6 @@ import java.util.*;
  *						compatibility with 1.1 JRE's.
  * 
  * @author Bryan Varner 5.07.2002
- * @version 1.3
- * 
- *	Change Log:
- *		1.0 - Basic font chooser.
- *		1.1 - Added toolkit.getAllFonts() instead of using a staticly produced list of the standard
- *			font names for pre 1.2 JREs. Also added <code>StyleizedFontListRenderer</code> as an 
- *			inner class, and the option to render the font list using each individual font.
- *			Added the Font JList to it's own panel, so that the borders now draw more correctly.
- *		1.2 - Added showFontDialog(Font) to allow a default font to be set.
- *		1.3 - 5.29.2002 - Now accepts <code>null</code> for a parent. If <code>null</code> is specified
- *			it attempts to center itself in the main graphics screen.
  */
 public class JFontChooser extends JDialog implements ActionListener, ListSelectionListener{
 	String[]	fontFams;
