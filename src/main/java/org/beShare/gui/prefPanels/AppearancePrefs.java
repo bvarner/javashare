@@ -27,8 +27,7 @@ public class AppearancePrefs extends PreferencePanel implements ActionListener {
 	
 	public AppearancePrefs(JavaSharePrefListener prefHandler, Message prefMessage){
 		super();
-		//super(new GridLayout(7, 1, 3, 3));
-		
+
 		target = prefHandler;
 		prefs = prefMessage;
 		
@@ -49,7 +48,7 @@ public class AppearancePrefs extends PreferencePanel implements ActionListener {
 		
 		btnFont = new JButton("Set Display Font");
 		
-		fontPicker = new JFontChooser(null, false);
+		fontPicker = new JFontChooser(null, true);
 		
 		setBorder(BorderFactory.createTitledBorder("Display Preferences"));
 		

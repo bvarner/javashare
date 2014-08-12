@@ -310,7 +310,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 			int[] selected = lstTransfers.getSelectedIndices();
 			if (selected != null) {
 				for (int x = selected.length; x > 0; x--) {
-					transMan.removeTransfer((Transfer)transMan.getElementAt(selected[x - 1]));
+					transMan.removeTransfer((AbstractTransfer)transMan.getElementAt(selected[x - 1]));
 				}
 			}
 		}
@@ -469,7 +469,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 			selected = isSelected;
 			
 			String status = "<html>";
-			Transfer t = (Transfer)value;
+			AbstractTransfer t = (AbstractTransfer)value;
 			
 			if (value instanceof Download){
 				Download dwn = (Download)value;
@@ -478,18 +478,18 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 				status += "Upload to " + "<br>";
 			}
 			
-			if (t.getStatus() == Transfer.ACTIVE) {
+			if (t.getStatus() == AbstractTransfer.ACTIVE) {
 				status += "File: " + t.getFileName() + "<br>";
 			}
 			
 			switch (t.getStatus()) {
-				case Transfer.CONNECTING:
+				case AbstractTransfer.CONNECTING:
 					status += "Connecting<br>";
 					break;
-				case Transfer.AWAITING_CALLBACK:
+				case AbstractTransfer.AWAITING_CALLBACK:
 					status += "Awaiting Callback<br>";
 					break;
-				case Transfer.ACTIVE:
+				case AbstractTransfer.ACTIVE:
 					progress = ((double)t.getFileTransfered() / t.getFileSize());
 					if (t.getFileSize() > (1024 * 1024))
 						status += "Transfered: " + progressFormatter.format((double)t.getFileTransfered() / (1024 * 1024)) + "MB of " + progressFormatter.format((double)t.getFileSize() / (1024 * 1024)) + "MB<br>";
@@ -498,20 +498,20 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 					else
 						status += "Transfered: " + t.getFileTransfered() + " of " + t.getFileSize() + " bytes<br>";
 					break;
-				case Transfer.REMOTE_QUEUED:
+				case AbstractTransfer.REMOTE_QUEUED:
 					status += "Remotely Queued<br>";
 					break;
-				case Transfer.EXAMINING:
+				case AbstractTransfer.EXAMINING:
 					status += "Examining...<br>";
 					break;
-				case Transfer.FINISHED:
+				case AbstractTransfer.FINISHED:
 					status += "Completed<br>";
 					progress = 1.0;
 					break;
-				case Transfer.LOCALLY_QUEUED:
+				case AbstractTransfer.LOCALLY_QUEUED:
 					status += "Locally Queued<br>";
 					break;
-				case Transfer.ERROR:
+				case AbstractTransfer.ERROR:
 					status += "An Error Has Occured<br>";
 					break;
 				default:

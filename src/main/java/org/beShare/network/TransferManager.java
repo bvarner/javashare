@@ -57,7 +57,7 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	/**
 	 * Adds a Transfer To the appropriate Queue and registers this object to receive status change notifications.
 	 */
-	public void addTransfer(Transfer t) {
+	public void addTransfer(AbstractTransfer t) {
 		t.addTransferProgressListener(this);
 		if (t instanceof Download) {
 			downQueue.addTransfer(t);
@@ -71,7 +71,7 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	/** 
 	 * Removes the Transfer from the Queues, this will halt the transfer.
 	 */
-	public void removeTransfer(Transfer t) {
+	public void removeTransfer(AbstractTransfer t) {
 		if (t instanceof Download) {
 			downQueue.removeTransfer(t);
 			fireIntervalRemoved(this, 0, getSize());
@@ -86,7 +86,7 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	 * This forces the List to update the transfer that fires off the change.
 	 * It also forces the Queues to check if they should start the next transfer.
 	 */
-	public void transferStatusUpdate(Transfer t) {
+	public void transferStatusUpdate(AbstractTransfer t) {
 		int index = downQueue.indexOf(t);
 		if (index == -1) {
 			index = upQueue.indexOf(t);

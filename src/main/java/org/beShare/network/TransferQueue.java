@@ -66,9 +66,9 @@ public class TransferQueue extends Vector {
 	public int countRunning() {
 		int running = 0;
 		for (int x = 0; x < size(); x++) {
-			Transfer tran = (Transfer)elementAt(x);
+			AbstractTransfer tran = (AbstractTransfer)elementAt(x);
 			if (tran.isStarted()) {
-				if ((tran.getStatus() == Transfer.FINISHED) || (tran.getStatus() == Transfer.ERROR)) {
+				if ((tran.getStatus() == AbstractTransfer.FINISHED) || (tran.getStatus() == AbstractTransfer.ERROR)) {
 					// Do nothing, it's not running.
 				} else {
 					running++;
@@ -83,7 +83,7 @@ public class TransferQueue extends Vector {
 	 * Forces the Queue to check itself. Running any unstarted transfers up to <code>getMax</code>.
 	 */
 	public void checkQueue() {
-		Transfer trans = null;
+		AbstractTransfer trans = null;
 		while (shouldStart()) {
 			trans = getNextUnstarted();
 			if (trans != null)
@@ -96,13 +96,13 @@ public class TransferQueue extends Vector {
 	/**
 	 * @return the next Transfer that has yet to start.
 	 */
-	public Transfer getNextUnstarted(){
-		Transfer next = null;
+	public AbstractTransfer getNextUnstarted(){
+		AbstractTransfer next = null;
 		
 		int x = 0;
 		while (x < size() && next == null) {
-			if (!((Transfer)elementAt(x)).isStarted()) {
-				next = (Transfer)elementAt(x);
+			if (!((AbstractTransfer)elementAt(x)).isStarted()) {
+				next = (AbstractTransfer)elementAt(x);
 				return next;
 			}
 			x++;
@@ -114,9 +114,9 @@ public class TransferQueue extends Vector {
 	/**
 	 * Adds a Transfer to this queue, the queue automatically checks to see if it should start the transfer.
 	 */
-	public void addTransfer(Transfer trans){
+	public void addTransfer(AbstractTransfer trans){
 		trans.setName("Transfer" + size() + 1);
-		trans.setStatus(Transfer.LOCALLY_QUEUED);
+		trans.setStatus(AbstractTransfer.LOCALLY_QUEUED);
 		addElement(trans);
 		checkQueue();
 	}
@@ -124,7 +124,7 @@ public class TransferQueue extends Vector {
 	/**
 	 * Removes the transfer from the queue. The queue will check if it should start another transfer.
 	 */
-	public void removeTransfer(Transfer trans){
+	public void removeTransfer(AbstractTransfer trans){
 		removeElement(trans);
 		trans.abort();
 		

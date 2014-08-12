@@ -1,5 +1,5 @@
 package org.beShare.network;
 
 public interface TransferProgressListener {
-	public void transferStatusUpdate(Transfer t);
+	public void transferStatusUpdate(AbstractTransfer t);
 }
