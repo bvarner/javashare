@@ -51,12 +51,17 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>java</goal>
+                            <goal>exec</goal>
                         </goals>
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>org.beShare.Application</mainClass>
+                    <executable>java</executable>
+                    <arguments>
+                        <argument>-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005</argument>
+                        <argument>-jar</argument>
+                        <argument>${project.build.directory}/${project.build.finalName}.jar</argument>
+                    </arguments>
                 </configuration>
             </plugin>
             <plugin>
