@@ -1,53 +1,4 @@
-/* Change Log:
- * 3.11.2002 - Version 1.0 Final Released!
- * 4.22.2002 - Updated version Info to reflect work on File Sharing.
- * 5.8.2002  - Added support for the System Beep method of sound events.
- * 5.9.2002  - Re-implemented the time stamp System.currentTimeInMillis().
- *				I haven't found a better way of doing this yet.
- * 5.13.2002 - Updated version information to reflect the latest development build.
- * 6.5.2002 - getCompletedName now returns the entire name, and is case-insensitive.
- *				reworked the calling methods to use this.
- * Begin 2.0 revisions
- * 7.14.2002 - Reworked some details and got Applet compatibility 100% back. Mostly,
- * 				this involves catching NPE's when trying to load ImageIcons.
- *				Also implemented AppletSoundThreadManager in the applet constructor.
- *				Yeah!!!
- * 7.15.2002 - Condensed the two applet constructors into one. Cleaned up, and began to look
- *				at how to include the query panel.
- * 7.16.2002 - FindSessionByName is now case-insensitive.
- * 8.3.2002  - Added getUserData()
- * 8.4.2002 - Now generates an InstallID on first-run.
- * 12.17.2002 - Updated the name completion and related functions to parse names for url [label]
- *				I've also commented out the lines that add file sharing to the application.
- *				I'll be making a 1.3 preliminary release soon.
- *				Seems there may still be a bug In JavaShareTransceiver with regards to uploading the user name to the server.
- * 12.19.2002 - Added addServers() and removeServers().
- *				Implemented the user Table Column Sorting Preference.
- *				Removed some un-needed instance variables.
- * 12.23.2002 - Fixed the mystical no-user name bug that was introduced into the 2.0 code base. The installid
- *				message was deleting all the data alread in /beshare/name. This has been fixed by integrating
- *				the installid into the name message.
- * 12.24.2002 - 1:00 AM - Reworked preference loading to use the new utility class. The code is MUCH cleaner now.
- *				Added the imageCache and loadImage method. All image loading now uses this. This will cut the
- *				overhead and memory useage of the file-sharing, and also makes the Applet properly load images.
- */
 package org.beShare.gui;
-
-/**
- *	AppPanel.java - JavaShare 2's main hub panel.
- *					This class handles the translation of incomming
- *					JavaShareEvents into ChatMessages or other froms of
- *					data handling.
- *					
- *					This class does a _LOT_ it's eaiser to understand if you break it down into the various
- *					interfaces it implements.
- *					
- *					This class is responsible for so much, you can honestly say
- *					it's the guts, heart, and soul of the program.
- *
- *	@version 2.0
- *	@author Bryan Varner
- */
 
 import blv.swing.AboutDialog;
 import com.meyer.muscle.message.Message;
@@ -75,13 +26,29 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 
+
+/**
+ *	AppPanel.java - JavaShare 2's main hub panel.
+ *					This class handles the translation of incomming
+ *					JavaShareEvents into ChatMessages or other froms of
+ *					data handling.
+ *					
+ *					This class does a _LOT_ it's eaiser to understand if you break it down into the various
+ *					interfaces it implements.
+ *					
+ *					This class is responsible for so much, you can honestly say
+ *					it's the guts, heart, and soul of the program.
+ *
+ *	@version 2.0
+ *	@author Bryan Varner
+ */
 public class AppPanel extends JPanel implements JavaShareEventListener,
 												ChatMessageListener,
 												ActionListener,
 												UserHashAccessor,
 												JavaSharePrefListener
 {
-	public static final String buildVersion = "2.0 a2 ";
+	public static final String buildVersion = "2.1 snapshot ";
 	public static final String applicationName = "JavaShare";
 	public static final String pubVersion = applicationName + buildVersion;
 	
@@ -201,7 +168,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener,
 		
 		// Servers
 		serverList = new String[1];
-        serverList[0] = "beshare.tycomsystems.com";
+	        serverList[0] = "beshare.tycomsystems.com";
 		serverList = MusclePreferenceReader.getStrings(programPrefsMessage, "servers", serverList);
 		muscleNetIO.setServerName(serverList[MusclePreferenceReader.getInt(programPrefsMessage, "curServer", 0)]);
 		
