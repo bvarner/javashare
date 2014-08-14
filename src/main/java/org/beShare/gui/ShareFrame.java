@@ -13,9 +13,6 @@ import org.beShare.network.ServerAutoUpdate;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 
 /**
  * MainFrame - Creates the main frame (window) for the Application mode of
