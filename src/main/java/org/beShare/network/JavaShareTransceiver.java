@@ -617,7 +617,12 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							Message userNameNode = userNameInfos[userNameInfos.length - 1];
 
 							// Construct the User object that's changed....
-							BeShareUser user = new BeShareUser(sessionIDFromNode(fieldName));
+							String sessionId = sessionIDFromNode(fieldName);
+							BeShareUser user = userDataModel.getUser(sessionId);
+							if (user == null) {
+								logInformation("User #" + sessionId + " is now connected.");
+								user = new BeShareUser(sessionId);
+							}
 							user.setIPAddress(ipFromNode(fieldName));
 							if (userNameNode.hasField("name", B_STRING_TYPE)) {
 								user.setName(userNameNode.getString("name"));
@@ -661,64 +666,14 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							if (userNameNode.hasField("filecount", B_INT32_TYPE)) {
 								user.setFileCount(userNameNode.getInt("filecount"));
 							}
+							userDataModel.updateUser(user);
+
 							if (updatedNode.equals("name")) {
-								BeShareUser existing = userDataModel.getUser(user.getSessionID());
-								if (existing == null) {
-									userDataModel.addUser(user);
-									logInformation("User #" + user.getSessionID() + " is now connected.");
-								} else {
-									existing.setName(user.getName());
-									existing.setClient(user.getClient());
-									existing.setPort(user.getPort());
-									userDataModel.updateUser(existing);
-									logInformation("User #" + existing.getSessionID() + " is now known as " + existing.getName());
-								}
+								logInformation("User #" + user.getSessionID() + " is now known as " + user.getName());
 							} else if (updatedNode.equals("userstatus")) {
-								BeShareUser existing = userDataModel.getUser(user.getSessionID());
-								if (existing == null) {
-									user.setName("<unknown>");
-									existing = user;
-								}
-								existing.setStatus(user.getStatus());
-								userDataModel.updateUser(existing);
-								logInformation("User #" + existing.getSessionID() + " " +
-										               "(a.k.a. " + existing.getName() + ") " +
-										               "is now " + existing.getStatus() + ".");
-							} else if (updatedNode.equals("uploadstats")) {
-								BeShareUser existing = userDataModel.getUser(user.getSessionID());
-								if (existing == null) {
-									user.setName("<unknown>");
-									existing = user;
-								}
-								existing.setUploadCurrent(user.getUploadCurrent());
-								existing.setUploadMax(user.getUploadMax());
-								existing.setPort(user.getPort());
-								userDataModel.updateUser(existing);
-							} else if (updatedNode.equals("bandwidth")) {
-								BeShareUser existing = userDataModel.getUser(user.getSessionID());
-								if (existing == null) {
-									user.setName("<unknown>");
-									existing = user;
-								}
-								existing.setBandwidthLabel(user.getBandwidthLabel());
-								existing.setBandwidthBps(user.getBandwidthBps());
-								userDataModel.updateUser(existing);
-							} else if (updatedNode.equals("fires") || updatedNode.equals("files")) {
-								BeShareUser existing = userDataModel.getUser(user.getSessionID());
-								if (existing == null) {
-									user.setName("<unknown>");
-									existing = user;
-								}
-								existing.setFirewall(user.getFirewall());
-								userDataModel.updateUser(existing);
-							} else if (updatedNode.equals("filecount")) {
-								BeShareUser existing = userDataModel.getUser(user.getSessionID());
-								if (existing == null) {
-									user.setName("<unknown>");
-									existing = user;
-								}
-								existing.setFileCount(user.getFileCount());
-								userDataModel.updateUser(existing);
+								logInformation("User #" + user.getSessionID() + " " +
+										               "(a.k.a. " + user.getName() + ") " +
+										               "is now " + user.getStatus() + ".");
 							}
 						} else if (getPathDepth(fieldName) == FILE_INFO_DEPTH && queryActive) {
 							Message fileInfo = message.getMessage(fieldName);
