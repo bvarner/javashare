@@ -16,6 +16,8 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Stack;
 
 /**
@@ -34,7 +36,7 @@ public class ChatMessagingPanel extends JPanel {
 
 	// Chat Log and Input Box
 	JTextPane chatLog;
-	ChatInputLine chatInput;
+	ChatInputLine chatInput = new ChatInputLine(25);
 
 	ChatDocument chatDoc;
 
@@ -49,6 +51,13 @@ public class ChatMessagingPanel extends JPanel {
 	Timer scrollTimer;
 	int scrollUpAdjustments;
 	int previousScrollPosition;
+
+	private WindowAdapter windowListener = new WindowAdapter() {
+		@Override
+		public void windowActivated(WindowEvent e) {
+			chatInput.requestFocus();
+		}
+	};
 
 	public ChatMessagingPanel(final JavaShareTransceiver transceiver) {
 		this(transceiver, new String[0]);
@@ -73,7 +82,6 @@ public class ChatMessagingPanel extends JPanel {
 		this.recentLines = new Stack();
 		this.lineIndex = 0;
 
-		chatInput = new ChatInputLine(25);
 		chatInput.setRequestFocusEnabled(true);
 
 		chatWithSessions.addActionListener(new ActionListener() {
@@ -311,19 +319,14 @@ public class ChatMessagingPanel extends JPanel {
 	public void addNotify() {
 		super.addNotify();
 		transceiver.addChatDocument(chatDoc);
+		SwingUtilities.getWindowAncestor(this).addWindowListener(windowListener);
 	}
 
 	@Override
 	public void removeNotify() {
 		transceiver.removeChatDocument(chatDoc);
+		SwingUtilities.getWindowAncestor(this).removeWindowListener(windowListener);
 		super.removeNotify();
-	}
-
-	/**
-	 * Has the chat line text field request focus.
-	 */
-	public void requestChatLineFocus() {
-		chatInput.requestFocus();
 	}
 
 	/**

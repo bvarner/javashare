@@ -6,7 +6,6 @@ import com.meyer.muscle.support.Rect;
 import gnu.regexp.RE;
 import gnu.regexp.REException;
 import org.beShare.data.BeShareUser;
-import org.beShare.data.MusclePreferenceReader;
 import org.beShare.data.SharedFileInfoHolder;
 import org.beShare.event.JavaShareEvent;
 import org.beShare.event.JavaShareEventListener;
@@ -17,6 +16,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -266,7 +266,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 //		}
 
 		// User Table Sorting and column widths.
-		saveUserSort = MusclePreferenceReader.getBoolean(programPrefsMessage, "userSort", false);
+//		saveUserSort = MusclePreferenceReader.getBoolean(programPrefsMessage, "userSort", false);
 //		if (saveUserSort) {
 //			chatterPanel.setUserListSortColumn(MusclePreferenceReader.getInt(programPrefsMessage, "sortUserTable", 0));
 //		}
@@ -283,12 +283,12 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 		}
 
 		// Create the sound listener.
-		soundPackChange(MusclePreferenceReader.getString(programPrefsMessage, "soundPack", "Default"));
+//		soundPackChange(MusclePreferenceReader.getString(programPrefsMessage, "soundPack", "Default"));
 
 		menuBar = null;
 		this.add(localUserInfo, BorderLayout.NORTH);
 
-		transPan = new TransferPanel(this.transceiver, programPrefsMessage);
+		transPan = new TransferPanel(this.transceiver);
 		prefsFrame.addFileTransferPrefs(programPrefsMessage, transPan);
 
 		queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
@@ -422,13 +422,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 	}
 
 	/**
-	 * calls requestChatLineFocus on the ChatPanel.
-	 */
-	protected void requestChatLineFocus() {
-		chatterPanel.requestChatLineFocus();
-	}
-
-	/**
 	 * Takes a vector of Server Names and adds them to the server list.
 	 *
 	 * @param servers A vector of server names as Strings
@@ -451,17 +444,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 			if (localUserInfo.removeServerName((String) servers.elementAt(x))) {
 				transceiver.logInformation("Removed server: " + (String) servers.elementAt(x));
 			}
-		}
-	}
-
-	/**
-	 * Sets the frame that this appPanel is a child of to contain the current server.
-	 */
-	public void updateFrameTitle() {
-		try {
-			((ShareFrame) this.getRootPane().getParent()).setTitle(
-					                                                      AppPanel.pubVersion + " @" + transceiver.getServerName());
-		} catch (Exception exc) {
 		}
 	}
 
@@ -527,7 +509,8 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 			}
 			transceiver.logError("You are diconnected from the MUSCLE server.");
 		} else if (e.getActionCommand() == "menuQuit") {
-			quitRequested();
+			Window root = SwingUtilities.getWindowAncestor(this);
+			root.dispatchEvent(new WindowEvent(root, WindowEvent.WINDOW_CLOSING));
 		} else if (e.getActionCommand() == "menuPrivate") {
 //			PrivateFrame privFrame = new PrivateFrame(this,
 //					                                         this, " ");
@@ -819,17 +802,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 			programPrefsMessage.setBoolean("sndWPat", signal);
 		} catch (Exception e) {
 		}
-	}
-
-	/**
-	 * This is called by either the window closing method, or by the Quit menu.
-	 * This is our clean-up method. We'll eventually confirm the quit if they
-	 * have file transfers in progress, and abort if they change thier mind.
-	 * For now, we're going to save our local Preferences, and then quit.
-	 */
-	public void quitRequested() {
-		savePrefs();
-		System.exit(0);
 	}
 
 	/**
@@ -1217,7 +1189,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 			case JavaShareEvent.CONNECTION_ATTEMPT: {
 				localUserInfo.setServerName(transceiver.getServerName());
 				transceiver.logInformation("Active server changed to: " + transceiver.getServerName());
-				updateFrameTitle();
 				break;
 			}
 			case JavaShareEvent.CONNECTION_DISCONNECT: {

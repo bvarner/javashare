@@ -3,7 +3,6 @@ package org.beShare.network;
 import com.meyer.muscle.message.FieldTypeMismatchException;
 import com.meyer.muscle.message.Message;
 import com.meyer.muscle.message.MessageException;
-import org.beShare.data.MusclePreferenceReader;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -198,7 +197,7 @@ public class Download extends AbstractTransfer {
 					currentFile = new File(localFileBasePath, message.getString("beshare:File Name"));
 					fileSlave = new RandomAccessFile(currentFile, "rw");
 
-					long seekto = MusclePreferenceReader.getLong(message, "beshare:StartOffset", 0);
+					long seekto = message.getLong("beshare:StartOffset", 0);
 					System.out.println("Writing to file at offset: " + seekto);
 					fileSlave.seek(seekto);
 
@@ -218,10 +217,10 @@ public class Download extends AbstractTransfer {
 
 			case TRANSFER_COMMAND_FILE_DATA: {
 				setStatus(ACTIVE);
-				try {
-					int mungeMode = MusclePreferenceReader.getInt(message, "mm", MUNGE_MODE_OFF);
-					byte[][] data = (byte[][]) message.getData("data");
+				int mungeMode = message.getInt("mm", MUNGE_MODE_OFF);
+				byte[][] data = (byte[][]) message.getData("data", new byte[0][0]);
 
+				try {
 					for (int i = 0; i < data.length; i++) {
 						switch (mungeMode) {
 							case MUNGE_MODE_XOR:
@@ -232,7 +231,8 @@ public class Download extends AbstractTransfer {
 						}
 						setFileTransfered(transferedSize + data[i].length);
 					}
-				} catch (Exception e) {
+				} catch (IOException ioe) {
+					System.err.println(ioe.toString());
 					abort();
 					setStatus(ERROR);
 				}

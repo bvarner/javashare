@@ -5,10 +5,9 @@
 */
 package org.beShare.network;
 
-import com.meyer.muscle.message.Message;
 import org.beShare.data.SharedFileInfoHolder;
 
-import javax.swing.*;
+import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -31,8 +30,6 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 
 	Timer updateTimer;
 
-	Message prefs;
-
 	String basePath;
 
 	String serverName;
@@ -42,20 +39,11 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 	 * <code>connection</code> as the interface to send the file list to, and
 	 * <code>prefsMessage</code> to read the settings from.
 	 */
-	public ShareFileMaintainer(JavaShareTransceiver connection, Message prefsMessage) {
+	public ShareFileMaintainer(JavaShareTransceiver connection) {
 		this.connection = connection;
-		this.prefs = prefsMessage;
 		fileList = new Vector();
 
-		if (prefs.hasField("autoShareDelay")) {
-			try {
-				delay = prefs.getInt("autoShareDelay") * oneSecond;
-			} catch (Exception e) {
-				delay = 300 * oneSecond;
-			}
-		} else {
-			delay = 300 * oneSecond;
-		}
+		delay = 300 * oneSecond;
 
 		updateTimer = new Timer(delay, this);
 		basePath = "";
@@ -96,14 +84,10 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 	 * Starts this bad-boy as a self-sustaining thread.
 	 */
 	public void run() {
-		if (prefs.hasField("autoShareUpdate")) {
-			try {
-				if (prefs.getBoolean("autoShareUpdate")) {
-					updateList();
-					updateTimer.start();
-				}
-			} catch (Exception e) {
-			}
+		try {
+			updateList();
+			updateTimer.start();
+		} catch (Exception e) {
 		}
 	}
 
@@ -128,32 +112,32 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 				// Empty fileList means we are
 				//	1. sharing nothing and this will execute fast,
 				//	2. Connecting to a server.
-				if (prefs.hasField("sharedPath")) {
-					String sharedPath;
-					try {
-						sharedPath = prefs.getString("sharedPath");
-						// Create a File Object for the base path.
-
-						File baseDir = new File(sharedPath);
-						// If there's a file selected, grab it's parent directory to share.
-						if (!baseDir.isDirectory()) {
-							if (baseDir.getParent() != null) {
-								baseDir = new File(baseDir.getParent());
-							} else {
-								// We have a file with no parent shared - theoretically not
-								// possible. So we'll disable sharing and bail out.
-								sharingDisabled();
-								return;
-							}
-						}
-
-						recurseDirectory(baseDir);
-						uploadList();
-						serverName = connection.getServerName();
-					} catch (Exception e) {
-						System.out.println(e.toString());
-					}
-				}
+//				if (prefs.hasField("sharedPath")) {
+//					String sharedPath;
+//					try {
+//						sharedPath = prefs.getString("sharedPath");
+//						// Create a File Object for the base path.
+//
+//						File baseDir = new File(sharedPath);
+//						// If there's a file selected, grab it's parent directory to share.
+//						if (!baseDir.isDirectory()) {
+//							if (baseDir.getParent() != null) {
+//								baseDir = new File(baseDir.getParent());
+//							} else {
+//								// We have a file with no parent shared - theoretically not
+//								// possible. So we'll disable sharing and bail out.
+//								sharingDisabled();
+//								return;
+//							}
+//						}
+//
+//						recurseDirectory(baseDir);
+//						uploadList();
+//						serverName = connection.getServerName();
+//					} catch (Exception e) {
+//						System.out.println(e.toString());
+//					}
+//				}
 			} else {
 				// In this case we have an existing fileList thats got something in it.
 				// We need to find out if it's up to date and accurate.
@@ -167,24 +151,24 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 					fileList.removeElementAt(0);
 				}
 
-				try {
-					String sharedPath = prefs.getString("sharedPath");
-					// Create a File Object.
-					File baseDir = new File(sharedPath);
-					// Make sure we have a directory shared.
-					if (!baseDir.isDirectory()) {
-						if (baseDir.getParent() != null) {
-							baseDir = new File(baseDir.getParent());
-						} else {
-							sharingDisabled();
-							return;
-						}
-					}
-
-					recurseDirectory(baseDir);
-				} catch (Exception e) {
-					System.out.println(e.toString());
-				}
+//				try {
+//					String sharedPath = prefs.getString("sharedPath");
+//					// Create a File Object.
+//					File baseDir = new File(sharedPath);
+//					// Make sure we have a directory shared.
+//					if (!baseDir.isDirectory()) {
+//						if (baseDir.getParent() != null) {
+//							baseDir = new File(baseDir.getParent());
+//						} else {
+//							sharingDisabled();
+//							return;
+//						}
+//					}
+//
+//					recurseDirectory(baseDir);
+//				} catch (Exception e) {
+//					System.out.println(e.toString());
+//				}
 
 				// Test #1, are they the same size? If not, instant update.
 				if (oldFileList.size() != fileList.size()) {
@@ -288,12 +272,12 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 				String extension = childFile.getName().substring(
 						                                                childFile.getName().lastIndexOf("."),
 						                                                childFile.getName().length());
-				if (prefs.hasField(extension)) {
-					try {
-						((SharedFileInfoHolder) fileList.elementAt(x)).setKind(prefs.getString(extension));
-					} catch (Exception e) {
-					}
-				}
+//				if (prefs.hasField(extension)) {
+//					try {
+//						((SharedFileInfoHolder) fileList.elementAt(x)).setKind(prefs.getString(extension));
+//					} catch (Exception e) {
+//					}
+//				}
 			}
 		}
 	}

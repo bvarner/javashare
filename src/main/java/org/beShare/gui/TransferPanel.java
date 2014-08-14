@@ -3,9 +3,7 @@
 */
 package org.beShare.gui;
 
-import com.meyer.muscle.message.Message;
 import org.beShare.data.BeShareUser;
-import org.beShare.data.MusclePreferenceReader;
 import org.beShare.data.SharedFileInfoHolder;
 import org.beShare.gui.prefPanels.SharePrefsListener;
 import org.beShare.gui.swingAddons.TableSorter;
@@ -57,7 +55,6 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	JButton btnRemoveDownload;
 
 	JavaShareTransceiver connection;
-	Message prefsMessage;
 
 	TransferManager transMan;
 
@@ -69,11 +66,10 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	JList lstTransfers;
 	DefaultListModel transferList;
 
-	public TransferPanel(JavaShareTransceiver connection, Message prefsMessage) {
+	public TransferPanel(JavaShareTransceiver connection) {
 		this.connection = connection;
-		this.prefsMessage = prefsMessage;
 
-		transMan = new TransferManager(connection, prefsMessage);
+		transMan = new TransferManager(connection);
 
 		typeIcons = new Hashtable();
 
@@ -83,33 +79,22 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 
 		transferSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, false, pnlQuery, pnlTransfer);
 		transferSplit.setOneTouchExpandable(true);
-		if (prefsMessage.hasField("transferSplit")) {
-			transferSplit.setDividerLocation(MusclePreferenceReader.getInt(prefsMessage, "transferSplit", 0));
-		}
 		pnlQuery.setPreferredSize(new Dimension(400, 200));
-		// setResizeWeight came in 1.2
-		try {
-			transferSplit.setResizeWeight(.80);
-		} catch (NoSuchMethodError nsme) {
-		}
+		transferSplit.setResizeWeight(.80);
 
 		this.add(transferSplit, BorderLayout.CENTER);
 
 		// Query preference stuff
-		try {
-			if (prefsMessage.hasField("querys")) {
-				Vector oldQuerys = new Vector();
-				String[] oldStrings = prefsMessage.getStrings("querys");
-				for (int x = 0; x < oldStrings.length; x++) {
-					oldQuerys.addElement(oldStrings[x]);
-				}
-				recentQueryMenu = new DropMenu("Query:", oldQuerys, 15);
-			} else {
-				recentQueryMenu = new DropMenu("Query:", 15);
-			}
-		} catch (Exception e) {
+//		if (prefsMessage.hasField("querys")) {
+//			Vector oldQuerys = new Vector();
+//			String[] oldStrings = prefsMessage.getStrings("querys");
+//			for (int x = 0; x < oldStrings.length; x++) {
+//				oldQuerys.addElement(oldStrings[x]);
+//			}
+//			recentQueryMenu = new DropMenu("Query:", oldQuerys, 15);
+//		} else {
 			recentQueryMenu = new DropMenu("Query:", 15);
-		}
+//		}
 
 		txtQuery = new JTextField("*.mp3", 12);
 		btnStartQuery = new JButton("Start Query");
@@ -195,8 +180,8 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 		pnlQuery.add(tableScroller, BorderLayout.CENTER);
 
 		// Make and start the shared file upload thread.
-		sharedFileLister = new ShareFileMaintainer(connection, prefsMessage);
-		Thread listThread = new Thread(sharedFileLister, "Mr. McFeelie");
+		sharedFileLister = new ShareFileMaintainer(connection);
+		Thread listThread = new Thread(sharedFileLister, "Mr. McFeely");
 		listThread.setPriority(Thread.MIN_PRIORITY);
 		listThread.start();
 	}
@@ -274,7 +259,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 				recentQueryMenu.addItem(txtQuery.getText());
 				recentQueryMenu.setSelectedIndex(
 						                                recentQueryMenu.getItemCount() - 1);
-				prefsMessage.setStrings("querys", recentQueryMenu.getStringItems());
+				//prefsMessage.setStrings("querys", recentQueryMenu.getStringItems());
 			}
 			resetQuery();
 		} else if (e.getSource() == btnStopQuery) {

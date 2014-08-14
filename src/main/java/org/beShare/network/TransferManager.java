@@ -15,20 +15,19 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	String baseSharedPath;
 
 	JavaShareTransceiver connection;
-	Message prefsMessage;
 
 	/**
 	 * Constructor - not much to see here, really.
 	 */
-	public TransferManager(JavaShareTransceiver connection, Message prefsMessage) {
+	public TransferManager(JavaShareTransceiver connection) {
 		this.connection = connection;
-		this.prefsMessage = prefsMessage;
+//		this.prefsMessage = prefsMessage;
 
-		try {
-			baseDownloadPath = prefsMessage.getString("downloadPath");
-		} catch (Exception e) {
-			baseDownloadPath = System.getProperty("user.home") + System.getProperty("path.Separator") + "download";
-		}
+//		try {
+//			baseDownloadPath = prefsMessage.getString("downloadPath");
+//		} catch (Exception e) {
+			baseDownloadPath = System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads";
+//		}
 
 		// Read Max Transfer Settings from prefsMessage
 		upQueue = new TransferQueue(2);

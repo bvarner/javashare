@@ -6,34 +6,24 @@
 */
 package org.beShare.gui;
 
-import com.meyer.muscle.message.Message;
-import com.meyer.muscle.message.MessageException;
-import com.meyer.muscle.support.Rect;
-import com.meyer.muscle.support.UnflattenFormatException;
 import org.beShare.data.BeShareDefaultSettings;
-import org.beShare.data.MusclePreferenceReader;
 import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ServerAutoUpdate;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.WindowConstants;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.io.DataInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 
 /**
  * MainFrame - Creates the main frame (window) for the Application mode of
  * JavaShare2.
- * <p/>
- * Last Update: 12.19.2002
  *
  * @author Bryan Varner
- * @version 1.3
  */
-public class ShareFrame extends JFrame implements WindowListener {
+public class ShareFrame extends JFrame {
 	AppPanel mainPanel;
 
 	/**
@@ -49,44 +39,15 @@ public class ShareFrame extends JFrame implements WindowListener {
 		this.setJMenuBar(new SwingMenuBar(mainPanel));
 
 		this.getContentPane().add(mainPanel);
-
-		// TODO: Remove this.
-		// Set the frames title to have the starting (default) server.
-		mainPanel.updateFrameTitle();
-
-		addWindowListener(this);
+		// TODO: Set to disposeOnClose and make sure all our other threads are Daemon.
+		this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
 		pack();
+
+		// TODO: Add a listener so that we update our title any time things change in the transceivers connection info...
 
 		// Now start the auto-update thread. Muhuhahaha.
 		ServerAutoUpdate autoUpdate = new ServerAutoUpdate(mainPanel);
 		autoUpdate.run();
-	}
-
-	/**
-	 * Whenever the window is re-activated, we send a signal for the chat line
-	 * to request focus! - There is a long chain of methods to get to it but it works.
-	 */
-	public void windowActivated(WindowEvent e) {
-		mainPanel.requestChatLineFocus();
-	}
-
-	public void windowClosed(WindowEvent e) {
-	}
-
-	public void windowClosing(WindowEvent e) {
-		mainPanel.quitRequested(); // Hehe... BeOS programmers - does look a bit familiar?
-	}
-
-	public void windowDeactivated(WindowEvent e) {
-	}
-
-	public void windowDeiconified(WindowEvent e) {
-	}
-
-	public void windowIconified(WindowEvent e) {
-	}
-
-	public void windowOpened(WindowEvent e) {
 	}
 }
