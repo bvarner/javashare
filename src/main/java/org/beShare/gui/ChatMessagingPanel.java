@@ -128,7 +128,7 @@ public class ChatMessagingPanel extends JPanel {
 						}
 
 						// Push Non-UI commands down to the Transceiver
-//						transceiver.command(chatInput.getText(), chatDoc);
+						transceiver.command(chatInput.getText(), chatDoc);
 					} else {
 						// Forces the JavaShareTransceiver to update the document appropriately.
 						ChatMessagingPanel.this.transceiver.sendChat(chatInput.getText(), chatDoc);
@@ -244,34 +244,21 @@ public class ChatMessagingPanel extends JPanel {
 			private void maybeShowPopup(MouseEvent e) {
 				if (e.isPopupTrigger()) {
 					JPopupMenu userMenu = new JPopupMenu();
-					String userName = userTable.getValueAt(
-							                                      userTable.rowAtPoint(new Point(e.getX(), e.getY())), 0).toString();
+
+					int userRow = userTable.rowAtPoint(new Point(e.getX(), e.getY()));
+					final String userName = userTable.getValueAt(userRow, 0).toString();
+
 					userMenu.add(new JMenuItem(new AbstractAction("Private Chat with " + userName) {
 						@Override
 						public void actionPerformed(ActionEvent e) {
-//                            // Fire the message for a new private chat off!
-//                            messageTarget.chatMessage(
-//                                    new ChatMessage("", "/priv "
-//                                            + e.getActionCommand().substring(18)
-//                                            , false
-//                                            , ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE
-//                                            , true
-//                                            , ""));
+							transceiver.command("/priv " + userName, chatDoc);
 						}
 					}));
 					userMenu.addSeparator();
 					userMenu.add(new JMenuItem(new AbstractAction("Watch User: " + userName) {
 						@Override
 						public void actionPerformed(ActionEvent e) {
-//                            // Watch User!!!
-//                            messageTarget.chatMessage(
-//                                    new ChatMessage("", "/watch "
-//                                            + e.getActionCommand().substring(12)
-//                                            , false
-//                                            , ChatMessage.LOG_LOCAL_USER_CHAT_MESSAGE
-//                                            , true
-//                                            , ""));
-
+							transceiver.command("/watch " + userName, chatDoc);
 						}
 					}));
 					userMenu.show(e.getComponent(), e.getX(), e.getY());

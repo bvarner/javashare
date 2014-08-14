@@ -26,8 +26,6 @@ import java.util.Vector;
  * @author Bryan Varner
  */
 public class JavaShareTransceiver implements MessageListener, StorageReflectConstants, TypeConstants {
-	public static final int startingPortNumber = 7000;
-	private int localUserPort = startingPortNumber;
 	public static final int portRange = 50;
 	private static final int ROOT_DEPTH = 0;    // root node
 	private static final int HOST_NAME_DEPTH = 1;
@@ -65,6 +63,9 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
 
 	private UserDataModel userDataModel = new UserDataModel();
+
+	public static final int startingPortNumber = 7000;
+	private int localUserPort = startingPortNumber;
 
 	/**
 	 * Default contstructor - Creates a new BeShare muscle interface
@@ -174,6 +175,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	public void startQuery(String sessionExpression, String fileExpression) {
 		stopQuery(); // If you can't figure out why we would do this... <sigh>
 		queryActive = true;
+
 		// This path string tells muscled which files it should inform us about.
 		// Since we may be basing part of our query on the session ID, we use
 		// the full path string for this query.
@@ -194,10 +196,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		Message ping = new Message(PR_COMMAND_PING);
 		ping.setInt("count", pingCount);
 		beShareTransceiver.sendOutgoingMessage(ping);
-
-		//_queryActive = true;
-		//_sessionIDRegExp.SetPattern(sessionIDRegExp);
-		//_fileNameRegExp.SetPattern(fileNameRegExp);
 	}
 
 	/**
@@ -326,7 +324,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 
 	// TODO: Implement This method!
 	public void command(final String command, final ChatDocument chatDoc) {
-		System.out.println(" TODO: Execute " + command);
+		System.out.println("Execute Command: " + command);
+
+
+
 	}
 
 	/**
@@ -360,7 +361,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * @param port      the port they use for filesharing.
 	 * @param installid the unique identifier for this install.
 	 */
-	public void setLocalUserName(final String uName, final int port, final long installid) {
+	private void setLocalUserName(final String uName, final int port, final long installid) {
 		this.localUserName = uName;
 		this.localUserPort = port;
 		this.localUserInstallId = installid;
