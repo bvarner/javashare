@@ -142,13 +142,15 @@ public class DropMenu<T> extends JPanel {
 		}
 
 		dataList.add(o);
+		final int itemIndex = dataList.indexOf(o);
 		JMenuItem tempItem = new JMenuItem(o.toString());
 		tempItem.addActionListener(
 			new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
+					selected = itemIndex;
 					// Transmute the incoming Item ActionEvent to originate from us.
-					ActionEvent dropMenuEvent = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, e.getActionCommand());
+					ActionEvent dropMenuEvent = new ActionEvent(DropMenu.this, ActionEvent.ACTION_PERFORMED, e.getActionCommand());
 					for (ActionListener listener : actionListeners) {
 						listener.actionPerformed(dropMenuEvent);
 					}
