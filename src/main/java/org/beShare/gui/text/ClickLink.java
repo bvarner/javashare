@@ -1,25 +1,25 @@
 package org.beShare.gui.text;
 
 public class ClickLink {
-	int 	s;
-	int 	e;
-	String 	location;
-	
-	public ClickLink(int start, int end, String URL){
+	int s;
+	int e;
+	String location;
+
+	public ClickLink(int start, int end, String URL) {
 		s = start;
 		e = end;
 		location = URL;
 	}
-	
-	public int getStart(){
+
+	public int getStart() {
 		return s;
 	}
-	
-	public int getEnd(){
+
+	public int getEnd() {
 		return e;
 	}
-	
-	public String getURL(){
+
+	public String getURL() {
 		return location;
 	}
 }

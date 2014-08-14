@@ -3,223 +3,164 @@ package org.beShare.gui.text;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import java.awt.*;
-import java.util.Vector;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
-	StyledString - Part of the chat text display over-haul
-	
-	This class keeps two vectors. One of Strings, the other of styles. All
-	Strings added to an instance of this class must have an accompanying style.
-	Simple vector navigation is included in the external interface. It should be
-	enough for any situation we'll encounter.
-	
-	Last Update: 4.23.2002
-	
-	@author Bryan Varner
-	@version 1.0
-*/
+ * StyledString is a wrapper around a LinkedHashMap, which retains object insertion order.
+ *
+ * @author Bryan Varner
+ */
 
-public class StyledString {
-	Vector		stringVect;
-	Vector 		styleVect;
-	
-	SimpleAttributeSet plainStyle;
-	SimpleAttributeSet localNameStyle;
-	SimpleAttributeSet systemMessageStyle;
-	SimpleAttributeSet userNameStyle;
-	SimpleAttributeSet localSpeakStyle;
-	SimpleAttributeSet userActionStyle;
-	SimpleAttributeSet privateStyle;
-	SimpleAttributeSet sysErrStyle;
-	SimpleAttributeSet urlStyle;
-	
-	public static final int SYSTEM_MESSAGE_STYLE = 0;
-	public static final int PLAIN_MESSAGE_STYLE = 1;
-	public static final int REMOTE_USER_NAME_STYLE = 2;
-	public static final int LOCAL_USER_NAME_STYLE = 3;
-	public static final int LOCAL_USER_NAME_SAID_STYLE = 4;
-	public static final int USER_ACTION_STYLE = 5;
-	public static final int PRIVATE_MESSAGE_STYLE = 6;
-	public static final int SYSTEM_ERROR_STYLE = 7;
-	public static final int WATCH_PATTERN_STYLE = 7;
-	public static final int URL_STYLE = 8;
-	
-	int currentElement;
-	
-	/**
-		Our lovely Constructor. This will initialize all our styles, and create
-		the empty Vectors.
-	*/
-	public StyledString(){
-		stringVect = new Vector();
-		styleVect = new Vector();
-		
-		currentElement = 0;
-		
-		plainStyle = new SimpleAttributeSet();
-		StyleConstants.setBold(plainStyle, false);
-		StyleConstants.setItalic(plainStyle, false);
-		StyleConstants.setForeground(plainStyle, Color.black);
-		
-		localNameStyle = new SimpleAttributeSet(plainStyle);
-		StyleConstants.setForeground(localNameStyle, new Color(255, 128, 0));
-		
-		systemMessageStyle = new SimpleAttributeSet(plainStyle);
-		StyleConstants.setBold(systemMessageStyle, true);
-		StyleConstants.setForeground(systemMessageStyle, new Color(0, 0, 128));
-		
-		userNameStyle = new SimpleAttributeSet(plainStyle);
-		StyleConstants.setBold(userNameStyle, true);
-		
-		localSpeakStyle = new SimpleAttributeSet(userNameStyle);
-		StyleConstants.setForeground(localSpeakStyle, new Color(0, 128, 0));
-		
-		userActionStyle = new SimpleAttributeSet(userNameStyle);
-		StyleConstants.setForeground(userActionStyle, new Color(128, 0 , 128));
-		
-		privateStyle = new SimpleAttributeSet(plainStyle);
-		StyleConstants.setForeground(privateStyle, new Color(0, 128, 128));
-		
-		sysErrStyle = new SimpleAttributeSet(systemMessageStyle);
-		StyleConstants.setForeground(sysErrStyle, new Color(128, 0, 0));
-		
-		urlStyle = new SimpleAttributeSet(plainStyle);
-		StyleConstants.setForeground(urlStyle, new Color(0, 0, 255));
-		StyleConstants.setUnderline(urlStyle, true);
+public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
+	public static final Map<String, SimpleAttributeSet> KEYWORD_STYLES =
+			Collections.synchronizedMap(new HashMap<String, SimpleAttributeSet>());
+
+	public static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
+	public static final SimpleAttributeSet LOCAL = new SimpleAttributeSet();
+	public static final SimpleAttributeSet SYSTEM_MESSAGE = new SimpleAttributeSet();
+	public static final SimpleAttributeSet REMOTE_USER = new SimpleAttributeSet();
+	public static final SimpleAttributeSet USER_MENTIONED = new SimpleAttributeSet();
+	public static final SimpleAttributeSet USER_ACTION = new SimpleAttributeSet();
+	public static final SimpleAttributeSet PRIVATE = new SimpleAttributeSet();
+	public static final SimpleAttributeSet SYSTEM_ERROR = new SimpleAttributeSet();
+	public static final SimpleAttributeSet WATCH_PATTERN = new SimpleAttributeSet();
+	public static final SimpleAttributeSet URI = new SimpleAttributeSet();
+
+	static {
+		StyleConstants.setBold(PLAIN, false);
+		StyleConstants.setItalic(PLAIN, false);
+		StyleConstants.setForeground(PLAIN, new Color(0, 0, 0));
+
+		StyleConstants.setForeground(USER_MENTIONED, new Color(255, 128, 0));
+
+		StyleConstants.setBold(SYSTEM_MESSAGE, true);
+		StyleConstants.setForeground(SYSTEM_MESSAGE, new Color(0, 0, 128));
+
+		StyleConstants.setBold(REMOTE_USER, true);
+		StyleConstants.setForeground(REMOTE_USER, new Color(0, 0, 0));
+
+		StyleConstants.setForeground(LOCAL, new Color(0, 128, 0));
+
+		StyleConstants.setForeground(USER_ACTION, new Color(128, 0, 128));
+
+		StyleConstants.setForeground(PRIVATE, new Color(0, 128, 128));
+
+		StyleConstants.setForeground(SYSTEM_ERROR, new Color(255, 60, 0));
+		StyleConstants.setForeground(WATCH_PATTERN, new Color(128, 0, 0));
+
+		StyleConstants.setForeground(URI, new Color(0, 0, 255));
+		StyleConstants.setUnderline(URI, true);
+
+		KEYWORD_STYLES.put(".*http://.*", URI);
+		KEYWORD_STYLES.put(".*beshare:.*", URI);
+		KEYWORD_STYLES.put(".*audio://.*", URI);
 	}
-	
+
 	/**
-		Adds <code>text</code> with <code>type</code> of style. See the public
-		constants in this class for valid <code>type</code>s.
-	*/
-	public void addStyledText(String text, int type){
-		stringVect.addElement(text);
-		switch(type){
-			case SYSTEM_MESSAGE_STYLE:{
-				styleVect.addElement(systemMessageStyle);
-			} break;
-			
-			case PLAIN_MESSAGE_STYLE:{
-				styleVect.addElement(plainStyle);
-			} break;
-			
-			case REMOTE_USER_NAME_STYLE:{
-				styleVect.addElement(userNameStyle);
-			} break;
-			
-			case LOCAL_USER_NAME_STYLE:{
-				styleVect.addElement(localSpeakStyle);
-			} break;
-			
-			case USER_ACTION_STYLE:{
-				styleVect.addElement(userActionStyle);
-			}break;
-			
-			case PRIVATE_MESSAGE_STYLE:{
-				styleVect.addElement(privateStyle);
-			}break;
-			
-			case SYSTEM_ERROR_STYLE:{
-				styleVect.addElement(sysErrStyle);
-			}break;
-			
-			case LOCAL_USER_NAME_SAID_STYLE:{
-				styleVect.addElement(localNameStyle);
-			}break;
-			
-			case URL_STYLE:{
-				styleVect.addElement(urlStyle);
-			}break;
-		}
-		currentElement = 0;
-		return;
-	}
-	
-	public void addStyledText(String text, SimpleAttributeSet attribs){
-		stringVect.addElement(text);
-		styleVect.addElement(attribs);
-		currentElement = 0;
-	}
-	
-	/**
-		Appends all strings and styles from <code>copy</code> to this
-		StyledString.
-	*/
-	public void concatStyledText(StyledString copy){
-		copy.moveFirstSegment();
-		for (int x = 0; x < copy.getSegmentCount(); x++){
-			stringVect.addElement(copy.getStringSegment());
-			styleVect.addElement(copy.getAttributeSet());
-			copy.moveNextSegment();
-		}
-		currentElement = 0;
-	}
-	
-	/**
-		Gets the current string segment. By default, the constructor sets this
-		to the first segment.
-		
-		@return The String if there is one, "" if not.
-	*/
-	public String getStringSegment(){
-		try {
-			return (String)stringVect.elementAt(currentElement);
-		} catch (ArrayIndexOutOfBoundsException aioobe) {
-			return "";
-		}
-	}
-	
-	/**
-		Repositions both Vectors to get the first segment with the next call to
-		either's get function.
-	*/
-	public void moveFirstSegment(){
-		currentElement = 0;
-	}
-	
-	/**
-		Gets the SimpleAttributeSet for the current String.
-	*/
-	public SimpleAttributeSet getAttributeSet(){
-		try {
-			return (SimpleAttributeSet)styleVect.elementAt(currentElement);
-		} catch (ArrayIndexOutOfBoundsException aioobe) {
-			return null;
-		}
-	}
-	
-	/**
-		Returns true if the current segment is styled as a link.
-	*/
-	public boolean isURLStyle() {
-		if (styleVect.elementAt(currentElement).toString().equals(urlStyle.toString())){
-			return true;
-		} else {
-			return false;
-		}
-	}
-	
-	/**
-		Moves the vector to the next segment.
-		Careful here, it is possible to move beyond the end of the vector.
-	*/
-	public void moveNextSegment(){
-		currentElement++;
-	}
-	
-	/**
-	 * Moves the vector to the previous segment.
-	 * Careful here, you can re-wind out bounds.
+	 * Constructs a StyledString given the text run (to parse for keywords) and a default style for the message.
+	 *
+	 * @param text
+	 * @param defaultStyle
 	 */
-	public void movePreviousSegment(){
-		currentElement--;
+	public StyledString(String text, final SimpleAttributeSet defaultStyle) {
+		super();
+		append(text, defaultStyle);
 	}
-	
+
 	/**
-		Returns the size of the Vectors. Useful for iteration from an external
-		source.
-	*/
-	public int getSegmentCount(){
-		return stringVect.size();
+	 * Appends the given text in a PLAIN format.
+	 *
+	 * @param text
+	 * @return This, for chaining.
+	 */
+	public StyledString append(final String text) {
+		return append(text, PLAIN);
+	}
+
+	/**
+	 * Appends the given text with the default given format. Keywords are given the proper treatment.
+	 *
+	 * @param text
+	 * @param defaultStyle
+	 * @return This, for chaining.
+	 */
+	public StyledString append(final String text, SimpleAttributeSet defaultStyle) {
+		boolean containsKeyword = false;
+		for (String keyword : KEYWORD_STYLES.keySet()) {
+			if (text.matches(keyword)) {
+				containsKeyword = true;
+				break;
+			}
+		}
+
+		// Shortcut if we can by putting the entire run in one style.
+		if (!containsKeyword) {
+			put(text, defaultStyle);
+		} else {
+			// Begin the long process of tokenizing and determining where to colorize.
+			String[] tokens = text.split("\\s+");
+
+			for (int i = 0; i < tokens.length; i++) {
+				boolean keywordMatched = false;
+
+				for (Map.Entry<String, SimpleAttributeSet> keyword : KEYWORD_STYLES.entrySet()) {
+					if (tokens[i].matches(keyword.getKey())) {
+						// Add the current token to the string with the proper style.
+						put(tokens[i], keyword.getValue());
+						keywordMatched = true;
+
+						// URL styles use special handling.
+						// To make it easier for the Document to parse the StyledString, we always add two URI
+						// entries. One for the URI, one for the label.
+						// If there is no explicit label, we create one using the URI and duplicate the data.
+						if (keyword.getValue().equals(URI)) {
+							int labelend = i;
+							int labelstart = i + 1;
+
+							// Does the next token (if there is one) start with a '['?
+							if ((labelstart < tokens.length) && tokens[labelstart].startsWith("[")) {
+								for (int j = labelstart; j < tokens.length; j++) {
+									if (tokens[j].endsWith("]")) {
+										labelend = j;
+										break;
+									}
+								}
+							} else {
+								labelend = i;
+							}
+
+							// No end of label found. Duplicate the URI text as the label.
+							if (labelend == i) {
+								put(tokens[i], keyword.getValue());
+							} else {
+								// Combine all tokens between labelstart and labelend into a single space separated string'
+								StringBuilder label = new StringBuilder();
+								for (int j = labelstart; j < labelend; j++) {
+									label.append(tokens[j]).append(" ");
+								}
+								// trim excess space, then trim the [] from around the label.
+								put(label.toString().trim().substring(1, label.length() - 2), keyword.getValue());
+
+								// Move the current 'i' pointer to labelend, so we'll start with the default style on the next non-label token.
+								i = labelend;
+							}
+						}
+						break;
+					}
+				}
+
+				if (!keywordMatched) {
+					if (i + 1 < tokens.length) {
+						put(tokens[i] + " ", defaultStyle);
+					} else {
+						put(tokens[i], defaultStyle);
+					}
+				}
+			}
+		}
+		return this;
 	}
 }

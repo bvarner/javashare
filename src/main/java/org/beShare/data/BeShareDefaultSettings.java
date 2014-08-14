@@ -3,30 +3,31 @@ package org.beShare.data;
 import com.meyer.muscle.message.Message;
 
 /**
- *  Description of the Class
+ * Description of the Class
  *
- * @author     Administrator
- * @created    March 8, 2002
+ * @author Administrator
+ * @created March 8, 2002
  */
 public class BeShareDefaultSettings {
 	/**
-	 *  Description of the Method
+	 * Description of the Method
 	 *
-	 * @return    a Message contianing the default settings.
+	 * @return a Message contianing the default settings.
 	 */
 	public final static Message createDefaultSettings() {
-		Message   defaults  = new Message();
+		Message defaults = new Message();
 
-        long installID = (((long)(Math.random() * Integer.MAX_VALUE)) << 32)|((long)(Math.random() * Integer.MAX_VALUE));
-        defaults.setLong("installid", installID);
+		long installID =
+				(((long) (Math.random() * Integer.MAX_VALUE)) << 32) | ((long) (Math.random() * Integer.MAX_VALUE));
+		defaults.setLong("installid", installID);
 
-        String[]  servers   = {""};
+		String[] servers = {""};
 		defaults.setStrings("servers", servers);
 		defaults.setInt("curServer", 0);
-		String[]  users     = {"Binky"};
+		String[] users = {"Binky"};
 		defaults.setStrings("nicks", users);
 		defaults.setInt("curNick", 0);
-		String[]  status    = {"Here", "Away"};
+		String[] status = {"Here", "Away"};
 		defaults.setStrings("status", status);
 		defaults.setInt("curStatus", 0);
 		defaults.setBoolean("isAway", false);
@@ -45,39 +46,41 @@ public class BeShareDefaultSettings {
 		defaults.setBoolean("dispWarn", true);
 		defaults.setBoolean("dispError", true);
 		defaults.setBoolean("tryNativeLaF", true);
-        defaults.setString("soundPack", "Default");
+		defaults.setString("soundPack", "Default");
 		defaults.setBoolean("sndUName", true);
 		defaults.setBoolean("sndWPat", true);
 		defaults.setBoolean("prvWSnd", true);
 		defaults.setBoolean("prvMSnd", true);
-		defaults.setBoolean("miniBrowser", true);
 		defaults.setInt("chatDivider", 500);
-		
+
 		// Added during File-sharing implementation.
 		defaults.setBoolean("fileSharingEnabled", true);
 		defaults.setString("downloadPath", System.getProperty("user.dir") + "/Download");
 		defaults.setString("sharedPath", System.getProperty("user.dir") + "/Shared");
 		defaults.setBoolean("autoShareUpdate", true);
 		defaults.setInt("autoShareDelay", 300);
-		
+
 		defaults.setInt("transferDivider", 100);
 		defaults.setInt("chatTransDivider", 250);
-		defaults.setInt("shareUpdateDelay", 120);	// Seconds between shared file updates.
-		
+		defaults.setInt("shareUpdateDelay", 120);    // Seconds between shared file updates.
+
 		// The default File Extension to Mime-type mapping database!
 		String[] extensions = {".html .htm", ".txt", ".rtf", // Text types.
-								".gif", ".xbm", ".xpm", ".png", ".jpeg .jpg .jpe", ".tiff .tif", ".g3f", ".pict", ".ppm", ".pgm", ".pbm", ".pnm", ".bmp", ".pcd", //Image Types
-								".au .snd", ".aif .aiff .aifc", ".wav", ".mpa .mp2 .mp3", ".mid .midi", ".mod", // Audio Types
-								".mpeg .mpg .mpe", ".qt .mov", ".avi", // Video Types
-								".eps .ps", ".pdf", ".gtar", ".tar", ".zip", ".hqx", ".sit .sea", ".lha", ".lzx", ".bin .uu", ".exe", ".js .mocha", ".pl", ".so" // Application types.
-							  };
+		                       ".gif", ".xbm", ".xpm", ".png", ".jpeg .jpg .jpe", ".tiff .tif", ".g3f", ".pict", ".ppm",
+		                       ".pgm", ".pbm", ".pnm", ".bmp", ".pcd", //Image Types
+		                       ".au .snd", ".aif .aiff .aifc", ".wav", ".mpa .mp2 .mp3", ".mid .midi", ".mod",
+		                       // Audio Types
+		                       ".mpeg .mpg .mpe", ".qt .mov", ".avi", // Video Types
+		                       ".eps .ps", ".pdf", ".gtar", ".tar", ".zip", ".hqx", ".sit .sea", ".lha", ".lzx",
+		                       ".bin .uu", ".exe", ".js .mocha", ".pl", ".so" // Application types.
+		};
 		// Text Types
 		defaults.setStrings("fileExtensions", extensions);
 		defaults.setString(".html .htm", "text/html");
 		defaults.setString(".txt", "text/plain");
 		defaults.setString(".rtf", "text/richtext");
 		defaults.setString(".cpp .h .java .c .cc", "text/x-source-code");
-		
+
 		// Image types.
 		defaults.setString(".gif", "image/gif");
 		defaults.setString(".xbm", "image/x-xbitmap");
@@ -93,7 +96,7 @@ public class BeShareDefaultSettings {
 		defaults.setString(".pnm", "image/x-portable-anymap");
 		defaults.setString(".bmp", "image/x-ms-bmp");
 		defaults.setString(".pcd", "image/x-photo-cd");
-		
+
 		// AudioTypes.
 		defaults.setString(".au .snd", "audio/basic");
 		defaults.setString(".aif .aiff .aifc", "audio/x-aiff");
@@ -101,12 +104,12 @@ public class BeShareDefaultSettings {
 		defaults.setString(".mpa .mp2 .mp3", "audio/x-mpeg");
 		defaults.setString(".mid .midi", "audio/midi");
 		defaults.setString(".mod", "audio/x-mod");
-		
+
 		// Video Types
 		defaults.setString(".mpeg .mpg .mpe", "video/mpeg");
 		defaults.setString(".qt .mov", "video/quicktime");
 		defaults.setString(".avi", "video/x-msvideo");
-		
+
 		//Application Types
 		defaults.setString(".eps .ps", "application/postscript");
 		defaults.setString(".rtf", "application/rtf");
@@ -124,19 +127,19 @@ public class BeShareDefaultSettings {
 		defaults.setString(".pl", "application/x-perl");
 		defaults.setString(".pkg", "application/x-scode-UPkg");
 		defaults.setString(".so", "");
-		
+
 		// Added during File-sharing implementation.
 		defaults.setBoolean("fileSharingEnabled", true);
 		defaults.setString("downloadPath", System.getProperty("user.dir") + "/Downloads");
 		defaults.setString("sharedPath", System.getProperty("user.dir") + "/Shared");
 		defaults.setBoolean("autoShareUpdate", true);
 		defaults.setInt("autoShareDelay", 300);
-		
+
 		defaults.setInt("transferDivider", 100);
 		defaults.setInt("chatTransDivider", 250);
-		defaults.setInt("shareUpdateDelay", 120);	// Seconds between shared file updates.
+		defaults.setInt("shareUpdateDelay", 120);    // Seconds between shared file updates.
 
-        return defaults;
+		return defaults;
 	}
 }
 

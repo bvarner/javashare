@@ -10,25 +10,25 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class DisplayPrefs extends PreferencePanel implements ActionListener {
-	JavaSharePrefListener 	target;
-	Message					prefs;
-	
-	JCheckBox				chkTimeStamps;
-	JCheckBox				chkUserEvents;
-	JCheckBox				chkUploads;
-	JCheckBox				chkChat;
-	JCheckBox				chkPrivMessages;
-	JCheckBox				chkInfoMessages;
-	JCheckBox				chkWarningMessages;
-	JCheckBox				chkErrorMessages;
-	
-	public DisplayPrefs(JavaSharePrefListener prefHandler, Message prefMessage){
+	JavaSharePrefListener target;
+	Message prefs;
+
+	JCheckBox chkTimeStamps;
+	JCheckBox chkUserEvents;
+	JCheckBox chkUploads;
+	JCheckBox chkChat;
+	JCheckBox chkPrivMessages;
+	JCheckBox chkInfoMessages;
+	JCheckBox chkWarningMessages;
+	JCheckBox chkErrorMessages;
+
+	public DisplayPrefs(JavaSharePrefListener prefHandler, Message prefMessage) {
 		super();
 		//super(new GridLayout(8, 1, 3, 3));
-		
+
 		target = prefHandler;
 		prefs = prefMessage;
-		
+
 		chkTimeStamps = new JCheckBox("Time Stamps", true);
 		chkUserEvents = new JCheckBox("User Events", true);
 		chkUploads = new JCheckBox("Uploads", true);
@@ -37,7 +37,7 @@ public class DisplayPrefs extends PreferencePanel implements ActionListener {
 		chkInfoMessages = new JCheckBox("Info Messages", true);
 		chkWarningMessages = new JCheckBox("Warning Messages", true);
 		chkErrorMessages = new JCheckBox("Error Messages", true);
-		
+
 		firstComponent();
 		add(chkTimeStamps);
 		add(chkUserEvents);
@@ -48,59 +48,59 @@ public class DisplayPrefs extends PreferencePanel implements ActionListener {
 		add(chkWarningMessages);
 		add(chkErrorMessages);
 		lastComponent();
-		
+
 		setBorder(BorderFactory.createTitledBorder("Display Preferences"));
-		
+
 		// Set the values from the Message.
-		if (prefs.hasField("dispTime")){
-			try{
+		if (prefs.hasField("dispTime")) {
+			try {
 				chkTimeStamps.setSelected(prefs.getBoolean("dispTime"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispUser")){
-			try{
+		if (prefs.hasField("dispUser")) {
+			try {
 				chkUserEvents.setSelected(prefs.getBoolean("dispUser"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispUpload")){
-			try{
+		if (prefs.hasField("dispUpload")) {
+			try {
 				chkUploads.setSelected(prefs.getBoolean("dispUpload"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispChat")){
-			try{
+		if (prefs.hasField("dispChat")) {
+			try {
 				chkChat.setSelected(prefs.getBoolean("dispChat"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispPriv")){
-			try{
+		if (prefs.hasField("dispPriv")) {
+			try {
 				chkPrivMessages.setSelected(prefs.getBoolean("dispPriv"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispInfo")){
-			try{
+		if (prefs.hasField("dispInfo")) {
+			try {
 				chkInfoMessages.setSelected(prefs.getBoolean("dispInfo"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispWarn")){
-			try{
+		if (prefs.hasField("dispWarn")) {
+			try {
 				chkWarningMessages.setSelected(prefs.getBoolean("dispWarn"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		if (prefs.hasField("dispError")){
-			try{
+		if (prefs.hasField("dispError")) {
+			try {
 				chkErrorMessages.setSelected(prefs.getBoolean("dispError"));
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
-		
+
 		// Register the listener.
 		chkTimeStamps.addActionListener(this);
 		chkUserEvents.addActionListener(this);
@@ -111,9 +111,9 @@ public class DisplayPrefs extends PreferencePanel implements ActionListener {
 		chkWarningMessages.addActionListener(this);
 		chkErrorMessages.addActionListener(this);
 	}
-	
-	public void actionPerformed(ActionEvent ae){
-		if (ae.getSource() == chkTimeStamps){
+
+	public void actionPerformed(ActionEvent ae) {
+		if (ae.getSource() == chkTimeStamps) {
 			target.timeStampDisplayChange(chkTimeStamps.isSelected());
 		} else if (ae.getSource() == chkUserEvents) {
 			target.userEventDisplayChange(chkUserEvents.isSelected());

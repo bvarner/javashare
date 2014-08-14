@@ -1,155 +1,171 @@
-/*
-ChangeLog
-	1.1 - Added appendString(StyledString) as part of the chat logging
-		overhaul.
-	
-	1.1.5 - Removed all SimpleAttributeSets from this class, moved all style
-		handling into StyledString.
-	1.2 - Added Vector of ClickLinks and supporting methods.
-		clearURLs(), textClicked() and add Anything with a URL style into
-		the linkVect.
-	2.0 - Changed from BeShareChatDocument to the more appropriate ChatDocument.
-		Cleaned up code and formatting.
-*/
 package org.beShare.gui;
 
+import org.beShare.data.BeShareUser;
+import org.beShare.data.FilteredUserDataModel;
 import org.beShare.gui.text.ClickLink;
 import org.beShare.gui.text.StyledString;
 
-import javax.swing.*;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
-import java.util.Vector;
+import javax.swing.text.SimpleAttributeSet;
+import java.awt.*;
+import java.net.URI;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
-	<p>ChatDocument - Defines the document styles for the Chat log.
-	
-	@author Bryan Varner
-	@version 2.0 - 7.15.2002
-*/
+ * <p>ChatDocument - Defines the document styles for the Chat log.
+ *
+ * @author Bryan Varner
+ */
 public class ChatDocument extends DefaultStyledDocument {
-	Vector linkVect;
-	String currentURL;
-	boolean useMiniBrowser;
-	
-	/**
-	 * A class to launch the browser in a separate thread from the 'GUI Thread'
-	 */
-	class browserThread extends org.beShare.gui.swingAddons.SwingWorker {
-		public Object construct() {
-			try{
-				HttpLinkViewer.createHttpLinkViewer(currentURL);
-			} catch (Exception e){
-				JOptionPane.showMessageDialog(null,
-					"An Error occured while opening the URL. THis page cannot be displayed.",
-					"Mini-Browser Error", JOptionPane.ERROR_MESSAGE);
-			}
-			return null; // Not Used
-		}
-	}
-	
-	
-	/**
-	 *Default Constructor. Calls the super, and creates our vector of links.
-	 */
-	public ChatDocument(){
-		super();
-		linkVect = new Vector();
-		currentURL = "";
-		useMiniBrowser = false;
-	}
-	
+	List<ClickLink> links = new ArrayList<>();
+	FilteredUserDataModel filteredUserDataModel;
+	SimpleDateFormat sdf = new SimpleDateFormat("'['M/dd HH:mm'] '");
+
 	/**
 	 * Construct a new Document, and set weather or not to use the MiniBrowser.
 	 */
-	public ChatDocument(boolean mb){
-		this();
-		useMiniBrowser = mb;
+	public ChatDocument(FilteredUserDataModel filteredUserDataModel) {
+		super();
+		this.filteredUserDataModel = filteredUserDataModel;
 	}
-	
-	/**
-	 *	<p>Appends the StyledString <code>textString</code> to the end of the
-	 *	document with the sytles that were defined when text was added to <code>
-	 *	textString</code>.
-	 *	
-	 *	@param textString the StyledString to add to this document.
-	 */
-	public void appendString(StyledString textString){
-		textString.moveFirstSegment();
-		for (int x = 0; x < textString.getSegmentCount(); x++){
-			try{
-				if(textString.isURLStyle()){
-					// Check for URL [label] syntax...
-					if (textString.getStringSegment().endsWith("]")){
-						String url = textString.getStringSegment().substring(0, textString.getStringSegment().indexOf("[") - 1);
-						linkVect.addElement(new ClickLink(getLength(), getLength() + url.length(), url));
-						insertString(getLength(),
-								textString.getStringSegment().substring(textString.getStringSegment().indexOf("[") + 1,
-																		textString.getStringSegment().indexOf("]")),
-								textString.getAttributeSet());
-					} else {
-						// Insert the full URL...
-						linkVect.addElement(new ClickLink(getLength(), getLength() +
-								textString.getStringSegment().length(),
-								textString.getStringSegment().trim()));
-						insertString(getLength(), textString.getStringSegment(),
-									textString.getAttributeSet());
-					}
+
+	public void addSystemMessage(final String message) {
+		appendString(new StyledString("System: ", StyledString.SYSTEM_MESSAGE).append(message));
+	}
+
+	public void addWarningMessage(final String message) {
+		appendString(new StyledString("Warning: ", StyledString.SYSTEM_ERROR).append(message));
+	}
+
+	public void addErrorMessage(final String message) {
+		appendString(new StyledString("Error: ", StyledString.SYSTEM_ERROR).append(message, StyledString.SYSTEM_ERROR));
+	}
+
+	public void addRemoteChatMessage(final String message, final String sourceSessionId, final boolean isPrivate) {
+		// Only do anything if we're not filtering, or we contain this sessionId.
+		if (!filteredUserDataModel.isFiltering() || filteredUserDataModel.getSessionIds().contains(sourceSessionId)) {
+			SimpleAttributeSet remoteStyle = StyledString.PLAIN;
+			if (isPrivate) {
+				remoteStyle = StyledString.PRIVATE;
+			}
+
+			StyledString styledString;
+			// Find the real user and do the things...
+			BeShareUser remoteUser = filteredUserDataModel.getUserDataModel().getUser(sourceSessionId);
+			if (remoteUser != null) {
+				// /me handling.
+				if (message.toLowerCase().startsWith("/me")) {
+					styledString =
+							new StyledString("Action: ", StyledString.USER_ACTION).append(remoteUser.getName()).append(message.substring((3)), remoteStyle);
 				} else {
-					insertString(getLength(), textString.getStringSegment(),
-									textString.getAttributeSet());
+					styledString =
+							new StyledString("(" + sourceSessionId + ") " + remoteUser.getName() + ": ", StyledString.REMOTE_USER).append(message, remoteStyle);
 				}
-				textString.moveNextSegment();
-			} catch (Exception e){System.err.println(e.toString());}
+			} else {
+				styledString =
+						new StyledString("Could not find user for sessionId : " + sourceSessionId + " when posting remote chat.", StyledString.SYSTEM_ERROR);
+			}
+
+			appendString(styledString);
 		}
 	}
-	
-	
+
+	public void addEchoChatMessage(final String message, final boolean isPrivate, final String localSessionId, final String localUserName) {
+		StyledString styledString;
+		SimpleAttributeSet defaultStyle = StyledString.PLAIN;
+		if (isPrivate) {
+			defaultStyle = StyledString.PRIVATE;
+		}
+
+		if (message.toLowerCase().startsWith("/me")) {
+			styledString =
+					new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(message.substring(3), defaultStyle);
+		} else {
+			styledString =
+					new StyledString("(" + localSessionId + ") " + localUserName + ": ", StyledString.LOCAL).append(message, defaultStyle);
+		}
+		appendString(styledString);
+	}
+
 	/**
-	 *	Clears the array of URLS.
+	 * <p>Appends the StyledString <code>textString</code> to the end of the
+	 * document with the sytles that were defined when text was added to <code>
+	 * textString</code>.
+	 *
+	 * @param textString the StyledString to add to this document.
 	 */
-	public void clearURLs(){
-		while (! linkVect.isEmpty()){
-			linkVect.removeElementAt(0);
+	private void appendString(StyledString textString) {
+		writeLock();
+		try {
+			if (true) { // Log timestamps.
+				insertString(getLength(), sdf.format(new Date()), StyledString.REMOTE_USER);
+			}
+
+
+			Iterator<Map.Entry<String, SimpleAttributeSet>> segments = textString.entrySet().iterator();
+			while (segments.hasNext()) {
+				Map.Entry<String, SimpleAttributeSet> segment = segments.next();
+				if (segment.getValue().equals(StyledString.URI) && segments.hasNext()) {
+					Map.Entry<String, SimpleAttributeSet> labelSegment = segments.next();
+
+					// The current 'segment' is the URL, add a ClickLink definition for the size of the label.
+					links.add(new ClickLink(getLength(), getLength() + labelSegment.getKey().length(), segment.getKey()));
+
+					insertString(getLength(), labelSegment.getKey(), segment.getValue());
+				} else {
+					insertString(getLength(), segment.getKey(), segment.getValue());
+				}
+			}
+
+			insertString(getLength(), "\n", StyledString.PLAIN);
+		} catch (Exception ex) {
+			System.out.println("Error occurred updating ChatDocument: " + ex);
+		} finally {
+			writeUnlock();
 		}
 	}
-	
-	/**
-	 * Sets the minibrowser usage status.
-	 */
-	public void setUseMiniBrowser(boolean use){
-		useMiniBrowser = use;
+
+	public FilteredUserDataModel getFilteredUserDataModel() {
+		return filteredUserDataModel;
 	}
-	
+
 	/**
-	 *	Checks to see if <code>clickLocation</code> is within the any of the
-	 *	ranges for any links within the vector of <code>ClickLinks</code>
+	 * Empties the document
 	 */
-	public void textClicked(int clickLocation){
-		for (int linkCounter = 0; linkCounter < linkVect.size(); linkCounter++){
-			ClickLink tempLink = (ClickLink)linkVect.elementAt(linkCounter);
-			if ((clickLocation > (tempLink.getStart() - 1)) 
-				&& (clickLocation < (tempLink.getEnd() + 1)))
-			{
-				if (tempLink.getURL().startsWith("http://")){
-					currentURL = tempLink.getURL().trim();
-					// This might not compile on non-macOS Systems.
-					if (useMiniBrowser){
-						browserThread webBrowser = new browserThread();
-						webBrowser.start();
-					} else {
-//						try{
-//							com.apple.mrj.MRJFileUtils.openURL(currentURL);
-//						} catch (Exception e){ // No such Method... no such class def... catch them all!
-//						}
+	public void clear() {
+		writeLock();
+		try {
+			links.clear();
+			replace(0, getLength(), "", null);
+		} catch (BadLocationException e) {
+			e.printStackTrace();
+		} finally {
+			writeUnlock();
+		}
+	}
+
+	/**
+	 * Checks to see if <code>clickLocation</code> is within the any of the
+	 * ranges for any links within the vector of <code>ClickLinks</code>
+	 */
+	public void textClicked(int clickLocation) {
+		for (ClickLink link : links) {
+			if ((clickLocation > (link.getStart() - 1)) && (clickLocation < (link.getEnd() + 1))) {
+				if (link.getURL().startsWith("http://")) {
+					if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+						try {
+							Desktop.getDesktop().browse(new URI(link.getURL().trim()));
+						} catch (Exception ex) {
+							System.err.println("Failed to browse to URL: " + link.getURL().trim());
+						}
 					}
-				} else if (tempLink.getURL().startsWith("audio://")){
-					currentURL = tempLink.getURL().trim();
-//					try{
-//						com.apple.mrj.MRJFileUtils.openURL(currentURL);
-//					} catch (Exception e){ // No such Method... no such class def... catch them all!
-//					}
 				}
-				// Check for other types.
 			}
 		}
 	}

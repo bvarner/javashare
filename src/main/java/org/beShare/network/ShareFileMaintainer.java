@@ -22,108 +22,109 @@ import java.util.Vector;
  * @version 1.0 - 8.2.2002
  */
 public class ShareFileMaintainer implements Runnable, ActionListener {
-	int		delay;
-	int 	oneSecond = 1000; // millisecond multiplier.
-	
-	Vector	fileList;
-	
+	int delay;
+	int oneSecond = 1000; // millisecond multiplier.
+
+	Vector fileList;
+
 	JavaShareTransceiver connection;
-	
-	Timer	updateTimer;
-	
-	Message	prefs;
-	
-	String	basePath;
-	
+
+	Timer updateTimer;
+
+	Message prefs;
+
+	String basePath;
+
 	String serverName;
-	
+
 	/**
 	 * Create a new ShareFileMaintainer with <code>delay</code> seconds between automatic updates,
-	 * <code>connection</code> as the interface to send the file list to, and 
+	 * <code>connection</code> as the interface to send the file list to, and
 	 * <code>prefsMessage</code> to read the settings from.
 	 */
-	public ShareFileMaintainer(JavaShareTransceiver connection, Message prefsMessage){
+	public ShareFileMaintainer(JavaShareTransceiver connection, Message prefsMessage) {
 		this.connection = connection;
 		this.prefs = prefsMessage;
 		fileList = new Vector();
-		
-		if(prefs.hasField("autoShareDelay")){
-			try{
+
+		if (prefs.hasField("autoShareDelay")) {
+			try {
 				delay = prefs.getInt("autoShareDelay") * oneSecond;
-			} catch (Exception e){
+			} catch (Exception e) {
 				delay = 300 * oneSecond;
 			}
 		} else {
 			delay = 300 * oneSecond;
 		}
-		
+
 		updateTimer = new Timer(delay, this);
 		basePath = "";
 	}
-	
-	/**
-	 * Sets the delay between updates.
-	 */
-	public void setDelay(int delay){
-		updateTimer.stop();
-		
-		if (delay > 0){
-			this.delay = delay * oneSecond;
-			updateTimer.setDelay(this.delay);
-		}
-		
-		if (delay > 0)
-			updateTimer.start();
-	}
-	
+
 	/**
 	 * Gets the delay between updates.
 	 */
-	public int getDelay(){
+	public int getDelay() {
 		return delay / oneSecond;
 	}
-	
+
+	/**
+	 * Sets the delay between updates.
+	 */
+	public void setDelay(int delay) {
+		updateTimer.stop();
+
+		if (delay > 0) {
+			this.delay = delay * oneSecond;
+			updateTimer.setDelay(this.delay);
+		}
+
+		if (delay > 0) {
+			updateTimer.start();
+		}
+	}
+
 	/**
 	 * sets the share folder. This will force an update.
 	 */
-	public void setSharePath(String path){
+	public void setSharePath(String path) {
 		basePath = path;
 		updateList();
 	}
-	
+
 	/**
 	 * Starts this bad-boy as a self-sustaining thread.
 	 */
-	public void run(){
-		if(prefs.hasField("autoShareUpdate")){
+	public void run() {
+		if (prefs.hasField("autoShareUpdate")) {
 			try {
-				if (prefs.getBoolean("autoShareUpdate")){
+				if (prefs.getBoolean("autoShareUpdate")) {
 					updateList();
 					updateTimer.start();
 				}
-			} catch (Exception e){
+			} catch (Exception e) {
 			}
 		}
 	}
-	
+
 	/**
 	 * Implements the action-listener. The only thing this should receive events from is it's
 	 * own timer. It's possible to get events from an outside source. Any event will force an
 	 * update of the current file list.
 	 */
-	public void actionPerformed(ActionEvent e){
+	public void actionPerformed(ActionEvent e) {
 		updateList();
 	}
-	
+
 	/**
 	 * Updates the file-list. The compare operations here are probably over-commented.
 	 * Here's the jist, it rebuilds the file vector if it needs to, and dosen't if it's
 	 * not necessary. It uses several tests to decide what to do.
 	 */
-	public void updateList(){
+	public void updateList() {
 		// If we aren't connected, why bother?
-		if (connection.isConnected()){
-			if (fileList.size() == 0){
+		if (connection.isConnected()) {
+			if (fileList.size() == 0) {
 				// Empty fileList means we are
 				//	1. sharing nothing and this will execute fast,
 				//	2. Connecting to a server.
@@ -132,10 +133,10 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 					try {
 						sharedPath = prefs.getString("sharedPath");
 						// Create a File Object for the base path.
-						
+
 						File baseDir = new File(sharedPath);
 						// If there's a file selected, grab it's parent directory to share.
-						if (! baseDir.isDirectory()) {
+						if (!baseDir.isDirectory()) {
 							if (baseDir.getParent() != null) {
 								baseDir = new File(baseDir.getParent());
 							} else {
@@ -145,11 +146,11 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 								return;
 							}
 						}
-						
+
 						recurseDirectory(baseDir);
 						uploadList();
 						serverName = connection.getServerName();
-					} catch (Exception e){
+					} catch (Exception e) {
 						System.out.println(e.toString());
 					}
 				}
@@ -158,20 +159,20 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 				// We need to find out if it's up to date and accurate.
 				// This copy block is ugly, but it is 1.1 safe.
 				Vector oldFileList = new Vector();
-				for (int x = 0; x < fileList.size(); x++){
+				for (int x = 0; x < fileList.size(); x++) {
 					oldFileList.addElement(fileList.elementAt(x));
 				}
-				
-				while (fileList.size() > 0){
+
+				while (fileList.size() > 0) {
 					fileList.removeElementAt(0);
 				}
-				
+
 				try {
 					String sharedPath = prefs.getString("sharedPath");
 					// Create a File Object.
 					File baseDir = new File(sharedPath);
 					// Make sure we have a directory shared.
-					if (! baseDir.isDirectory()) {
+					if (!baseDir.isDirectory()) {
 						if (baseDir.getParent() != null) {
 							baseDir = new File(baseDir.getParent());
 						} else {
@@ -179,19 +180,19 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 							return;
 						}
 					}
-					
+
 					recurseDirectory(baseDir);
-				} catch (Exception e){
+				} catch (Exception e) {
 					System.out.println(e.toString());
 				}
-				
+
 				// Test #1, are they the same size? If not, instant update.
-				if (oldFileList.size() != fileList.size()){
+				if (oldFileList.size() != fileList.size()) {
 					uploadList();
-				} else if (!serverName.equals(connection.getServerName())){
+				} else if (!serverName.equals(connection.getServerName())) {
 					// Our connection has changed servers. Clear out all our list data,
 					// (we need to rebuild it), then force an update immediately.
-					while (fileList.size() > 0){
+					while (fileList.size() > 0) {
 						fileList.removeElementAt(0);
 					}
 					serverName = connection.getServerName();
@@ -200,8 +201,8 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 					// We couldn't find any cosmetic changes, so now it's off to the races.
 					// Item by item comparison of the contents of the vectors.
 					int x = 0;
-					while (x < fileList.size()){
-						if (!((SharedFileInfoHolder)fileList.elementAt(x)).equals(((SharedFileInfoHolder)fileList.elementAt(x)))){
+					while (x < fileList.size()) {
+						if (!((SharedFileInfoHolder) fileList.elementAt(x)).equals(((SharedFileInfoHolder) fileList.elementAt(x)))) {
 							break;
 						}
 						x++;
@@ -221,76 +222,76 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 			serverName = "";
 		}
 	}
-	
+
 	/**
 	 * This clears the list, and disables the sharing.
 	 */
-	public void sharingDisabled(){
+	public void sharingDisabled() {
 		setDelay(-1);
 		serverName = "";
-		while (fileList.size() > 0){
+		while (fileList.size() > 0) {
 			fileList.removeElementAt(0);
 		}
 		connection.uploadFileListing(fileList);
 		connection.removeFileListing();
 	}
-	
+
 	/**
 	 * Clears the internal list, forces a server change,
 	 * and re-uploads the file list.
 	 */
-	public void resetShareList(){
+	public void resetShareList() {
 		connection.removeFileListing();
 		serverName = "";
-		while (fileList.size() > 0){
+		while (fileList.size() > 0) {
 			fileList.removeElementAt(0);
 		}
 		updateList();
 	}
-	
-	
+
+
 	/**
 	 * Sets mime-types, and sends an upload command to tranto.
 	 */
-	private void uploadList(){
+	private void uploadList() {
 		setMimeTypes();
 		connection.uploadFileListing(fileList);
 	}
-	
+
 	/**
 	 * Recursively calls itself to populate the class member fileList with entries.
 	 */
-	private void recurseDirectory(File baseDir){
+	private void recurseDirectory(File baseDir) {
 		String[] childList = baseDir.list();
-		for(int x = 0; x < childList.length; x++){
+		for (int x = 0; x < childList.length; x++) {
 			File childFile = new File(baseDir, childList[x]);
-			if (childFile.isDirectory()){
+			if (childFile.isDirectory()) {
 				recurseDirectory(childFile);
 			} else {
 				fileList.addElement(new SharedFileInfoHolder(childFile));
 			}
 		}
 	}
-	
+
 	/**
 	 * Sets mime-types for files in the fileList vector.
 	 * Does a live match against the current mime-type database.
 	 */
-	private void setMimeTypes(){
-		for (int x = 0; x < fileList.size(); x++){
+	private void setMimeTypes() {
+		for (int x = 0; x < fileList.size(); x++) {
 			// set the Mime-type of that last element you added.
 			// Find the .extension of the file.
-			SharedFileInfoHolder childFile = (SharedFileInfoHolder)fileList.elementAt(x);
-			
+			SharedFileInfoHolder childFile = (SharedFileInfoHolder) fileList.elementAt(x);
+
 			int extensionOffset = childFile.getName().lastIndexOf(".");
 			if (extensionOffset > -1) {
 				String extension = childFile.getName().substring(
-						childFile.getName().lastIndexOf("."),
-						childFile.getName().length());
-				if (prefs.hasField(extension)){
+						                                                childFile.getName().lastIndexOf("."),
+						                                                childFile.getName().length());
+				if (prefs.hasField(extension)) {
 					try {
-						((SharedFileInfoHolder)fileList.elementAt(x)).setKind(prefs.getString(extension));
-					} catch (Exception e){
+						((SharedFileInfoHolder) fileList.elementAt(x)).setKind(prefs.getString(extension));
+					} catch (Exception e) {
 					}
 				}
 			}

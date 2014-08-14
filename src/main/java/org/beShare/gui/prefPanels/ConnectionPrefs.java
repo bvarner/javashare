@@ -16,31 +16,31 @@ import java.awt.event.FocusListener;
  * Connection Preferences panel.
  */
 public class ConnectionPrefs extends JPanel implements ActionListener,
-														FocusListener {
-	JavaSharePrefListener 	target;
-	Message					prefs;
-	
-	JTextField				txtServer;
-	JTextField				txtPort;
-	
-	JComboBox				cmboBandwidth;
-	
-	public ConnectionPrefs(JavaSharePrefListener prefHandler, Message prefMessage){
+		                                                       FocusListener {
+	JavaSharePrefListener target;
+	Message prefs;
+
+	JTextField txtServer;
+	JTextField txtPort;
+
+	JComboBox cmboBandwidth;
+
+	public ConnectionPrefs(JavaSharePrefListener prefHandler, Message prefMessage) {
 		super(new GridLayout(7, 1, 3, 3));
-		
+
 		target = prefHandler;
 		prefs = prefMessage;
-		
+
 		String[] bwLabels = {"300 Baud", "14.4 kbps", "28.8 kbps", "33.6 kbps",
-								"57.6 kbps", "ISDN-64k", "ISDN-128k", "DSL",
-								"Cable", "T1", "T3", "OC-3", "OC-12"};
+		                     "57.6 kbps", "ISDN-64k", "ISDN-128k", "DSL",
+		                     "Cable", "T1", "T3", "OC-3", "OC-12"};
 		cmboBandwidth = new JComboBox(bwLabels);
 		JLabel conSpeedLbl = new JLabel("Upload Bandwidth: ");
 		JPanel conSpeedPanel = new JPanel();
 		conSpeedPanel.setLayout(new BoxLayout(conSpeedPanel, BoxLayout.X_AXIS));
 		conSpeedPanel.add(conSpeedLbl);
 		conSpeedPanel.add(cmboBandwidth);
-		
+
 		JPanel socksSvrPanel = new JPanel(new BorderLayout());
 		JPanel socksPrtPanel = new JPanel(new BorderLayout());
 		txtServer = new JTextField();
@@ -49,32 +49,31 @@ public class ConnectionPrefs extends JPanel implements ActionListener,
 		socksSvrPanel.add(txtServer, BorderLayout.CENTER);
 		socksPrtPanel.add(new JLabel("Socks Port: "), BorderLayout.WEST);
 		socksPrtPanel.add(txtPort, BorderLayout.CENTER);
-		
+
 		add(conSpeedPanel);
 		add(socksSvrPanel);
 		add(socksPrtPanel);
 		add(new JLabel("SOCKS Settings take effect", JLabel.CENTER));
 		add(new JLabel("next time you run JavaShare2", JLabel.CENTER));
-		
+
 		setBorder(BorderFactory.createTitledBorder("Connection Preferences"));
-		
+
 		// Set the values from the Message.
-		if(prefs.hasField("uploadBw")){
-			try{
+		if (prefs.hasField("uploadBw")) {
+			try {
 				cmboBandwidth.setSelectedIndex(prefs.getInt("uploadBw"));
-			} catch (Exception e){
+			} catch (Exception e) {
 				cmboBandwidth.setSelectedIndex(4);
 			}
 		}
-		
-		if(prefs.hasField("socksServer") && prefs.hasField("socksPort"))
-		{
-			try{
+
+		if (prefs.hasField("socksServer") && prefs.hasField("socksPort")) {
+			try {
 				txtServer.setText(prefs.getString("socksServer"));
-				if(prefs.getInt("socksPort") != -1){
+				if (prefs.getInt("socksPort") != -1) {
 					txtPort.setText("" + prefs.getInt("socksPort"));
 				}
-			} catch (Exception e){
+			} catch (Exception e) {
 				txtServer.setText("");
 				txtPort.setText("");
 			}
@@ -82,17 +81,17 @@ public class ConnectionPrefs extends JPanel implements ActionListener,
 			txtServer.setText("");
 			txtPort.setText("");
 		}
-		
+
 		// Register the listener.
 		cmboBandwidth.addActionListener(this);
 		txtServer.addFocusListener(this);
 		txtPort.addFocusListener(this);
 	}
-	
-	public void actionPerformed(ActionEvent ae){
-		if (ae.getSource() == cmboBandwidth){
+
+	public void actionPerformed(ActionEvent ae) {
+		if (ae.getSource() == cmboBandwidth) {
 			int speed = 0;
-			switch(cmboBandwidth.getSelectedIndex()){
+			switch (cmboBandwidth.getSelectedIndex()) {
 				case 0:
 					speed = 300;
 					break;
@@ -136,19 +135,19 @@ public class ConnectionPrefs extends JPanel implements ActionListener,
 					speed = 0;
 					break;
 			}
-			String label = (String)cmboBandwidth.getItemAt(
-									cmboBandwidth.getSelectedIndex());
+			String label = (String) cmboBandwidth.getItemAt(
+					                                               cmboBandwidth.getSelectedIndex());
 			target.bandwidthChange(label, speed, cmboBandwidth.getSelectedIndex());
 		}
 	}
-	
-	public void focusGained(FocusEvent e){
+
+	public void focusGained(FocusEvent e) {
 	}
-	
-	public void focusLost(FocusEvent e){
-		try{
+
+	public void focusLost(FocusEvent e) {
+		try {
 			target.socksChange(txtServer.getText(), Integer.parseInt(txtPort.getText()));
-		} catch (NumberFormatException nfe){
+		} catch (NumberFormatException nfe) {
 			target.socksChange(txtServer.getText(), -1);
 		}
 	}

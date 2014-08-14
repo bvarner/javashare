@@ -4,6 +4,7 @@
 package org.beShare.data;
 
 import java.io.File;
+
 /**
  * Holds data and provides convience methods for maintaining data on
  * the files that are shared.
@@ -12,113 +13,113 @@ import java.io.File;
  * @version 1.0 - 8.2.2002
  */
 public class SharedFileInfoHolder {
-	String	fileName;
-	long	sizeInBytes;
-	String	fileKind;
-	String	fullPath;
-	String	sessionID;
-	
+	String fileName;
+	long sizeInBytes;
+	String fileKind;
+	String fullPath;
+	String sessionID;
+
 	/**
 	 * Default constructor, initializes stuff.
 	 */
-	public SharedFileInfoHolder(){
+	public SharedFileInfoHolder() {
 		fileName = "";
 		sizeInBytes = 0;
 		fullPath = "";
 		fileKind = "";
 		sessionID = "";
 	}
-	
+
 	/**
 	 * Constructor, takes a file and pre-fills everything except the mime-type.
 	 */
-	public SharedFileInfoHolder(File infoTarget){
+	public SharedFileInfoHolder(File infoTarget) {
 		fileName = infoTarget.getName();
 		sizeInBytes = infoTarget.length();
 		fullPath = infoTarget.getParent();
 		fileKind = "";
 		sessionID = "";
 	}
-	
-	/**
-	 * Sets the file name.
-	 */
-	public void setName(String name){
-		fileName = name;
-	}
-	
+
 	/**
 	 * Retreives the file name
 	 */
-	public String getName(){
+	public String getName() {
 		return fileName;
 	}
-	
+
 	/**
-	 * Sets the file size.
+	 * Sets the file name.
 	 */
-	public void setSize(long size){
-		sizeInBytes = size;
+	public void setName(String name) {
+		fileName = name;
 	}
-	
+
 	/**
 	 * Finds the file size
 	 */
-	public long getSize(){
+	public long getSize() {
 		return sizeInBytes;
 	}
-	
+
 	/**
-	 * Sets the file kind.
+	 * Sets the file size.
 	 */
-	public void setKind(String kind){
-		fileKind = kind;
+	public void setSize(long size) {
+		sizeInBytes = size;
 	}
-	
+
 	/**
 	 * Gets the file kind (mime-type).
 	 */
-	public String getKind(){
+	public String getKind() {
 		return fileKind;
 	}
-	
+
 	/**
-	 * Sets the files local path.
+	 * Sets the file kind.
 	 */
-	public void setPath(String path){
-		fullPath = path;
+	public void setKind(String kind) {
+		fileKind = kind;
 	}
-	
+
 	/**
 	 * Retreives the files local path.
 	 */
-	public String getPath(){
+	public String getPath() {
 		return fullPath;
 	}
-	
-	public void setSessionID(String session){
-		this.sessionID = session;
+
+	/**
+	 * Sets the files local path.
+	 */
+	public void setPath(String path) {
+		fullPath = path;
 	}
-	
-	public String getSessionID(){
+
+	public String getSessionID() {
 		return sessionID;
 	}
-	
+
+	public void setSessionID(String session) {
+		this.sessionID = session;
+	}
+
 	/**
 	 * Returns true if sfh is data-wise identical to this object.
 	 */
-	public boolean equals(SharedFileInfoHolder sfh){
+	public boolean equals(SharedFileInfoHolder sfh) {
 		return (fileKind.equals(sfh.getKind()) &&
-				fileName.equals(sfh.getName()) &&
-				fullPath.equals(sfh.getPath()) &&
-				sizeInBytes == sfh.getSize() &&
-				sessionID.equals(sfh.getSessionID()));
+				        fileName.equals(sfh.getName()) &&
+				        fullPath.equals(sfh.getPath()) &&
+				        sizeInBytes == sfh.getSize() &&
+				        sessionID.equals(sfh.getSessionID()));
 	}
-	
+
 	/**
 	 * Returns a string representation of the file.
 	 */
-	public String toString(){
+	public String toString() {
 		return "[" + fileName + "] - " + fileKind + " - " + fullPath + " - Size: " + sizeInBytes + " - SessionID: " + sessionID;
 	}
 }
