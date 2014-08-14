@@ -5,14 +5,24 @@
 */
 package org.beShare.gui;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.Action;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>DropMenu - A class that constructs a BeShare style Button/Menu combo.
@@ -21,42 +31,26 @@ import java.util.Vector;
  * <p>When you add items to the vector, They are added to the menu.
  * <p/>
  * <p>The interface is similar to that of a JComboBox, but is more limited.
- * <p/>
- * <p>Class Started: 2-08-2002
- * <p>Last Update: 6-04-2002
  *
  * @author Bryan Varner
- * @version 2.0
  */
 
-public class DropMenu extends JPanel implements ActionListener {
+public class DropMenu<T> extends JPanel {
 	private JButton button;
 	private JPopupMenu menu;
-	private Vector dataList;
+	private List<T> dataList;
+
 	private int selected = -1;
 	private int maxSize = 50;
-	private ActionListener actionTarget;
+
+	private List<ActionListener> actionListeners = new ArrayList<>();
 
 	/**
 	 * Default Constructor
 	 * Default DropMenus have a maximum number of 50 elements in the menu.
 	 */
 	public DropMenu() {
-		super();
-		this.setLayout(new GridLayout(1, 1, 0, 0));
-		button = new JButton();
-		button.setHorizontalTextPosition(SwingConstants.LEADING);
-		button.setIcon(AppPanel.loadImage("Images/DownArrow.gif", this));
-		button.setMargin(new Insets(2, 2, 2, 2));
-		MouseListener popupListener = new PopupListener();
-		button.addMouseListener(popupListener);
-
-		menu = new JPopupMenu();
-
-		dataList = new Vector();
-		actionTarget = null;
-
-		this.add(button);
+		this("");
 	}
 
 	/**
@@ -64,9 +58,8 @@ public class DropMenu extends JPanel implements ActionListener {
 	 *
 	 * @param label The Label for the DropMenu button.
 	 */
-	public DropMenu(String label) {
-		this();
-		button.setText(label);
+	public DropMenu(final String label) {
+		this(label, 50);
 	}
 
 	/**
@@ -75,9 +68,8 @@ public class DropMenu extends JPanel implements ActionListener {
 	 * @param label The Label for the DropMenu button.
 	 * @param max   The maximum number of items in the menu
 	 */
-	public DropMenu(String label, int max) {
-		this(label);
-		maxSize = max;
+	public DropMenu(final String label, final int max) {
+		this(label, new ArrayList<T>(), max);
 	}
 
 	/**
@@ -87,13 +79,24 @@ public class DropMenu extends JPanel implements ActionListener {
 	 * @param content A vector containing the contents of the menu.
 	 *                Contents are listed by the toString() method.
 	 */
-	public DropMenu(String label, Vector content, int max) {
-		this(label, max);
-		dataList = content;
-		for (int x = 0; x < dataList.size() && x < max; x++) {
-			JMenuItem tempItem = new JMenuItem(dataList.elementAt(x).toString());
-			tempItem.addActionListener(this);
-			menu.add(tempItem);
+	public DropMenu(final String label, List<T> content, final int maxSize) {
+		super();
+		this.maxSize = maxSize;
+		this.dataList = content;
+
+		this.setLayout(new GridLayout(1, 1, 0, 0));
+		button = new JButton(label);
+		button.setHorizontalTextPosition(SwingConstants.LEADING);
+		button.setIcon(new ImageIcon(getClass().getClassLoader().getResource("Images/DownArrow.gif")));
+		button.setMargin(new Insets(2, 2, 2, 2));
+		MouseListener popupListener = new PopupListener();
+		button.addMouseListener(popupListener);
+
+		menu = new JPopupMenu();
+		this.add(button);
+
+		for (T item : dataList) {
+			addItem(item);
 		}
 	}
 
@@ -127,21 +130,31 @@ public class DropMenu extends JPanel implements ActionListener {
 	 * @param o An Object to be added to the list.
 	 * @return <code>true</code> if the object is added, <code>false</code> if not.
 	 */
-	public boolean addItem(Object o) {
+	public boolean addItem(T o) {
 		// Filter through the list looking for duplicates.
-		for (int x = 0; x < dataList.size(); x++) {
-			if (dataList.elementAt(x).toString().toUpperCase().equals(
-					                                                         o.toString().toUpperCase())) {
-				return false;
-			}
+		if (dataList.contains(o)) {
+			return false;
 		}
+
 		// make sure we're within size.
 		if (dataList.size() >= maxSize) {
-			removeItem(dataList.elementAt(0));
+			removeItem(dataList.get(0));
 		}
-		dataList.addElement(o);
+
+		dataList.add(o);
 		JMenuItem tempItem = new JMenuItem(o.toString());
-		tempItem.addActionListener(this);
+		tempItem.addActionListener(
+			new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// Transmute the incoming Item ActionEvent to originate from us.
+					ActionEvent dropMenuEvent = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, e.getActionCommand());
+					for (ActionListener listener : actionListeners) {
+						listener.actionPerformed(dropMenuEvent);
+					}
+				}
+			}
+		);
 		menu.add(tempItem);
 		return true;
 	}
@@ -152,17 +165,13 @@ public class DropMenu extends JPanel implements ActionListener {
 	 * @param o The Object to be removed.
 	 * @return <code>true</code> if the object is found, <code>false<code> if not.
 	 */
-	public boolean removeItem(Object o) {
-		boolean found = false;
-		for (int x = 0; x < dataList.size(); x++) {
-			if (dataList.elementAt(x).toString().toUpperCase().equals(
-					                                                         o.toString().toUpperCase())) {
-				dataList.removeElementAt(x);
-				menu.remove(x);
-				found = true;
-			}
+	public boolean removeItem(T o) {
+		int index = dataList.indexOf(o);
+		if (index > -1) {
+			dataList.remove(index);
+			menu.remove(index);
 		}
-		return found;
+		return index > -1;
 	}
 
 	/**
@@ -171,8 +180,8 @@ public class DropMenu extends JPanel implements ActionListener {
 	 * @param i The index of the object to return.
 	 * @return The Object at index <code>i</code>
 	 */
-	public Object getItemAt(int i) {
-		return dataList.elementAt(i);
+	public T getItemAt(int i) {
+		return dataList.get(i);
 	}
 
 	/**
@@ -180,8 +189,8 @@ public class DropMenu extends JPanel implements ActionListener {
 	 *
 	 * @return An Object of the selected item.
 	 */
-	public Object getSelectedItem() {
-		return dataList.elementAt(selected);
+	public T getSelectedItem() {
+		return dataList.get(selected);
 	}
 
 	/**
@@ -218,7 +227,16 @@ public class DropMenu extends JPanel implements ActionListener {
 	 *          will be sent to.
 	 */
 	public void addActionListener(ActionListener a) {
-		actionTarget = a;
+		actionListeners.add(a);
+	}
+
+	/**
+	 * Removes an ActionListener.
+	 *
+	 * @param a
+	 */
+	public void removeActionListener(ActionListener a) {
+		actionListeners.remove(a);
 	}
 
 	/**
@@ -257,7 +275,7 @@ public class DropMenu extends JPanel implements ActionListener {
 	/**
 	 * Returns the vector containing the list of items in the menu.
 	 */
-	public Vector getItems() {
+	public List<T> getItems() {
 		return dataList;
 	}
 
@@ -267,23 +285,9 @@ public class DropMenu extends JPanel implements ActionListener {
 	public String[] getStringItems() {
 		String[] stringList = new String[dataList.size()];
 		for (int x = 0; x < dataList.size(); x++) {
-			stringList[x] = dataList.elementAt(x).toString();
+			stringList[x] = dataList.get(x).toString();
 		}
 		return stringList;
-	}
-
-	/**
-	 * Implements an ActionListener interface for receiving messages.
-	 */
-	public void actionPerformed(ActionEvent e) {
-		for (int x = 0; x < dataList.size(); x++) {
-			if (e.getActionCommand().equals(dataList.elementAt(x).toString())) {
-				selected = x;
-				actionTarget.actionPerformed(new ActionEvent(this
-						                                            , ActionEvent.ACTION_PERFORMED, dataList.elementAt(x).toString()));
-				return;
-			}
-		}
 	}
 
 	/**
@@ -302,13 +306,11 @@ public class DropMenu extends JPanel implements ActionListener {
 	 */
 	class PopupListener extends MouseAdapter {
 		public void mousePressed(MouseEvent e) {
-			menu.show(e.getComponent(), button.getX(), button.getY()
-					                                           + button.getHeight());
+			menu.show(e.getComponent(), button.getX(), button.getY() + button.getHeight());
 		}
 
 		public void mouseReleased(MouseEvent e) {
-			menu.show(e.getComponent(), button.getX(), button.getY()
-					                                           + button.getHeight());
+			menu.show(e.getComponent(), button.getX(), button.getY() + button.getHeight());
 		}
 	}
 }
