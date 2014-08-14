@@ -59,9 +59,12 @@ public class ChatDocument extends DefaultStyledDocument {
 			// Find the real user and do the things...
 			BeShareUser remoteUser = filteredUserDataModel.getUserDataModel().getUser(sourceSessionId);
 			if (remoteUser != null) {
-				// /me handling.
-				if (message.toLowerCase().startsWith("/me ")) {
-					styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(remoteUser.getName()).append(message.substring((4)), remoteStyle);
+				// /me & /action replacement.
+				String lowerFirstToken = message.split(" ")[0].trim().toLowerCase();
+				if (lowerFirstToken.equals("/me")) {
+					styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(remoteUser.getName()).append(" " + message.substring((4)), remoteStyle);
+				} else if (lowerFirstToken.equals("/action")) {
+					styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(remoteUser.getName()).append(" " + message.substring((8)), remoteStyle);
 				} else {
 					styledString = new StyledString("(" + sourceSessionId + ") " + remoteUser.getName() + ": ", StyledString.REMOTE_USER).append(message, remoteStyle);
 				}
@@ -81,12 +84,13 @@ public class ChatDocument extends DefaultStyledDocument {
 			defaultStyle = StyledString.PRIVATE;
 		}
 
-		if (message.toLowerCase().startsWith("/me ")) {
-			styledString =
-					new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(message.substring(4), defaultStyle);
+		String lowerFirstToken = message.split(" ")[0].trim().toLowerCase();
+		if (lowerFirstToken.equals("/me")) {
+			styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(" " + message.substring((4)), defaultStyle);
+		} else if (lowerFirstToken.equals("/action")) {
+			styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(" " + message.substring((8)), defaultStyle);
 		} else {
-			styledString =
-					new StyledString("(" + localSessionId + ") " + localUserName + ": ", StyledString.LOCAL).append(message, defaultStyle);
+			styledString = new StyledString("(" + localSessionId + ") " + localUserName + ": ", StyledString.LOCAL).append(message, defaultStyle);
 		}
 		appendString(styledString);
 	}

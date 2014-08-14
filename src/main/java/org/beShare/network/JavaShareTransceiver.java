@@ -305,17 +305,41 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 */
 	public void command(final String command, final ChatDocument chatDoc) {
 		String lowerCommand = command.toLowerCase().trim();
-		if (lowerCommand.startsWith("/me ")) {
+		if (lowerCommand.startsWith("/me ") || lowerCommand.startsWith("/action ")) {
 			sendChat(command, chatDoc);
 		} else if (lowerCommand.startsWith("/priv")) {
 			// TODO: Implement me.
 			System.out.println("New Private Frame to [" + command.substring(5).trim() + "]");
+		} else if (lowerCommand.startsWith("/msg")) {
+			// TODO: Implement me.
+			System.out.println("New private chat message to [" + command.substring(5).trim() + "]");
 		} else if (lowerCommand.equalsIgnoreCase("/connect")) {
 			connect();
 		} else if (lowerCommand.equalsIgnoreCase("/disconnect")) {
 			disconnect();
 		} else if (lowerCommand.equalsIgnoreCase("/clear")) {
 			chatDoc.clear();
+		} else if (lowerCommand.equalsIgnoreCase("/away")) {
+			// TODO: Set the status to the 'away' message.
+		} else if (lowerCommand.startsWith("/awaymsg")) {
+			// TODO: Create / set the auto-away-status
+			//logInformation("Auto-away message set to " + message);
+		} else if (lowerCommand.startsWith("/alias")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/unalias")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/watch")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/unwatch")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/ping")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/ping")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/ping")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/ping")) {
+			// TODO: Implement
 		}
 	}
 
@@ -631,7 +655,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 								user.setInstallID(userNameNode.getLong("installid"));
 							}
 							if (userNameNode.hasField("port", B_INT32_TYPE)) {
-								System.out.println(fieldName + " Port: " + userNameNode.getInt("port"));
 								user.setPort(userNameNode.getInt("port"));
 							}
 							if (userNameNode.hasField("bot", B_BOOL_TYPE)) {
@@ -666,6 +689,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							if (userNameNode.hasField("filecount", B_INT32_TYPE)) {
 								user.setFileCount(userNameNode.getInt("filecount"));
 							}
+
 							userDataModel.updateUser(user);
 
 							if (updatedNode.equals("name")) {
@@ -697,6 +721,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 
 							Thread.yield(); // Force the query to play nice.
 
+							// TODO: Transfer query bits.
 							// transferPanel.addResult(holder);
 						} // FILE_INFO_DEPTH
 					} // B_MESSAGE_TYPE
