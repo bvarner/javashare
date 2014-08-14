@@ -13,6 +13,7 @@ import org.beShare.event.JavaShareEvent;
 import org.beShare.event.JavaShareEventListener;
 import org.beShare.gui.AppPanel;
 import org.beShare.gui.ChatDocument;
+import org.beShare.gui.text.StyledString;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -324,6 +325,11 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 
 	// TODO: Implement This method!
 	public void command(final String command, final ChatDocument chatDoc) {
+		if (command.toLowerCase().startsWith("/me ")) {
+			sendChat(command, chatDoc);
+			return;
+		}
+
 		System.out.println("Execute Command: " + command);
 
 
@@ -362,6 +368,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * @param installid the unique identifier for this install.
 	 */
 	private void setLocalUserName(final String uName, final int port, final long installid) {
+		if (this.localUserName != null) {
+			StyledString.KEYWORD_STYLES.remove(".*" + this.localUserName + ".*");
+		}
+
 		this.localUserName = uName;
 		this.localUserPort = port;
 		this.localUserInstallId = installid;
@@ -375,6 +385,8 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			nameMessage.setString("version_num", "v" + AppPanel.buildVersion);
 			setDataNodeValue("beshare/name", nameMessage);
 		}
+
+		StyledString.KEYWORD_STYLES.put(".*" + this.localUserName + ".*", StyledString.USER_MENTIONED);
 		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.LOCAL_USER_NAME));
 	}
 

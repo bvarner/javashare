@@ -24,8 +24,11 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 
@@ -42,7 +45,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 
 	public static final String AutoUpdateURL = "http://beshare.tycomsystems.com/servers.txt";
 
-	private static Hashtable imageCache = new Hashtable();
+	private static Map<String, ImageIcon> imageCache = Collections.synchronizedMap(new HashMap<String, ImageIcon>());
 
 	PrefsFrame prefsFrame;
 	Message programPrefsMessage;
@@ -311,17 +314,11 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 	 * Gets an ImageIcon specified by <code>name</code> for </code>cmp</code>
 	 */
 	public static ImageIcon loadImage(String name, Component cmp) {
-		ImageIcon img = (ImageIcon) imageCache.get(name);
+		ImageIcon img = imageCache.get(name);
 
 		if (img == null) {
-			URL fileLoc = null;
-			try {
-				URLClassLoader urlLoader = (URLClassLoader) cmp.getClass().getClassLoader();
-				fileLoc = urlLoader.findResource(name);
-			} catch (NoClassDefFoundError ncdfe) {
-				// For pre-Java 2 platforms
-				fileLoc = name.getClass().getClassLoader().getSystemResource(name);
-			}
+			URLClassLoader urlLoader = (URLClassLoader) cmp.getClass().getClassLoader();
+			URL fileLoc = urlLoader.findResource(name);
 
 			if (fileLoc != null) {
 				img = new ImageIcon(fileLoc);
@@ -422,27 +419,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 		for (int x = 0; x < chatMessageListenerVect.size(); x++) {
 //			((ChatPoster) chatMessageListenerVect.elementAt(x)).setChatFont(f);
 		}
-	}
-
-	/**
-	 * Gets the menu bar which is currently registered for receiving events.
-	 */
-	public Object getListenToMenu() {
-		return menuBar;
-	}
-
-	/**
-	 * Registers a JMenuBar to listen for ActionEvents from.
-	 */
-	public void setListenToMenu(Object mb) {
-		menuBar = mb;
-	}
-
-	/**
-	 * Removes the JMenuBar for Event Listening.
-	 */
-	public void removeListenToMenu() {
-		menuBar = null;
 	}
 
 	/**

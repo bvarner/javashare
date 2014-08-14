@@ -89,10 +89,13 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 	 */
 	public StyledString append(final String text, SimpleAttributeSet defaultStyle) {
 		boolean containsKeyword = false;
-		for (String keyword : KEYWORD_STYLES.keySet()) {
-			if (text.matches(keyword)) {
-				containsKeyword = true;
-				break;
+
+		if (!defaultStyle.equals(LOCAL)) { // Don't do keyword matching against Local Prefix text.
+			for (String keyword : KEYWORD_STYLES.keySet()) {
+				if (text.matches(keyword)) {
+					containsKeyword = true;
+					break;
+				}
 			}
 		}
 
@@ -109,8 +112,12 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 				for (Map.Entry<String, SimpleAttributeSet> keyword : KEYWORD_STYLES.entrySet()) {
 					if (tokens[i].matches(keyword.getKey())) {
 						// Add the current token to the string with the proper style.
-						put(tokens[i], keyword.getValue());
 						keywordMatched = true;
+						if (i + 1 < tokens.length) {
+							put(tokens[i] + " ", keyword.getValue());
+						} else {
+							put(tokens[i], keyword.getValue());
+						}
 
 						// URL styles use special handling.
 						// To make it easier for the Document to parse the StyledString, we always add two URI
@@ -123,7 +130,7 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 							// Does the next token (if there is one) start with a '['?
 							if ((labelstart < tokens.length) && tokens[labelstart].startsWith("[")) {
 								for (int j = labelstart; j < tokens.length; j++) {
-									if (tokens[j].endsWith("]")) {
+									if (tokens[j].contains("]")) {
 										labelend = j;
 										break;
 									}
@@ -134,15 +141,24 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 
 							// No end of label found. Duplicate the URI text as the label.
 							if (labelend == i) {
-								put(tokens[i], keyword.getValue());
+								put(tokens[i] + " ", keyword.getValue());
 							} else {
 								// Combine all tokens between labelstart and labelend into a single space separated string'
 								StringBuilder label = new StringBuilder();
-								for (int j = labelstart; j < labelend; j++) {
+								for (int j = labelstart; j <= labelend; j++) {
 									label.append(tokens[j]).append(" ");
 								}
-								// trim excess space, then trim the [] from around the label.
-								put(label.toString().trim().substring(1, label.length() - 2), keyword.getValue());
+
+								// The string at this point can look like '[foo bar]: this amen'
+								// We need to get the bits between '[]' added with the URL style.
+								// Then we need to get the rest of them with the default style.
+								int endChar = label.indexOf("]");
+								put (label.toString().substring(1, endChar), keyword.getValue());
+
+								if (endChar < label.length() - 1) {
+									put(label.toString().substring(endChar + 1), defaultStyle);
+								}
+//								put(label.toString().trim().substring(1, label.length() - 2), keyword.getValue());
 
 								// Move the current 'i' pointer to labelend, so we'll start with the default style on the next non-label token.
 								i = labelend;

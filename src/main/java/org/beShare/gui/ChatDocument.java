@@ -60,12 +60,10 @@ public class ChatDocument extends DefaultStyledDocument {
 			BeShareUser remoteUser = filteredUserDataModel.getUserDataModel().getUser(sourceSessionId);
 			if (remoteUser != null) {
 				// /me handling.
-				if (message.toLowerCase().startsWith("/me")) {
-					styledString =
-							new StyledString("Action: ", StyledString.USER_ACTION).append(remoteUser.getName()).append(message.substring((3)), remoteStyle);
+				if (message.toLowerCase().startsWith("/me ")) {
+					styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(remoteUser.getName()).append(message.substring((4)), remoteStyle);
 				} else {
-					styledString =
-							new StyledString("(" + sourceSessionId + ") " + remoteUser.getName() + ": ", StyledString.REMOTE_USER).append(message, remoteStyle);
+					styledString = new StyledString("(" + sourceSessionId + ") " + remoteUser.getName() + ": ", StyledString.REMOTE_USER).append(message, remoteStyle);
 				}
 			} else {
 				styledString =
@@ -83,9 +81,9 @@ public class ChatDocument extends DefaultStyledDocument {
 			defaultStyle = StyledString.PRIVATE;
 		}
 
-		if (message.toLowerCase().startsWith("/me")) {
+		if (message.toLowerCase().startsWith("/me ")) {
 			styledString =
-					new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(message.substring(3), defaultStyle);
+					new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(message.substring(4), defaultStyle);
 		} else {
 			styledString =
 					new StyledString("(" + localSessionId + ") " + localUserName + ": ", StyledString.LOCAL).append(message, defaultStyle);
