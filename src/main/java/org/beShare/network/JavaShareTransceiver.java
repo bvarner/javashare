@@ -313,7 +313,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		} else if (lowerCommand.startsWith("/msg")) {
 			// TODO: Implement me.
 			System.out.println("New private chat message to [" + command.substring(5).trim() + "]");
+		} else if (lowerCommand.equalsIgnoreCase("/server")) {
+			// TODO: Server name parsing....
 		} else if (lowerCommand.equalsIgnoreCase("/connect")) {
+			// TODO: Server name parsing....
 			connect();
 		} else if (lowerCommand.equalsIgnoreCase("/disconnect")) {
 			disconnect();
@@ -334,12 +337,47 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/ping")) {
 			// TODO: Implement
-		} else if (lowerCommand.startsWith("/ping")) {
+		} else if (lowerCommand.startsWith("/autopriv")) {
 			// TODO: Implement
-		} else if (lowerCommand.startsWith("/ping")) {
+		} else if (lowerCommand.startsWith("/ignore")) {
 			// TODO: Implement
-		} else if (lowerCommand.startsWith("/ping")) {
+		} else if (lowerCommand.startsWith("/unignore")) {
 			// TODO: Implement
+		} else if (lowerCommand.startsWith("/nick")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/onlogin")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/quit")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/serverinfo")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/status")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/help")) {
+			logInformation("JavaShare Command Refrence\n"
+					               + "       /action <action> - do something\n"
+					               + "       /alias [names and value] - create an alias\n"
+					               + "       /autopriv <names or session ids> - specify AutoPriv users\n"
+					               + "       /away tag - Force away state\n"
+					               + "       /awaymsg tag - change the auto-away tag\n"
+					               + "       /clear - clear the chat log\n"
+					               + "       /clearonlogin - clear startup commands\n"
+					               + "       /connect [serverName] - connect to a server\n"
+					               + "       /disconnect - disconnect from the server\n"
+					               + "       /help - show this help text\n"
+					               + "       /ignore <names or session ids> - specify users to ignore\n"
+					               + "       /me <action> - synonym for /action\n"
+					               + "       /msg <name or session id> <text> - send a private message\n"
+					               + "       /nick <name> - change your user name\n"
+					               + "       /onlogin command - add a startup command\n"
+					               + "       /priv <names or session ids> - Open Private Chat Window\n"
+					               + "       /ping <names or session ids> - ping other clients\n"
+					               + "       /quit - quit BeShare\n"
+					               + "       /serverinfo - Request server status\n"
+					               + "       /status Status - set user status string\n"
+					               + "       /unalias <name> - remove an alias\n"
+					               + "       /watch <name or session ids> - specify users to watch\n"
+					               + "       /server <address> - Sets the server address.\n");
 		}
 	}
 
