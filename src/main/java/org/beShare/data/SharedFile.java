@@ -6,13 +6,11 @@ package org.beShare.data;
 import java.io.File;
 
 /**
- * Holds data and provides convience methods for maintaining data on
- * the files that are shared.
+ * Defines the necessary information for shared Files.
  *
  * @author Bryan Varner
- * @version 1.0 - 8.2.2002
  */
-public class SharedFileInfoHolder {
+public class SharedFile {
 	String fileName;
 	long sizeInBytes;
 	String fileKind;
@@ -22,7 +20,7 @@ public class SharedFileInfoHolder {
 	/**
 	 * Default constructor, initializes stuff.
 	 */
-	public SharedFileInfoHolder() {
+	public SharedFile() {
 		fileName = "";
 		sizeInBytes = 0;
 		fullPath = "";
@@ -33,7 +31,7 @@ public class SharedFileInfoHolder {
 	/**
 	 * Constructor, takes a file and pre-fills everything except the mime-type.
 	 */
-	public SharedFileInfoHolder(File infoTarget) {
+	public SharedFile(File infoTarget) {
 		fileName = infoTarget.getName();
 		sizeInBytes = infoTarget.length();
 		fullPath = infoTarget.getParent();
@@ -108,7 +106,7 @@ public class SharedFileInfoHolder {
 	/**
 	 * Returns true if sfh is data-wise identical to this object.
 	 */
-	public boolean equals(SharedFileInfoHolder sfh) {
+	public boolean equals(SharedFile sfh) {
 		return (fileKind.equals(sfh.getKind()) &&
 				        fileName.equals(sfh.getName()) &&
 				        fullPath.equals(sfh.getPath()) &&

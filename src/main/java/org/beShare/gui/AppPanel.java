@@ -6,7 +6,7 @@ import com.meyer.muscle.support.Rect;
 import gnu.regexp.RE;
 import gnu.regexp.REException;
 import org.beShare.data.BeShareUser;
-import org.beShare.data.SharedFileInfoHolder;
+import org.beShare.data.SharedFile;
 import org.beShare.event.JavaShareEvent;
 import org.beShare.event.JavaShareEventListener;
 import org.beShare.gui.prefPanels.JavaSharePrefListener;
@@ -1307,11 +1307,11 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 //				break;
 //			}
 			case JavaShareEvent.FILE_INFO_ADD_TO_RESULTS: {
-				transPan.addResult((SharedFileInfoHolder) bse.getSource());
+				transPan.addResult((SharedFile) bse.getSource());
 				break;
 			}
 			case JavaShareEvent.FILE_INFO_REMOVE_RESULTS: {
-				transPan.removeResult((SharedFileInfoHolder) bse.getSource());
+				transPan.removeResult((SharedFile) bse.getSource());
 				break;
 			}
 		}

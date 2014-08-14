@@ -4,7 +4,7 @@
 package org.beShare.gui;
 
 import org.beShare.data.BeShareUser;
-import org.beShare.data.SharedFileInfoHolder;
+import org.beShare.data.SharedFile;
 import org.beShare.gui.prefPanels.SharePrefsListener;
 import org.beShare.gui.swingAddons.TableSorter;
 import org.beShare.network.AbstractTransfer;
@@ -346,7 +346,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	/**
 	 * Adds a new file to the result list
 	 */
-	public void addResult(SharedFileInfoHolder newFile) {
+	public void addResult(SharedFile newFile) {
 		String size = (Long.toString(newFile.getSize()));
 		if (size.length() <= 3) {
 			size = size + "bytes";
@@ -398,7 +398,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	/**
 	 * Removes the file from the result set.
 	 */
-	public void removeResult(SharedFileInfoHolder killFile) {
+	public void removeResult(SharedFile killFile) {
 		//Get the name and session id of the file, remove it from the table.
 		queryModel.removeFile(connection.getUserDataModel().findNameBySession(killFile.getSessionID()), killFile.getName());
 	}

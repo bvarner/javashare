@@ -6,8 +6,9 @@ import com.meyer.muscle.message.Message;
 import com.meyer.muscle.support.TypeConstants;
 import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
+import com.meyer.muscle.thread.ThreadPool;
 import org.beShare.data.BeShareUser;
-import org.beShare.data.SharedFileInfoHolder;
+import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
 import org.beShare.event.JavaShareEvent;
 import org.beShare.event.JavaShareEventListener;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
+import java.util.prefs.Preferences;
 
 /**
  * JavaShareTransceiver - This class handles all incomming/outgoing Muscle messages
@@ -28,6 +30,8 @@ import java.util.Vector;
  */
 public class JavaShareTransceiver implements MessageListener, StorageReflectConstants, TypeConstants {
 	public static final int portRange = 50;
+	public static final int startingPortNumber = 7000;
+	private int localUserPort = startingPortNumber;
 	private static final int ROOT_DEPTH = 0;    // root node
 	private static final int HOST_NAME_DEPTH = 1;
 	private static final int SESSION_ID_DEPTH = 2;
@@ -40,9 +44,9 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private static final int NET_CLIENT_PING = 5;
 	private static final int NET_CLIENT_PONG = 6;
 	public final String MUSCLE_INTERFACE_VERSION = AppPanel.applicationName + " " + AppPanel.buildVersion;
-
+	private final Object serverConnect = new Object();
+	private final Object serverDisconnect = new Object();
 	// Connection Management
-	AutoReconnector autoRecon = null;
 	private String serverName = "";
 	private int serverPort = 2960;
 	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
@@ -50,30 +54,24 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private String localUserName;
 	private String localUserStatus;
 	private long localUserInstallId;
-	private Object serverConnect;
-	private Object serverDisconnect;
-
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
 	private List<JavaShareEventListener> eventListeners = new ArrayList<>();
 	private boolean requestedServerInfo = false;
+	private boolean connectInProgress = false;
 	private boolean connected = false;
 	private boolean firewalled = false;
 	private int pingCount = 0;
 	private boolean queryActive = false;
-	private boolean recentActivity = false;
+	private long lastEvent = System.currentTimeMillis();
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
-
 	private UserDataModel userDataModel = new UserDataModel();
 
-	public static final int startingPortNumber = 7000;
-	private int localUserPort = startingPortNumber;
-
 	/**
-	 * Default contstructor - Creates a new BeShare muscle interface
-	 * with no server or port , and does not connect.
+	 * Construct a new JavaShareTransceiver,
 	 */
-	public JavaShareTransceiver() {
-		new ConnectionCheck().start();
+	public JavaShareTransceiver(final Preferences preferences) {
+		// Run the connectionCheck in the MUSCLE thread Pool.
+		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 	}
 
 	/**
@@ -100,12 +98,11 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * @param sName - the Name of the server to connect to.
 	 */
 	public void setServerName(final String sName) {
-		boolean connectAfter = (connected && !sName.equalsIgnoreCase(serverName));
-
-		this.serverName = sName;
-
-		if (connectAfter) {
-			connect();
+		if (!sName.equalsIgnoreCase(this.serverName)) {
+			this.serverName = sName;
+			if (connected || connectInProgress) {
+				connect();
+			}
 		}
 	}
 
@@ -133,7 +130,12 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * @param sPort - the port to connect with
 	 */
 	public void setServerPort(int sPort) {
-		serverPort = serverPort;
+		if (this.serverPort != sPort) {
+			this.serverPort = sPort;
+			if (connected || connectInProgress) {
+				connect();
+			}
+		}
 	}
 
 	/**
@@ -251,13 +253,11 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * Connects to MUSCLE server.
 	 */
 	public synchronized void connect() {
+		connectInProgress = true;
+		connected = false;
 		disconnect();
-		serverConnect = new Object();
-		serverDisconnect = new Object();
-		fireJavaShareEvent(new JavaShareEvent(this,
-				                                     JavaShareEvent.CONNECTION_ATTEMPT));
-		beShareTransceiver.connect(serverName, serverPort,
-				                          serverConnect, serverDisconnect);
+		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.CONNECTION_ATTEMPT));
+		beShareTransceiver.connect(serverName, serverPort, serverConnect, serverDisconnect);
 	}
 
 	/**
@@ -265,11 +265,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 */
 	public synchronized void disconnect() {
 		userDataModel.clear();
-		fireJavaShareEvent(new JavaShareEvent(this,
-				                                     JavaShareEvent.CONNECTION_DISCONNECT));
-		serverConnect = null;
-		serverDisconnect = null;
-		connected = false;
+		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.CONNECTION_DISCONNECT));
 		beShareTransceiver.disconnect();
 	}
 
@@ -277,8 +273,9 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * Returns connection status
 	 *
 	 * @return true if connected, false if not connected.
+	 * @deprecated Please remove this method, and get the shared file list maintenance added refactored...
 	 */
-	public boolean isConnected() {
+	public synchronized boolean isConnected() {
 		return connected;
 	}
 
@@ -331,7 +328,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		}
 
 		System.out.println("Execute Command: " + command);
-
 
 
 	}
@@ -450,10 +446,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// Get the file-specific data into a sub-message.
 			Message infoMessage = new Message();
 
-			infoMessage.setLong("beshare:File Size", ((SharedFileInfoHolder) fileListing.elementAt(x)).getSize());
+			infoMessage.setLong("beshare:File Size", ((SharedFile) fileListing.elementAt(x)).getSize());
 			//infoMessage.SetInt("beshare:Modification Time", 0);  // Java Dosen't support modification or creation dates on File objects
-			infoMessage.setString("beshare:Path", ((SharedFileInfoHolder) fileListing.elementAt(x)).getPath());
-			infoMessage.setString("beshare:Kind", ((SharedFileInfoHolder) fileListing.elementAt(x)).getKind());
+			infoMessage.setString("beshare:Path", ((SharedFile) fileListing.elementAt(x)).getPath());
+			infoMessage.setString("beshare:Kind", ((SharedFile) fileListing.elementAt(x)).getKind());
 
 			String filePath = "";
 			if (getFirewalled()) {
@@ -461,7 +457,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			} else {
 				filePath += "beshare/files/";
 			}
-			filePath += ((SharedFileInfoHolder) fileListing.elementAt(x)).getName();
+			filePath += ((SharedFile) fileListing.elementAt(x)).getName();
 			uploadMessage.setMessage(filePath, infoMessage);
 
 			if (x % 50 == 0) {
@@ -508,11 +504,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	public synchronized void messageReceived(Object message, int numleft) {
 		if (message == serverConnect) {
 			connected = true;
-			// If this happens while an AutoReconect is active, kill the autoRecon.
-			if (autoRecon != null) {
-				autoRecon.interrupt();
-				autoRecon = null;
-			}
+			connectInProgress = false;
 
 			// Send our current User information to the server.
 			beShareSubscribe();
@@ -522,15 +514,13 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// Tell the UI to update.
 			fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.SERVER_CONNECTED));
 		} else if (message == serverDisconnect) {
-			if (autoRecon == null) {
-				autoRecon = new AutoReconnector();
-				disconnect(); // resets variables, sends message, etc.
-				autoRecon.start();
-			}
+			connected = false;
+			connectInProgress = false;
+			disconnect();
+			ThreadPool.getDefaultThreadPool().startThread(new AutoReconnector());
 		} else if (message instanceof Message) {
 			try {
-				recentActivity = true;
-				//muscleMessageReceived((Message)message);
+				lastEvent = System.currentTimeMillis();
 				muscleMessageHandler((Message) message);
 			} catch (Exception ex) {
 				System.out.println(ex.toString());
@@ -613,7 +603,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 									                  new JavaShareEvent(this, JavaShareEvent.USER_DISCONNECTED, removed));
 						} else if (getPathDepth(removedNodes[x]) == FILE_INFO_DEPTH) {
 							// Files were removed
-							SharedFileInfoHolder holder = new SharedFileInfoHolder();
+							SharedFile holder = new SharedFile();
 							if (removedNodes[x].indexOf("files/") != -1) {
 								holder.setName(lastNodeElement(removedNodes[x], "files/"));
 							} else {
@@ -732,7 +722,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							}
 						} else if (getPathDepth(fieldName) == FILE_INFO_DEPTH && queryActive) {
 							Message fileInfo = message.getMessage(fieldName);
-							SharedFileInfoHolder holder = new SharedFileInfoHolder();
+							SharedFile holder = new SharedFile();
 							holder.setSessionID(sessionIDFromNode(fieldName));
 
 							if (fileInfo.hasField("beshare:File Size")) {
@@ -866,48 +856,24 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	}
 
 	/**
-	 * @return the Timeout setting in milliseconds.
-	 */
-	private long getTimeout() {
-		return connectionTimeout * 1000;
-	}
-
-	/**
-	 * Sets the timeout setting. @param seconds Consider it a timeout if inactive for this many seconds.
-	 */
-	private void setTimeout(int seconds) {
-		connectionTimeout = seconds;
-	}
-
-	/**
 	 * Thread to test the connection activity and re-connect to the MUSCLE server if need be.
 	 */
-	private class ConnectionCheck extends Thread {
-		/**
-		 * Creates a new Connection Checking daemon thread.
-		 * This thread runs as a Daemon, and will check the connection every if no
-		 * muscle activity has taken place for getTimeout() seconds. If a muscle message
-		 * is received, no action is taken.
-		 */
-		public ConnectionCheck() {
-			setDaemon(true);
-			setName("MUSCLE_Activity_Monitor");
-		}
+	private class ConnectionCheck implements Runnable {
+		final static long timeoutMillis = 60 * 2500;
 
 		/**
 		 * Runs the thread connection test
 		 */
 		public void run() {
 			while (true) {
-				if (isConnected()) {
-					if (!recentActivity) { // We send a check.
-						beShareTransceiver.sendOutgoingMessage(new Message(PR_COMMAND_NOOP));
-					}
+				if (connected && System.currentTimeMillis() - lastEvent >= timeoutMillis) {
+					beShareTransceiver.sendOutgoingMessage(new Message(PR_COMMAND_NOOP));
 				}
+
+				// Sleep 2.5 minutes.
 				try {
-					sleep(getTimeout()); // 2.5 minutes
+					Thread.currentThread().sleep(timeoutMillis);
 				} catch (InterruptedException ie) {
-					// What, you think I care about this exception?!
 				}
 			}
 		}
@@ -916,52 +882,37 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	/**
 	 * Performs the time-delayed auto-reconnect.
 	 */
-	private class AutoReconnector extends Thread {
-		private int waitTime = 0;
-
-		/**
-		 * Creates a new AutoReconnect thread.
-		 */
-		public AutoReconnector() {
-			setDaemon(true);
-			setName("Auto_Reconnect");
-		}
+	private class AutoReconnector implements Runnable {
+		private int backoff = 0;
 
 		@Override
 		public void run() {
 			// TODO: Refactor this down into something other than a thread that beats the tar out of the background...
-			while (true) {
-				if (isConnected()) {
-					// If we're connected, bail out!
-					return;
+			while (!connected && !connectInProgress) {
+				switch (backoff) {
+					case 0:
+						logInformation("Reconnecting...");
+						break;
+					case 30:
+						// Seconds Message
+						logInformation("Reconnecting in " + backoff + " seconds...");
+						break;
+					case 60:
+						// Minutes message
+						logInformation("Reconnecting in 1 minute...");
+						break;
+					default:
+						// Minutes message
+						logInformation("Reconnecting in " + (backoff / 60) + " minutes...");
+				}
+				connect();
+				try {
+					Thread.currentThread().sleep(backoff * 1000);
+				} catch (InterruptedException ie) { }
+				if (backoff == 0) {
+					backoff = 30;
 				} else {
-					switch (waitTime) {
-						case 0:
-							logInformation("Reconnecting...");
-							break;
-						case 30:
-							// Seconds Message
-							logInformation("Reconnecting in " + waitTime + " seconds...");
-							break;
-						case 60:
-							// Minutes message
-							logInformation("Reconnecting in 1 minute...");
-							break;
-						default:
-							// Minutes message
-							logInformation("Reconnecting in " + (waitTime / 60) + " minutes...");
-					}
-					try {
-						sleep(waitTime * 1000);
-						if (waitTime == 0) {
-							waitTime = 30;
-						} else {
-							waitTime *= 2;
-						}
-						connect();
-					} catch (InterruptedException ie) {
-						// Who cares?
-					}
+					backoff *= 2;
 				}
 			}
 		}

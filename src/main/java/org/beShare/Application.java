@@ -4,6 +4,8 @@ import org.beShare.gui.ShareFrame;
 import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.*;
+import java.util.prefs.Preferences;
+import java.util.prefs.PreferencesFactory;
 
 /**
  * BeShare for Java application class. This constructs the stand-alone version
@@ -19,12 +21,13 @@ public class Application {
 	 * @param args Description of Parameter
 	 */
 	public static void main(String args[]) {
-		final JavaShareTransceiver transceiver = new JavaShareTransceiver();
+		final JavaShareTransceiver transceiver = new JavaShareTransceiver(Preferences.userNodeForPackage(Application.class));
 
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				ShareFrame shareFrame = new ShareFrame(transceiver);
-				shareFrame.show();
+				shareFrame.pack();
+				shareFrame.setVisible(true);
 			}
 		});
 	}

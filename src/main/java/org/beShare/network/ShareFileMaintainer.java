@@ -5,7 +5,7 @@
 */
 package org.beShare.network;
 
-import org.beShare.data.SharedFileInfoHolder;
+import org.beShare.data.SharedFile;
 
 import javax.swing.Timer;
 import java.awt.event.ActionEvent;
@@ -186,7 +186,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 					// Item by item comparison of the contents of the vectors.
 					int x = 0;
 					while (x < fileList.size()) {
-						if (!((SharedFileInfoHolder) fileList.elementAt(x)).equals(((SharedFileInfoHolder) fileList.elementAt(x)))) {
+						if (!((SharedFile) fileList.elementAt(x)).equals(((SharedFile) fileList.elementAt(x)))) {
 							break;
 						}
 						x++;
@@ -252,7 +252,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 			if (childFile.isDirectory()) {
 				recurseDirectory(childFile);
 			} else {
-				fileList.addElement(new SharedFileInfoHolder(childFile));
+				fileList.addElement(new SharedFile(childFile));
 			}
 		}
 	}
@@ -265,7 +265,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 		for (int x = 0; x < fileList.size(); x++) {
 			// set the Mime-type of that last element you added.
 			// Find the .extension of the file.
-			SharedFileInfoHolder childFile = (SharedFileInfoHolder) fileList.elementAt(x);
+			SharedFile childFile = (SharedFile) fileList.elementAt(x);
 
 			int extensionOffset = childFile.getName().lastIndexOf(".");
 			if (extensionOffset > -1) {

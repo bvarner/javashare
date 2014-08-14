@@ -15,36 +15,29 @@ import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
 /**
- * MainFrame - Creates the main frame (window) for the Application mode of
- * JavaShare2.
+ * ShareFrame is a parent window of a connection to a BeShare (MUSCLE) server.
+ * It renders the state maintained by the JavaShareTransceiver and provides a GUI.
  *
  * @author Bryan Varner
  */
 public class ShareFrame extends JFrame {
-	AppPanel mainPanel;
 
-	/**
-	 * Default constructor Creates a new mainPanel, and JavaShareTransceiver.
-	 * It then connects the two together.
-	 */
 	public ShareFrame(JavaShareTransceiver transceiver) {
 		super(AppPanel.pubVersion);
 
 		ImageIcon JavaShareIcon = AppPanel.loadImage("Images/BeShare.gif", this);
 		this.setIconImage(JavaShareIcon.getImage());
-		this.mainPanel = new AppPanel(transceiver, BeShareDefaultSettings.createDefaultSettings());
-		this.setJMenuBar(new SwingMenuBar(mainPanel));
+		this.setContentPane(new AppPanel(transceiver, BeShareDefaultSettings.createDefaultSettings()));
+		this.setJMenuBar(new SwingMenuBar((AppPanel)this.getContentPane()));
 
-		this.getContentPane().add(mainPanel);
 		// TODO: Set to disposeOnClose and make sure all our other threads are Daemon.
 		this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-		pack();
+		// TODO: Add listeners here to the transceiver to keep our state in line.
 
-		// TODO: Add a listener so that we update our title any time things change in the transceivers connection info...
-
-		// Now start the auto-update thread. Muhuhahaha.
-		ServerAutoUpdate autoUpdate = new ServerAutoUpdate(mainPanel);
-		autoUpdate.run();
+		// TODO: Refactor The majority of AppPanel into this class.
 	}
+
+
+
 }
