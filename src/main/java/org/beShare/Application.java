@@ -15,6 +15,8 @@ import java.util.prefs.PreferencesFactory;
  * @created March 8, 2002
  */
 public class Application {
+	public static final String BUILD_VERSION = "3.0-SNAPSHOT";
+
 	/**
 	 * Application Main - Creates a new instance of mainFrame Application.
 	 *

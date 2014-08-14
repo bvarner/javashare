@@ -5,15 +5,20 @@ import com.meyer.muscle.message.Message;
 import com.meyer.muscle.support.Rect;
 import gnu.regexp.RE;
 import gnu.regexp.REException;
-import org.beShare.data.BeShareUser;
-import org.beShare.data.SharedFile;
-import org.beShare.event.JavaShareEvent;
-import org.beShare.event.JavaShareEventListener;
 import org.beShare.gui.prefPanels.JavaSharePrefListener;
 import org.beShare.network.JavaShareTransceiver;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.Rectangle;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -38,16 +43,12 @@ import java.util.Vector;
  *
  * @author Bryan Varner
  */
-public class AppPanel extends JPanel implements JavaShareEventListener, ActionListener, JavaSharePrefListener {
-	public static final String buildVersion = "2.1 Snapshot";
-	public static final String applicationName = "JavaShare";
-	public static final String pubVersion = applicationName + buildVersion;
+public class AppPanel extends JPanel implements ActionListener, JavaSharePrefListener {
 
 	public static final String AutoUpdateURL = "http://beshare.tycomsystems.com/servers.txt";
 
 	private static Map<String, ImageIcon> imageCache = Collections.synchronizedMap(new HashMap<String, ImageIcon>());
 
-	PrefsFrame prefsFrame;
 	Message programPrefsMessage;
 
 	JSplitPane queryChatSplit;
@@ -113,39 +114,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 			}
 		}
 
-		this.prefsFrame = new PrefsFrame(this, programPrefsMessage);
-
-		String[] aboutText = {"JavaShare",
-		                      "Version " + buildVersion,
-		                      "",
-		                      "Created By: Bryan Varner",
-		                      "",
-		                      "Inspired by the works of: Jeremy Friesner",
-		                      "",
-		                      "",
-		                      "Special Thanks to:",
-		                      "     Tori Anderson",
-		                      "     Jonathon Beige",
-		                      "     Adam McNutt",
-		                      "     Michael Paine",
-		                      "     David Varner",
-		                      "     Douglas Varner",
-		                      "     Helmar Rudolph",
-		                      "     John Slevin",
-		                      "     The Wonderful BeOS Community!",
-		                      "",
-		                      "And especially:",
-		                      "   Those who have submitted bug-reports!",
-		                      "   The graphics aid of Mikko Heikkinen",
-		                      "   The awesome generosity of",
-		                      "      Chris Gelatt",
-		                      "      Austin Brower",
-		                      "      Alan Ellis",
-		                      "      Silent Computing"};
-		ImageIcon javaShareIcon = loadImage("Images/BeShare.gif", this);
-		this.aboutJavaShare = new AboutDialog(this,
-				                                     "About JavaShare",
-				                                     true, aboutText, javaShareIcon, 2, 20);
 
 		String[] serverList = new String[]{"beshare.tycomsystems.com"};
 		String[] nickList = new String[]{"Binky"};
@@ -289,7 +257,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 		this.add(localUserInfo, BorderLayout.NORTH);
 
 		transPan = new TransferPanel(this.transceiver);
-		prefsFrame.addFileTransferPrefs(programPrefsMessage, transPan);
 
 		queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		queryChatSplit.add(transPan);
@@ -298,7 +265,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 
 		SwingUtilities.updateComponentTreeUI(this);
 
-		this.transceiver.addJavaShareEventListener(this);
 		this.transceiver.logInformation("Welcome to JavaShare!\n" +
 				                                "Type /help for a list of commands.");
 
@@ -527,7 +493,7 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 		} else if (e.getActionCommand() == "paste") {
 			chatterPanel.paste();
 		} else if (e.getActionCommand() == "prefs") {
-			prefsFrame.setVisible(true);
+//			prefsFrame.setVisible(true);
 		} else if (e.getSource() == autoAwayTimer) {
 			// Set the status to away and stop the timer. No need to run it.
 			try {
@@ -1180,143 +1146,6 @@ public class AppPanel extends JPanel implements JavaShareEventListener, ActionLi
 //			fireLogNewMessage(newMessage);
 //		}
 //	}
-
-	/**
-	 * Implementation of JavaShareEventListener
-	 */
-	public void javaShareEventPerformed(JavaShareEvent bse) {
-		switch (bse.getType()) {
-			case JavaShareEvent.CONNECTION_ATTEMPT: {
-				localUserInfo.setServerName(transceiver.getServerName());
-				transceiver.logInformation("Active server changed to: " + transceiver.getServerName());
-				break;
-			}
-			case JavaShareEvent.CONNECTION_DISCONNECT: {
-				break;
-			}
-			case JavaShareEvent.LOCAL_USER_NAME: {
-				// TODO: Add the localUserInfo as a listener to the JavaShareTransceiver.
-				localUserInfo.setUserName(transceiver.getLocalUserName());
-				transceiver.logInformation("Your name has been changed to " + transceiver.getLocalUserName());
-				break;
-			}
-			case JavaShareEvent.LOCAL_USER_STATUS: {
-				// TODO: Add the localUserInfo as a listener to the JavaShareTransceiver.
-				localUserInfo.setUserStatus(transceiver.getLocalUserStatus());
-				transceiver.logInformation("Your name has been change to " + transceiver.getLocalUserStatus());
-				break;
-			}
-			case JavaShareEvent.SERVER_CONNECTED: {
-				try {
-					transceiver.setUploadBandwidth(programPrefsMessage.getString("uploadLabel"),
-							                              programPrefsMessage.getInt("uploadValue"));
-				} catch (Exception e) {
-				}
-
-				// Do the login commands!
-				for (int x = 0; x < onLoginVect.size(); x++) {
-					// Send the commands out as if you typed them!
-					transceiver.command((String) onLoginVect.elementAt(x), chatterPanel.chatDoc);
-				}
-				if (transPan != null) {
-					transPan.resetShareList();
-				}
-				break;
-			}
-			case JavaShareEvent.SERVER_DISCONNECTED: {
-				break;
-			}
-			case JavaShareEvent.UNKNOWN_MUSCLE_MESSAGE: {
-				transceiver.logError("Unknown MUSCLE message received.");
-				break;
-			}
-			case JavaShareEvent.PING_RECEIVED: {
-				break;
-			}
-			case JavaShareEvent.USER_DISCONNECTED: {
-				BeShareUser tempUser = bse.getUser();
-				transceiver.logInformation("User #" + tempUser.getSessionID() + " (a.k.a. "
-						                           + transceiver.getUserDataModel().findNameBySession(tempUser.getSessionID()) +
-						                           ") has disconnected.");
-				break;
-			}
-			case JavaShareEvent.USER_NAME_CHANGE: {
-				BeShareUser tempUser = bse.getUser();
-				transceiver.logInformation("User #" + tempUser.getSessionID() + " is now known as " + tempUser.getName());
-				break;
-			}
-			case JavaShareEvent.USER_CONNECTED: {
-				BeShareUser tempUser = bse.getUser();
-				transceiver.logInformation("User #" + tempUser.getSessionID() + " is now connected.");
-				break;
-			}
-			case JavaShareEvent.USER_STATUS_CHANGE: {
-				transceiver.logInformation("User #" + bse.getUser().getSessionID() + " " +
-						                           "(a.k.a. " + bse.getUser().getName() + ") " +
-						                           "is now " + bse.getUser().getStatus() + ".");
-			}
-			break;
-//			case JavaShareEvent.USER_UPLOAD_STATS_CHANGE: {
-//				break;
-//			}
-//			case JavaShareEvent.USER_BANDWIDTH_CHANGE: {
-//				BeShareUser tempUser = bse.getUser();
-//				if (userHashTable.containsKey(tempUser.getSessionID())) {
-//					BeShareUser oldUserData = (BeShareUser) userHashTable.get(tempUser.getSessionID());
-//					if (tempUser.getBandwidthLabel() != "") {
-//						oldUserData.setBandwidthLabel(tempUser.getBandwidthLabel());
-//					}
-//					if (tempUser.getBandwidthBps() != -1) {
-//						oldUserData.setBandwidthBps(tempUser.getBandwidthBps());
-//					}
-//					userHashTable.put(tempUser.getSessionID(), oldUserData);
-//					chatterPanel.updateUser(oldUserData);
-//				} else {
-//					tempUser.setName("<unknown>");
-//					userHashTable.put(tempUser.getSessionID(), tempUser);
-//					chatterPanel.addUser(tempUser);
-//				}
-//				break;
-//			}
-//			case JavaShareEvent.USER_FIREWALL_CHANGE: {
-//				BeShareUser tempUser = bse.getUser();
-//				if (userHashTable.containsKey(tempUser.getSessionID())) {
-//					BeShareUser oldUserData = (BeShareUser) userHashTable.get(tempUser.getSessionID());
-//					oldUserData.setFirewall(tempUser.getFirewall());
-//					userHashTable.put(tempUser.getSessionID(), oldUserData);
-//					chatterPanel.updateUser(oldUserData);
-//				} else {
-//					tempUser.setName("<unknown>");
-//					userHashTable.put(tempUser.getSessionID(), tempUser);
-//					chatterPanel.addUser(tempUser);
-//				}
-//				break;
-//			}
-//			case JavaShareEvent.USER_FILE_COUNT_CHANGE: {
-//				BeShareUser tempUser = bse.getUser();
-//				if (userHashTable.containsKey(tempUser.getSessionID())) {
-//					BeShareUser oldUserData = (BeShareUser) userHashTable.get(tempUser.getSessionID());
-//					oldUserData.setFileCount(tempUser.getFileCount());
-//					userHashTable.put(tempUser.getSessionID(), oldUserData);
-//					chatterPanel.updateUser(oldUserData);
-//				} else {
-//					tempUser.setName("<unknown>");
-//					userHashTable.put(tempUser.getSessionID(), tempUser);
-//					chatterPanel.addUser(tempUser);
-//				}
-//				break;
-//			}
-			case JavaShareEvent.FILE_INFO_ADD_TO_RESULTS: {
-				transPan.addResult((SharedFile) bse.getSource());
-				break;
-			}
-			case JavaShareEvent.FILE_INFO_REMOVE_RESULTS: {
-				transPan.removeResult((SharedFile) bse.getSource());
-				break;
-			}
-		}
-
-	}
 
 	/**
 	 * Tests a ChatMessage across all Regex patters stored in <code>regexVect

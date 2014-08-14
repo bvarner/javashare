@@ -73,26 +73,6 @@ public class AboutDialog extends JDialog implements ActionListener {
 		recenter();
 	}
 
-	public AboutDialog(JPanel owner, String title, boolean modal,
-	                   String[] aboutText, ImageIcon appIcon,
-	                   int maxLoops, int speed) {
-		this((Frame) null, title, modal, aboutText, appIcon, maxLoops, speed);
-		try {
-			GraphicsEnvironment systemGE
-					= GraphicsEnvironment.getLocalGraphicsEnvironment();
-			Rectangle screenRect = systemGE.getDefaultScreenDevice().getDefaultConfiguration().getBounds();
-			this.setBounds((screenRect.width / 2) - (this.getBounds().width / 2),
-					              (screenRect.height / 2) - (this.getBounds().height / 2),
-					              this.getBounds().width, this.getBounds().height);
-		} catch (NoClassDefFoundError ncdfe) {
-			Toolkit tk = Toolkit.getDefaultToolkit();
-			Rectangle screenRect = new Rectangle(tk.getScreenSize());
-			this.setBounds((screenRect.width / 2) - (this.getBounds().width / 2),
-					              (screenRect.height / 2) - (this.getBounds().height / 2),
-					              this.getBounds().width, this.getBounds().height);
-		}
-	}
-
 	/**
 	 * Detects the Button Press, and Disposes of the dialog.
 	 */

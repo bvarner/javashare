@@ -7,12 +7,10 @@ import com.meyer.muscle.support.TypeConstants;
 import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 import com.meyer.muscle.thread.ThreadPool;
+import org.beShare.Application;
 import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
-import org.beShare.event.JavaShareEvent;
-import org.beShare.event.JavaShareEventListener;
-import org.beShare.gui.AppPanel;
 import org.beShare.gui.ChatDocument;
 import org.beShare.gui.text.StyledString;
 
@@ -43,7 +41,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private static final int NET_CLIENT_CONNECT_BACK_REQUEST = 3;
 	private static final int NET_CLIENT_PING = 5;
 	private static final int NET_CLIENT_PONG = 6;
-	public final String MUSCLE_INTERFACE_VERSION = AppPanel.applicationName + " " + AppPanel.buildVersion;
+	public final String MUSCLE_INTERFACE_VERSION = "JavaShare " + Application.BUILD_VERSION;
 	private final Object serverConnect = new Object();
 	private final Object serverDisconnect = new Object();
 	// Connection Management
@@ -55,7 +53,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private String localUserStatus;
 	private long localUserInstallId;
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
-	private List<JavaShareEventListener> eventListeners = new ArrayList<>();
 	private boolean requestedServerInfo = false;
 	private boolean connectInProgress = false;
 	private boolean connected = false;
@@ -63,6 +60,8 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private int pingCount = 0;
 	private boolean queryActive = false;
 	private long lastEvent = System.currentTimeMillis();
+	private boolean disconnectExpected = false;
+	private int reconnectBackoff = -1;
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
 	private UserDataModel userDataModel = new UserDataModel();
 
@@ -70,7 +69,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * Construct a new JavaShareTransceiver,
 	 */
 	public JavaShareTransceiver(final Preferences preferences) {
-		// Run the connectionCheck in the MUSCLE thread Pool.
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 	}
 
@@ -135,31 +133,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			if (connected || connectInProgress) {
 				connect();
 			}
-		}
-	}
-
-	/**
-	 * Add a new JavaShareEventListener to receive JavaShareEvents from this
-	 * Muscle Interface.
-	 */
-	public void addJavaShareEventListener(final JavaShareEventListener javaShareEventListener) {
-		eventListeners.add(javaShareEventListener);
-	}
-
-	/**
-	 * Removes an existing JavaShareEventListener.
-	 * This stops the Listener from receiving messages from this Interface.
-	 */
-	public void removeJavaShareEventListener(final JavaShareEventListener javaShareEventListener) {
-		eventListeners.remove(javaShareEventListener);
-	}
-
-	/**
-	 * Fires JavaShareEvents to all registered listeners.
-	 */
-	protected void fireJavaShareEvent(final JavaShareEvent javaShareEvent) {
-		for (JavaShareEventListener listener : eventListeners) {
-			listener.javaShareEventPerformed(javaShareEvent);
 		}
 	}
 
@@ -253,20 +226,24 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * Connects to MUSCLE server.
 	 */
 	public synchronized void connect() {
+		disconnectExpected = false;
 		connectInProgress = true;
 		connected = false;
-		disconnect();
-		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.CONNECTION_ATTEMPT));
+
+		beShareTransceiver.disconnect();
+		userDataModel.clear();
+
+		logInformation("Connecting to: " + serverName);
 		beShareTransceiver.connect(serverName, serverPort, serverConnect, serverDisconnect);
 	}
 
 	/**
-	 * Disconnects from MUSCLE server
+	 * Force a disconnect from the current server.
 	 */
 	public synchronized void disconnect() {
-		userDataModel.clear();
-		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.CONNECTION_DISCONNECT));
+		disconnectExpected = true;
 		beShareTransceiver.disconnect();
+		userDataModel.clear();
 	}
 
 	/**
@@ -320,16 +297,26 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		chatDoc.addEchoChatMessage(text, chatMessage.hasField("private"), localSessionID, localUserName);
 	}
 
-	// TODO: Implement This method!
+	/**
+	 * Handles text commands, echoing output to the given chatDoc.
+	 *
+	 * @param command
+	 * @param chatDoc
+	 */
 	public void command(final String command, final ChatDocument chatDoc) {
-		if (command.toLowerCase().startsWith("/me ")) {
+		String lowerCommand = command.toLowerCase().trim();
+		if (lowerCommand.startsWith("/me ")) {
 			sendChat(command, chatDoc);
-			return;
+		} else if (lowerCommand.startsWith("/priv")) {
+			// TODO: Implement me.
+			System.out.println("New Private Frame to [" + command.substring(5).trim() + "]");
+		} else if (lowerCommand.equalsIgnoreCase("/connect")) {
+			connect();
+		} else if (lowerCommand.equalsIgnoreCase("/disconnect")) {
+			disconnect();
+		} else if (lowerCommand.equalsIgnoreCase("/clear")) {
+			chatDoc.clear();
 		}
-
-		System.out.println("Execute Command: " + command);
-
-
 	}
 
 	/**
@@ -374,16 +361,16 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 
 		if (connected) {
 			Message nameMessage = new Message();
-			nameMessage.setString("name", this.localUserName);
+			nameMessage.setString("name", localUserName);
 			nameMessage.setInt("port", this.localUserPort);
 			nameMessage.setLong("installid", this.localUserInstallId);
-			nameMessage.setString("version_name", AppPanel.applicationName);
-			nameMessage.setString("version_num", "v" + AppPanel.buildVersion);
+			nameMessage.setString("version_name", "JavaShare");
+			nameMessage.setString("version_num", "v" + Application.BUILD_VERSION);
 			setDataNodeValue("beshare/name", nameMessage);
 		}
 
-		StyledString.KEYWORD_STYLES.put(".*" + this.localUserName + ".*", StyledString.USER_MENTIONED);
-		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.LOCAL_USER_NAME));
+		logInformation("Your name has been changed to " + localUserName);
+		StyledString.KEYWORD_STYLES.put(".*" + localUserName + ".*", StyledString.USER_MENTIONED);
 	}
 
 	public String getLocalUserName() {
@@ -426,7 +413,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			statusMessage.setString("userstatus", this.localUserStatus);
 			setDataNodeValue("beshare/userstatus", statusMessage);
 		}
-		fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.LOCAL_USER_STATUS));
+		logInformation("Your status has been changed to " + getLocalUserStatus());
 	}
 
 	/**
@@ -505,19 +492,27 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		if (message == serverConnect) {
 			connected = true;
 			connectInProgress = false;
+			reconnectBackoff = -1;
 
 			// Send our current User information to the server.
 			beShareSubscribe();
 			setLocalUserName(localUserName);
 			setLocalUserStatus(localUserStatus);
+			setUploadBandwidth("?", 0);
 
-			// Tell the UI to update.
-			fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.SERVER_CONNECTED));
+			// TODO: Execute any 'onlogin' commands.
+
+			// TODO: Update the list of files you share.
 		} else if (message == serverDisconnect) {
 			connected = false;
 			connectInProgress = false;
-			disconnect();
-			ThreadPool.getDefaultThreadPool().startThread(new AutoReconnector());
+			if (!disconnectExpected && reconnectBackoff < 0) {
+				logInformation("Disconnected from: " + serverName);
+				reconnectBackoff = 0;
+				ThreadPool.getDefaultThreadPool().startThread(new AutoReconnector());
+			} else {
+				logError("Connection failed to: " + serverName);
+			}
 		} else if (message instanceof Message) {
 			try {
 				lastEvent = System.currentTimeMillis();
@@ -526,9 +521,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 				System.out.println(ex.toString());
 				ex.printStackTrace(System.out);
 				System.out.println("Message Error Occured with:\n" + message.toString());
-				// Try to pass the message on and see what happens.
-				fireJavaShareEvent(new JavaShareEvent(message,
-						                                     JavaShareEvent.UNKNOWN_MUSCLE_MESSAGE));
 			}
 		}
 	}
@@ -599,8 +591,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							// The User was removed
 							BeShareUser removed = new BeShareUser(sessionIDFromNode(removedNodes[x]));
 							userDataModel.removeUser(removed);
-							fireJavaShareEvent(
-									                  new JavaShareEvent(this, JavaShareEvent.USER_DISCONNECTED, removed));
+							logInformation("User #" + removed.getSessionID() + " (a.k.a. " + removed.getName() + ") has disconnected.");
 						} else if (getPathDepth(removedNodes[x]) == FILE_INFO_DEPTH) {
 							// Files were removed
 							SharedFile holder = new SharedFile();
@@ -610,8 +601,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 								holder.setName(lastNodeElement(removedNodes[x], "fires/"));
 							}
 							holder.setSessionID(sessionIDFromNode(removedNodes[x]));
-							fireJavaShareEvent(
-									                  new JavaShareEvent(holder, JavaShareEvent.FILE_INFO_REMOVE_RESULTS));
+							// transferPanel.removeResult(holder);
 						}
 					} // next removed Node
 				} // done with removal
@@ -675,50 +665,60 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 								BeShareUser existing = userDataModel.getUser(user.getSessionID());
 								if (existing == null) {
 									userDataModel.addUser(user);
-									fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.USER_CONNECTED, user));
+									logInformation("User #" + user.getSessionID() + " is now connected.");
 								} else {
 									existing.setName(user.getName());
 									existing.setClient(user.getClient());
 									existing.setPort(user.getPort());
 									userDataModel.updateUser(existing);
-									fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.USER_NAME_CHANGE, existing));
+									logInformation("User #" + existing.getSessionID() + " is now known as " + existing.getName());
 								}
 							} else if (updatedNode.equals("userstatus")) {
 								BeShareUser existing = userDataModel.getUser(user.getSessionID());
 								if (existing == null) {
 									user.setName("<unknown>");
-									userDataModel.addUser(user);
-									fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.USER_STATUS_CHANGE, user));
-								} else {
-									existing.setStatus(user.getStatus());
-									userDataModel.updateUser(existing);
-									fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.USER_STATUS_CHANGE, existing));
+									existing = user;
 								}
+								existing.setStatus(user.getStatus());
+								userDataModel.updateUser(existing);
+								logInformation("User #" + existing.getSessionID() + " " +
+										               "(a.k.a. " + existing.getName() + ") " +
+										               "is now " + existing.getStatus() + ".");
 							} else if (updatedNode.equals("uploadstats")) {
 								BeShareUser existing = userDataModel.getUser(user.getSessionID());
 								if (existing == null) {
 									user.setName("<unknown>");
-									userDataModel.addUser(user);
-									fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.USER_UPLOAD_STATS_CHANGE, user));
-								} else {
-									existing.setUploadCurrent(user.getUploadCurrent());
-									existing.setUploadMax(user.getUploadMax());
-									existing.setPort(user.getPort());
-									userDataModel.updateUser(existing);
-									fireJavaShareEvent(new JavaShareEvent(this, JavaShareEvent.USER_UPLOAD_STATS_CHANGE, existing));
+									existing = user;
 								}
+								existing.setUploadCurrent(user.getUploadCurrent());
+								existing.setUploadMax(user.getUploadMax());
+								existing.setPort(user.getPort());
+								userDataModel.updateUser(existing);
 							} else if (updatedNode.equals("bandwidth")) {
-								fireJavaShareEvent(
-										                  new JavaShareEvent(this, JavaShareEvent.USER_BANDWIDTH_CHANGE, user));
-							} else if (updatedNode.equals("fires")) {
-								fireJavaShareEvent(
-										                  new JavaShareEvent(this, JavaShareEvent.USER_FIREWALL_CHANGE, user));
-							} else if (updatedNode.equals("files")) {
-								fireJavaShareEvent(
-										                  new JavaShareEvent(this, JavaShareEvent.USER_FIREWALL_CHANGE, user));
+								BeShareUser existing = userDataModel.getUser(user.getSessionID());
+								if (existing == null) {
+									user.setName("<unknown>");
+									existing = user;
+								}
+								existing.setBandwidthLabel(user.getBandwidthLabel());
+								existing.setBandwidthBps(user.getBandwidthBps());
+								userDataModel.updateUser(existing);
+							} else if (updatedNode.equals("fires") || updatedNode.equals("files")) {
+								BeShareUser existing = userDataModel.getUser(user.getSessionID());
+								if (existing == null) {
+									user.setName("<unknown>");
+									existing = user;
+								}
+								existing.setFirewall(user.getFirewall());
+								userDataModel.updateUser(existing);
 							} else if (updatedNode.equals("filecount")) {
-								fireJavaShareEvent(
-										                  new JavaShareEvent(this, JavaShareEvent.USER_FILE_COUNT_CHANGE, user));
+								BeShareUser existing = userDataModel.getUser(user.getSessionID());
+								if (existing == null) {
+									user.setName("<unknown>");
+									existing = user;
+								}
+								existing.setFileCount(user.getFileCount());
+								userDataModel.updateUser(existing);
 							}
 						} else if (getPathDepth(fieldName) == FILE_INFO_DEPTH && queryActive) {
 							Message fileInfo = message.getMessage(fieldName);
@@ -742,8 +742,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 
 							Thread.yield(); // Force the query to play nice.
 
-							fireJavaShareEvent(
-									                  new JavaShareEvent(holder, JavaShareEvent.FILE_INFO_ADD_TO_RESULTS));
+							// transferPanel.addResult(holder);
 						} // FILE_INFO_DEPTH
 					} // B_MESSAGE_TYPE
 				} // Next field name
@@ -883,19 +882,16 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * Performs the time-delayed auto-reconnect.
 	 */
 	private class AutoReconnector implements Runnable {
-		private int backoff = 0;
-
 		@Override
 		public void run() {
-			// TODO: Refactor this down into something other than a thread that beats the tar out of the background...
-			while (!connected && !connectInProgress) {
-				switch (backoff) {
+			while (!connected && !connectInProgress && reconnectBackoff >= 0) {
+				switch (reconnectBackoff) {
 					case 0:
 						logInformation("Reconnecting...");
 						break;
 					case 30:
 						// Seconds Message
-						logInformation("Reconnecting in " + backoff + " seconds...");
+						logInformation("Reconnecting in " + reconnectBackoff + " seconds...");
 						break;
 					case 60:
 						// Minutes message
@@ -903,16 +899,17 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 						break;
 					default:
 						// Minutes message
-						logInformation("Reconnecting in " + (backoff / 60) + " minutes...");
+						logInformation("Reconnecting in " + (reconnectBackoff / 60) + " minutes...");
 				}
 				connect();
 				try {
-					Thread.currentThread().sleep(backoff * 1000);
-				} catch (InterruptedException ie) { }
-				if (backoff == 0) {
-					backoff = 30;
+					Thread.currentThread().sleep(reconnectBackoff * 1000);
+				} catch (InterruptedException ie) {
+				}
+				if (reconnectBackoff == 0) {
+					reconnectBackoff = 30;
 				} else {
-					backoff *= 2;
+					reconnectBackoff *= 2;
 				}
 			}
 		}

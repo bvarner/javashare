@@ -14,8 +14,6 @@ import java.awt.event.ActionListener;
 public class GeneralPrefs extends JPanel implements ActionListener {
 	final int oneSecond = 1000;
 	final int oneMinute = 60 * oneSecond;
-	JavaSharePrefListener target;
-	Message prefs;
 	JComboBox autoAway;
 	JCheckBox chkAutoUpdateServers;
 	JCheckBox chkFirewall;
@@ -23,11 +21,8 @@ public class GeneralPrefs extends JPanel implements ActionListener {
 	JCheckBox chkMiniBrowser;
 	JCheckBox chkSaveUserSort;
 
-	public GeneralPrefs(JavaSharePrefListener prefHandler, Message prefMessage) {
+	public GeneralPrefs() {
 		super(new GridLayout(7, 1, 3, 3));
-
-		target = prefHandler;
-		prefs = prefMessage;
 
 		String[] autoAwayTimes = {"Disabled", "2 Minutes", "5 Minutes",
 		                          "10 Minutes", "15 Minutes", "20 Minutes", "30 Minutes", "1 Hour",
@@ -62,36 +57,11 @@ public class GeneralPrefs extends JPanel implements ActionListener {
 		setBorder(BorderFactory.createTitledBorder("General Preferences"));
 
 		// Set the values from the Message.
-		if (prefs.hasField("autoUpdServers")) {
-			try {
-				chkAutoUpdateServers.setSelected(prefs.getBoolean("autoUpdServers"));
-			} catch (Exception e) {
-			}
-		}
-		if (prefs.hasField("awayTimeIndex")) {
-			try {
-				autoAway.setSelectedIndex(prefs.getInt("awayTimeIndex"));
-			} catch (Exception e) {
-			}
-		}
-		if (prefs.hasField("firewalled")) {
-			try {
-				chkFirewall.setSelected(prefs.getBoolean("firewalled"));
-			} catch (Exception e) {
-			}
-		}
-		if (prefs.hasField("autoLogin")) {
-			try {
-				chkLogin.setSelected(prefs.getBoolean("autoLogin"));
-			} catch (Exception e) {
-			}
-		}
-		if (prefs.hasField("userSort")) {
-			try {
-				chkSaveUserSort.setSelected(prefs.getBoolean("userSort"));
-			} catch (Exception e) {
-			}
-		}
+//		chkAutoUpdateServers.setSelected(prefs.getBoolean("autoUpdServers"), true);
+//		autoAway.setSelectedIndex(prefs.getInt("awayTimeIndex"));
+//		chkFirewall.setSelected(prefs.getBoolean("firewalled"));
+//		chkLogin.setSelected(prefs.getBoolean("autoLogin"));
+//		chkSaveUserSort.setSelected(prefs.getBoolean("userSort"));
 
 		// Register the listener.
 		autoAway.addActionListener(this);
@@ -143,15 +113,15 @@ public class GeneralPrefs extends JPanel implements ActionListener {
 					break;
 				}
 			}
-			target.autoAwayTimerChange(time, autoAway.getSelectedIndex());
+//			target.autoAwayTimerChange(time, autoAway.getSelectedIndex());
 		} else if (ae.getSource() == chkAutoUpdateServers) {
-			target.autoUpdateServerChange(chkAutoUpdateServers.isSelected());
+//			target.autoUpdateServerChange(chkAutoUpdateServers.isSelected());
 		} else if (ae.getSource() == chkFirewall) {
-			target.firewallSettingChange(chkFirewall.isSelected());
+//			target.firewallSettingChange(chkFirewall.isSelected());
 		} else if (ae.getSource() == chkLogin) {
-			target.loginOnStartupChange(chkLogin.isSelected());
+//			target.loginOnStartupChange(chkLogin.isSelected());
 		} else if (ae.getSource() == chkSaveUserSort) {
-			target.userSortChange(chkSaveUserSort.isSelected());
+//			target.userSortChange(chkSaveUserSort.isSelected());
 		}
 	}
 }
