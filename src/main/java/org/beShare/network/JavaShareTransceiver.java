@@ -233,7 +233,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		beShareTransceiver.disconnect();
 		userDataModel.clear();
 
-		logInformation("Connecting to: " + serverName);
+		logSystemMessage("Connecting to: " + serverName);
 		beShareTransceiver.connect(serverName, serverPort, serverConnect, serverDisconnect);
 	}
 
@@ -326,15 +326,42 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// TODO: Set the status to the 'away' message.
 		} else if (lowerCommand.startsWith("/awaymsg")) {
 			// TODO: Create / set the auto-away-status
-			//logInformation("Auto-away message set to " + message);
+			//logSystemMessage("Auto-away message set to " + message);
 		} else if (lowerCommand.startsWith("/alias")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/unalias")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/watch")) {
-			// TODO: Implement
+			if (lowerCommand.equals("/watch")) { // If all they typed was 'watch', then list the current watches.
+				StringBuilder sb = new StringBuilder("Current Watch Expressions:\n");
+				for (String pattern : StyledString.getUserPatterns()) {
+					sb.append("        ").append(pattern).append("\n");
+				}
+				chatDoc.addSystemMessage(sb.toString());
+			} else {
+				String watchPattern = command.substring(6).trim();
+				StyledString.addUserPattern(watchPattern, ".*" + watchPattern + ".*", StyledString.WATCH_PATTERN);
+
+				chatDoc.addSystemMessage("Added watch pattern: " + watchPattern);
+			}
 		} else if (lowerCommand.startsWith("/unwatch")) {
-			// TODO: Implement
+			if (lowerCommand.length() > 8) {
+				String removePattern = command.substring(8).trim();
+
+				// If you type '/unwatch all' it will remove all patterns.
+				if (removePattern.equals("all")) {
+					for (String pattern : StyledString.getUserPatterns()) {
+						StyledString.removePattern(pattern);
+					}
+					chatDoc.addSystemMessage("All watch patterns removed.");
+				} else if (StyledString.removePattern(removePattern)) {
+					chatDoc.addSystemMessage("Removed watch pattern: " + removePattern);
+				} else {
+					chatDoc.addErrorMessage("The pattern you entered, '" + removePattern + "', did not match a known watch pattern.");
+				}
+			} else {
+				chatDoc.addWarningMessage("No pattern to remove specified.");
+			}
 		} else if (lowerCommand.startsWith("/ping")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/autopriv")) {
@@ -354,30 +381,30 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		} else if (lowerCommand.startsWith("/status")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/help")) {
-			logInformation("JavaShare Command Refrence\n"
-					               + "       /action <action> - do something\n"
-					               + "       /alias [names and value] - create an alias\n"
-					               + "       /autopriv <names or session ids> - specify AutoPriv users\n"
-					               + "       /away tag - Force away state\n"
-					               + "       /awaymsg tag - change the auto-away tag\n"
-					               + "       /clear - clear the chat log\n"
-					               + "       /clearonlogin - clear startup commands\n"
-					               + "       /connect [serverName] - connect to a server\n"
-					               + "       /disconnect - disconnect from the server\n"
-					               + "       /help - show this help text\n"
-					               + "       /ignore <names or session ids> - specify users to ignore\n"
-					               + "       /me <action> - synonym for /action\n"
-					               + "       /msg <name or session id> <text> - send a private message\n"
-					               + "       /nick <name> - change your user name\n"
-					               + "       /onlogin command - add a startup command\n"
-					               + "       /priv <names or session ids> - Open Private Chat Window\n"
-					               + "       /ping <names or session ids> - ping other clients\n"
-					               + "       /quit - quit BeShare\n"
-					               + "       /serverinfo - Request server status\n"
-					               + "       /status Status - set user status string\n"
-					               + "       /unalias <name> - remove an alias\n"
-					               + "       /watch <name or session ids> - specify users to watch\n"
-					               + "       /server <address> - Sets the server address.\n");
+			logSystemMessage("JavaShare Command Refrence\n"
+					                 + "       /action <action> - do something\n"
+					                 + "       /alias [names and value] - create an alias\n"
+					                 + "       /autopriv <names or session ids> - specify AutoPriv users\n"
+					                 + "       /away tag - Force away state\n"
+					                 + "       /awaymsg tag - change the auto-away tag\n"
+					                 + "       /clear - clear the chat log\n"
+					                 + "       /clearonlogin - clear startup commands\n"
+					                 + "       /connect [serverName] - connect to a server\n"
+					                 + "       /disconnect - disconnect from the server\n"
+					                 + "       /help - show this help text\n"
+					                 + "       /ignore <names or session ids> - specify users to ignore\n"
+					                 + "       /me <action> - synonym for /action\n"
+					                 + "       /msg <name or session id> <text> - send a private message\n"
+					                 + "       /nick <name> - change your user name\n"
+					                 + "       /onlogin command - add a startup command\n"
+					                 + "       /priv <names or session ids> - Open Private Chat Window\n"
+					                 + "       /ping <names or session ids> - ping other clients\n"
+					                 + "       /quit - quit BeShare\n"
+					                 + "       /serverinfo - Request server status\n"
+					                 + "       /status Status - set user status string\n"
+					                 + "       /unalias <name> - remove an alias\n"
+					                 + "       /watch <name or session ids> - specify users to watch\n"
+					                 + "       /server <address> - Sets the server address.\n");
 		}
 	}
 
@@ -414,7 +441,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 */
 	private void setLocalUserName(final String uName, final int port, final long installid) {
 		if (this.localUserName != null) {
-			StyledString.KEYWORD_STYLES.remove(".*" + this.localUserName + ".*");
+			StyledString.removePattern(StyledString.USERNAME_PATTERN_NAME);
 		}
 
 		this.localUserName = uName;
@@ -431,8 +458,8 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			setDataNodeValue("beshare/name", nameMessage);
 		}
 
-		logInformation("Your name has been changed to " + localUserName);
-		StyledString.KEYWORD_STYLES.put(".*" + localUserName + ".*", StyledString.USER_MENTIONED);
+		logSystemMessage("Your name has been changed to " + localUserName);
+		StyledString.addSystemPattern(StyledString.USERNAME_PATTERN_NAME, ".*" + localUserName + ".*", StyledString.LOCAL_USER_MENTIONED);
 	}
 
 	public String getLocalUserName() {
@@ -475,7 +502,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			statusMessage.setString("userstatus", this.localUserStatus);
 			setDataNodeValue("beshare/userstatus", statusMessage);
 		}
-		logInformation("Your status has been changed to " + getLocalUserStatus());
+		logSystemMessage("Your status has been changed to " + getLocalUserStatus());
 	}
 
 	/**
@@ -569,7 +596,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			connected = false;
 			connectInProgress = false;
 			if (!disconnectExpected && reconnectBackoff < 0) {
-				logInformation("Disconnected from: " + serverName);
+				logSystemMessage("Disconnected from: " + serverName);
 				reconnectBackoff = 0;
 				ThreadPool.getDefaultThreadPool().startThread(new AutoReconnector());
 			} else {
@@ -653,7 +680,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							// The User was removed
 							BeShareUser removed = new BeShareUser(sessionIDFromNode(removedNodes[x]));
 							userDataModel.removeUser(removed);
-							logInformation("User #" + removed.getSessionID() + " (a.k.a. " + removed.getName() + ") has disconnected.");
+							logSystemMessage("User #" + removed.getSessionID() + " (a.k.a. " + removed.getName() + ") has disconnected.");
 						} else if (getPathDepth(removedNodes[x]) == FILE_INFO_DEPTH) {
 							// Files were removed
 							SharedFile holder = new SharedFile();
@@ -682,7 +709,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							String sessionId = sessionIDFromNode(fieldName);
 							BeShareUser user = userDataModel.getUser(sessionId);
 							if (user == null) {
-								logInformation("User #" + sessionId + " is now connected.");
+								logSystemMessage("User #" + sessionId + " is now connected.");
 								user = new BeShareUser(sessionId);
 							}
 							user.setIPAddress(ipFromNode(fieldName));
@@ -731,11 +758,11 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 							userDataModel.updateUser(user);
 
 							if (updatedNode.equals("name")) {
-								logInformation("User #" + user.getSessionID() + " is now known as " + user.getName());
+								logSystemMessage("User #" + user.getSessionID() + " is now known as " + user.getName());
 							} else if (updatedNode.equals("userstatus")) {
-								logInformation("User #" + user.getSessionID() + " " +
-										               "(a.k.a. " + user.getName() + ") " +
-										               "is now " + user.getStatus() + ".");
+								logSystemMessage("User #" + user.getSessionID() + " " +
+										                 "(a.k.a. " + user.getName() + ") " +
+										                 "is now " + user.getStatus() + ".");
 							}
 						} else if (getPathDepth(fieldName) == FILE_INFO_DEPTH && queryActive) {
 							Message fileInfo = message.getMessage(fieldName);
@@ -804,13 +831,13 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 
 	/**
 	 * Taks a Server Information message and sends the information out to the JavaShare Listeners
-	 * by calling logInformation();
+	 * by calling logSystemMessage();
 	 */
 	protected final void processServerInfo(Message message) throws Exception {
 		requestedServerInfo = false;
-		logInformation("Server status requested.");
+		logSystemMessage("Server status requested.");
 		if (message.hasField(PR_NAME_SERVER_VERSION)) {
-			logInformation("Server version:  " + message.getString(PR_NAME_SERVER_VERSION));
+			logSystemMessage("Server version:  " + message.getString(PR_NAME_SERVER_VERSION));
 		}
 		if (message.hasField(PR_NAME_SERVER_UPTIME)) {
 			long seconds = message.getLong(PR_NAME_SERVER_UPTIME) / 1000000;
@@ -822,18 +849,18 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			hours = hours % 24;
 			long weeks = days / 7;
 			days = days % 7;
-			logInformation("Server uptime:   " + weeks + " weeks, " + days + " days, " + hours +
-					               ":" + minutes + ":" + seconds);
+			logSystemMessage("Server uptime:   " + weeks + " weeks, " + days + " days, " + hours +
+					                 ":" + minutes + ":" + seconds);
 		}
 		if (message.hasField(PR_NAME_SESSION_ROOT)) {
-			logInformation("Local Session Root:    " + message.getString(PR_NAME_SESSION_ROOT));
+			logSystemMessage("Local Session Root:    " + message.getString(PR_NAME_SESSION_ROOT));
 		}
 		if (message.hasField(PR_NAME_SERVER_MEM_AVAILABLE) && message.hasField(PR_NAME_SERVER_MEM_USED)) {
 			final float oneMeg = 1024.0f * 1024.0f;
 			float memAvailableMB = ((float) message.getLong(PR_NAME_SERVER_MEM_AVAILABLE)) / oneMeg;
 			float memUsedMB = ((float) message.getLong(PR_NAME_SERVER_MEM_USED)) / oneMeg;
-			logInformation("Server memory usage:    " + memUsedMB + "MB used (" +
-					               memAvailableMB + "MB available)");
+			logSystemMessage("Server memory usage:    " + memUsedMB + "MB used (" +
+					                 memAvailableMB + "MB available)");
 		}
 	}
 
@@ -842,7 +869,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 *
 	 * @param message - The Text to display as an informational message.
 	 */
-	public final void logInformation(final String message) {
+	public final void logSystemMessage(final String message) {
 		for (ChatDocument doc : chatDocuments) {
 			doc.addSystemMessage(message);
 		}
@@ -905,19 +932,19 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			while (!connected && !connectInProgress && reconnectBackoff >= 0) {
 				switch (reconnectBackoff) {
 					case 0:
-						logInformation("Reconnecting...");
+						logSystemMessage("Reconnecting...");
 						break;
 					case 30:
 						// Seconds Message
-						logInformation("Reconnecting in " + reconnectBackoff + " seconds...");
+						logSystemMessage("Reconnecting in " + reconnectBackoff + " seconds...");
 						break;
 					case 60:
 						// Minutes message
-						logInformation("Reconnecting in 1 minute...");
+						logSystemMessage("Reconnecting in 1 minute...");
 						break;
 					default:
 						// Minutes message
-						logInformation("Reconnecting in " + (reconnectBackoff / 60) + " minutes...");
+						logSystemMessage("Reconnecting in " + (reconnectBackoff / 60) + " minutes...");
 				}
 				connect();
 				try {

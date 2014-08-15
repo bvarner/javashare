@@ -33,12 +33,6 @@
 //						                        , StyledString.PLAIN_MESSAGE_STYLE);
 //			}
 //			break;
-//			case ChatMessage.LOG_USER_EVENT_MESSAGE: {
-//				chatString.addStyledText("System: ", StyledString.SYSTEM_MESSAGE);
-//				chatString.addStyledText(theMessage.getMessage() + "\n"
-//						                        , StyledString.PLAIN_MESSAGE_STYLE);
-//			}
-//			break;
 //			case ChatMessage.LOG_WATCH_PATTERN_MATCH: {
 //				// A remote user said something.
 //				if (theMessage.getMessage().startsWith("/me")) {

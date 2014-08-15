@@ -3,8 +3,6 @@ package org.beShare.gui;
 import blv.swing.AboutDialog;
 import com.meyer.muscle.message.Message;
 import com.meyer.muscle.support.Rect;
-import gnu.regexp.RE;
-import gnu.regexp.REException;
 import org.beShare.gui.prefPanels.JavaSharePrefListener;
 import org.beShare.network.JavaShareTransceiver;
 
@@ -167,10 +165,10 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 				if (strPrivs[x].startsWith("(?:")) {
 					strPrivs[x] = strPrivs[x].substring(3, strPrivs[x].length() - 1);
 				}
-				try {
-					autoPrivVect.addElement(new RE(strPrivs[x]));
-				} catch (REException ree) {
-				}
+//				try {
+//					autoPrivVect.addElement(new RE(strPrivs[x]));
+//				} catch (REException ree) {
+//				}
 			}
 		}
 
@@ -183,10 +181,10 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 				if (strWatch[x].startsWith("(?:")) {
 					strWatch[x] = strWatch[x].substring(3, strWatch[x].length() - 1);
 				}
-				try {
-					watchPatVect.addElement(new RE(strWatch[x]));
-				} catch (REException ree) {
-				}
+//				try {
+//					watchPatVect.addElement(new RE(strWatch[x]));
+//				} catch (REException ree) {
+//				}
 			}
 		}
 
@@ -199,10 +197,10 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 				if (strIgnore[x].startsWith("(?:")) {
 					strIgnore[x] = strIgnore[x].substring(3, strIgnore[x].length() - 1);
 				}
-				try {
-					ignorePatVect.addElement(new RE(strIgnore[x]));
-				} catch (REException ree) {
-				}
+//				try {
+//					ignorePatVect.addElement(new RE(strIgnore[x]));
+//				} catch (REException ree) {
+//				}
 			}
 		}
 
@@ -265,8 +263,8 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 
 		SwingUtilities.updateComponentTreeUI(this);
 
-		this.transceiver.logInformation("Welcome to JavaShare!\n" +
-				                                "Type /help for a list of commands.");
+		this.transceiver.logSystemMessage("Welcome to JavaShare!\n" +
+				                                  "Type /help for a list of commands.");
 
 		this.transceiver.setServerPort(2960);
 		if (programPrefsMessage.getBoolean("autoLogin", false)) {
@@ -395,7 +393,7 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 	public void addServers(Vector servers) {
 		for (int x = 0; x < servers.size(); x++) {
 			if (localUserInfo.addServerName((String) servers.elementAt(x))) {
-				transceiver.logInformation("Added server: " + (String) servers.elementAt(x));
+				transceiver.logSystemMessage("Added server: " + (String) servers.elementAt(x));
 			}
 		}
 	}
@@ -408,7 +406,7 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 	public void removeServers(Vector servers) {
 		for (int x = 0; x < servers.size(); x++) {
 			if (localUserInfo.removeServerName((String) servers.elementAt(x))) {
-				transceiver.logInformation("Removed server: " + (String) servers.elementAt(x));
+				transceiver.logSystemMessage("Removed server: " + (String) servers.elementAt(x));
 			}
 		}
 	}
