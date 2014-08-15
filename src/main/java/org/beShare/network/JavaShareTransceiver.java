@@ -363,7 +363,19 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 				chatDoc.addWarningMessage("No pattern to remove specified.");
 			}
 		} else if (lowerCommand.startsWith("/ping")) {
-			// TODO: Implement
+			String pingTarget = command.substring(5).trim();
+			// Lookup by name
+			String sessionId = userDataModel.findSessionByName(pingTarget);
+			if ("".equals(sessionId)) {
+				sessionId = pingTarget;
+			}
+			BeShareUser user = userDataModel.getUser(sessionId);
+			if (user != null) {
+				pingUser(sessionId);
+				chatDoc.addSystemMessage("Ping sent to User #" + user.getSessionID() + " (a.k.a. " + user.getName() + ")");
+			} else {
+				chatDoc.addWarningMessage("Could not find a username or session # for: " + pingTarget);
+			}
 		} else if (lowerCommand.startsWith("/autopriv")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/ignore")) {
