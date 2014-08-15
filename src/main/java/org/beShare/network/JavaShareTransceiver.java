@@ -41,7 +41,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private static final int NET_CLIENT_CONNECT_BACK_REQUEST = 3;
 	private static final int NET_CLIENT_PING = 5;
 	private static final int NET_CLIENT_PONG = 6;
-	private static final String[] ALL_SESSIONS = new String[] {"*"};
+	private static final String[] ALL_SESSIONS = new String[]{"*"};
 	public final String MUSCLE_INTERFACE_VERSION = "JavaShare " + Application.BUILD_VERSION;
 	private final Object serverConnect = new Object();
 	private final Object serverDisconnect = new Object();
@@ -50,8 +50,8 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private int serverPort = 2960;
 	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
 	private String localSessionID = "";
-	private String localUserName;
-	private String localUserStatus;
+	private String localUserName = "";
+	private String localUserStatus = "";
 	private long localUserInstallId;
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
 	private boolean requestedServerInfo = false;
@@ -61,9 +61,11 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private int pingCount = 0;
 	private boolean queryActive = false;
 	private long lastEvent = System.currentTimeMillis();
+	private long lastAction = System.currentTimeMillis();
 	private boolean disconnectExpected = false;
 	private int reconnectBackoff = -1;
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
+	private int awayTimeout = 300;
 	private UserDataModel userDataModel = new UserDataModel();
 
 	/**
@@ -71,6 +73,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 */
 	public JavaShareTransceiver(final Preferences preferences) {
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
+		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
 	}
 
 	/**
@@ -226,7 +229,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	/**
 	 * Connects to MUSCLE server.
 	 */
-	public synchronized void connect() {
+	private synchronized void connect() {
 		disconnectExpected = false;
 		connectInProgress = true;
 		connected = false;
@@ -241,20 +244,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	/**
 	 * Force a disconnect from the current server.
 	 */
-	public synchronized void disconnect() {
+	private synchronized void disconnect() {
 		disconnectExpected = true;
 		beShareTransceiver.disconnect();
 		userDataModel.clear();
-	}
-
-	/**
-	 * Returns connection status
-	 *
-	 * @return true if connected, false if not connected.
-	 * @deprecated Please remove this method, and get the shared file list maintenance added refactored...
-	 */
-	public synchronized boolean isConnected() {
-		return connected;
 	}
 
 	/**
@@ -284,11 +277,12 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * unless <code>privateSessionIds</code> is specified. When <code>privateSessionIds</code> is not-null, and not-empty, the text
 	 * is sent to only the sessions specified in the array.
 	 *
-	 * @param text    The String to send
-	 * @param chatDoc The document to update with the content you've sent.
+	 * @param text              The String to send
+	 * @param chatDoc           The document to update with the content you've sent.
 	 * @param privateSessionIds An optional list of sessionIds to receive the message as private.
 	 */
 	public void sendChat(final String text, final ChatDocument chatDoc, final String[] privateSessionIds) {
+		lastAction = System.currentTimeMillis();
 		String[] sessions = ALL_SESSIONS;
 		if (chatDoc.getFilteredUserDataModel().isFiltering()) {
 			sessions = chatDoc.getFilteredUserDataModel().getSessionIds().toArray(new String[0]);
@@ -323,6 +317,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * @param chatDoc
 	 */
 	public void command(final String command, final ChatDocument chatDoc) {
+		lastAction = System.currentTimeMillis();
 		String lowerCommand = command.toLowerCase().trim();
 		if (lowerCommand.startsWith("/me ") || lowerCommand.startsWith("/action ")) {
 			// This isn't really a command...
@@ -416,10 +411,8 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/unignore")) {
 			// TODO: Implement
-		} else if (lowerCommand.startsWith("/unignore")) {
-			// TODO: Implement
 		} else if (lowerCommand.startsWith("/nick")) {
-			// TODO: Implement
+			setLocalUserName(command.substring(5).trim());
 		} else if (lowerCommand.startsWith("/onlogin")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/quit")) {
@@ -441,7 +434,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 					                 + "       /disconnect - disconnect from the server\n"
 					                 + "       /help - show this help text\n"
 					                 + "       /ignore [name | session id] - specify a user to ignore\n"
-									 + "       /unignore [name | session id] - specify a user to stop ignoring\n"
+					                 + "       /unignore [name | session id] - specify a user to stop ignoring\n"
 					                 + "       /me <action> - synonym for /action\n"
 					                 + "       /msg [name | session id] [message] - send a private message\n"
 					                 + "       /nick <name> - change your user name\n"
@@ -489,26 +482,28 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * @param installid the unique identifier for this install.
 	 */
 	private void setLocalUserName(final String uName, final int port, final long installid) {
-		if (this.localUserName != null) {
-			StyledString.removePattern(StyledString.USERNAME_PATTERN_NAME);
+		if (uName != null && !"".equals(uName) && !localUserName.equals(uName)) {
+			if (this.localUserName != null) {
+				StyledString.removePattern(StyledString.USERNAME_PATTERN_NAME);
+			}
+
+			this.localUserName = uName;
+			this.localUserPort = port;
+			this.localUserInstallId = installid;
+
+			if (connected) {
+				Message nameMessage = new Message();
+				nameMessage.setString("name", localUserName);
+				nameMessage.setInt("port", this.localUserPort);
+				nameMessage.setLong("installid", this.localUserInstallId);
+				nameMessage.setString("version_name", "JavaShare");
+				nameMessage.setString("version_num", "v" + Application.BUILD_VERSION);
+				setDataNodeValue("beshare/name", nameMessage);
+			}
+
+			logSystemMessage("Your name has been changed to " + localUserName);
+			StyledString.addSystemPattern(StyledString.USERNAME_PATTERN_NAME, ".*" + localUserName + ".*", StyledString.LOCAL_USER_MENTIONED);
 		}
-
-		this.localUserName = uName;
-		this.localUserPort = port;
-		this.localUserInstallId = installid;
-
-		if (connected) {
-			Message nameMessage = new Message();
-			nameMessage.setString("name", localUserName);
-			nameMessage.setInt("port", this.localUserPort);
-			nameMessage.setLong("installid", this.localUserInstallId);
-			nameMessage.setString("version_name", "JavaShare");
-			nameMessage.setString("version_num", "v" + Application.BUILD_VERSION);
-			setDataNodeValue("beshare/name", nameMessage);
-		}
-
-		logSystemMessage("Your name has been changed to " + localUserName);
-		StyledString.addSystemPattern(StyledString.USERNAME_PATTERN_NAME, ".*" + localUserName + ".*", StyledString.LOCAL_USER_MENTIONED);
 	}
 
 	public String getLocalUserName() {
@@ -964,6 +959,24 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 				// Sleep 2.5 minutes.
 				try {
 					Thread.currentThread().sleep(timeoutMillis);
+				} catch (InterruptedException ie) {
+				}
+			}
+		}
+	}
+
+	/**
+	 * Automatically trigger the away setting if there hasn't been any local activity...
+	 */
+	private class AutoAway implements Runnable {
+		public void run() {
+			while (true) {
+				try {
+					Thread.currentThread().sleep(10);
+					// TODO: If auto-away is enabled....
+					if (true && connected && System.currentTimeMillis() - lastAction >= (awayTimeout * 1000)) {
+					//setLocalUserStatus(getAwayStatus());
+					}
 				} catch (InterruptedException ie) {
 				}
 			}

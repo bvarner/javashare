@@ -1,32 +1,24 @@
 package org.beShare.gui;
 
-import blv.swing.AboutDialog;
 import com.meyer.muscle.message.Message;
 import com.meyer.muscle.support.Rect;
-import org.beShare.gui.prefPanels.JavaSharePrefListener;
 import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import javax.swing.UIManager;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Rectangle;
-import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -41,7 +33,7 @@ import java.util.Vector;
  *
  * @author Bryan Varner
  */
-public class AppPanel extends JPanel implements ActionListener, JavaSharePrefListener {
+public class AppPanel extends JPanel {
 
 	public static final String AutoUpdateURL = "http://beshare.tycomsystems.com/servers.txt";
 
@@ -54,7 +46,6 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 	boolean saveUserSort;
 	LocalUserPanel localUserInfo;
 	JavaShareTransceiver transceiver;
-	AboutDialog aboutJavaShare;
 
 	TransferPanel transPan;
 
@@ -69,11 +60,6 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 	Vector watchPatVect;
 	Vector ignorePatVect;
 	Vector onLoginVect;
-
-	Timer autoAwayTimer;
-
-	Calendar calendar = Calendar.getInstance();
-
 
 	/**
 	 * Creates a new AppPanel based on the fields stored in <code>prefsMessage
@@ -267,11 +253,6 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 				                                  "Type /help for a list of commands.");
 
 		this.transceiver.setServerPort(2960);
-		if (programPrefsMessage.getBoolean("autoLogin", false)) {
-			transceiver.connect();
-		}
-
-
 	}
 
 	/**
@@ -461,74 +442,9 @@ public class AppPanel extends JPanel implements ActionListener, JavaSharePrefLis
 	// -------------------
 
 	/**
-	 * Implementation of ActionListener
-	 */
-	public void actionPerformed(ActionEvent e) {
-		if (e.getActionCommand() == "menuConnect") {
-			transceiver.connect();
-		} else if (e.getActionCommand() == "menuDisconnect") {
-			transceiver.disconnect();
-			if (transPan != null) {
-				transPan.clearQueryResults();
-			}
-			transceiver.logError("You are diconnected from the MUSCLE server.");
-		} else if (e.getActionCommand() == "menuQuit") {
-			Window root = SwingUtilities.getWindowAncestor(this);
-			root.dispatchEvent(new WindowEvent(root, WindowEvent.WINDOW_CLOSING));
-		} else if (e.getActionCommand() == "menuPrivate") {
-//			PrivateFrame privFrame = new PrivateFrame(this,
-//					                                         this, " ");
-//			privFrame.pack();
-//			privFrame.show();
-		} else if (e.getActionCommand() == "menuClear") {
-			chatterPanel.chatDoc.clear();
-		} else if (e.getActionCommand() == "menuAbout") {
-			aboutJavaShare.setVisible(true);
-		} else if (e.getActionCommand() == "cut") {
-			chatterPanel.cut();
-		} else if (e.getActionCommand() == "copy") {
-			chatterPanel.copy();
-		} else if (e.getActionCommand() == "paste") {
-			chatterPanel.paste();
-		} else if (e.getActionCommand() == "prefs") {
-//			prefsFrame.setVisible(true);
-		} else if (e.getSource() == autoAwayTimer) {
-			// Set the status to away and stop the timer. No need to run it.
-			try {
-				localUserInfo.setAwayStatus(true);
-				autoAwayTimer.stop();
-			} catch (NullPointerException npe) {
-				autoAwayTimer.stop();
-				// This happens if the auto-away is disabled.
-				// It's not any type of a problem. The timer just isn't created
-				// unless we need it.
-			}
-		}
-	}
-
-	/**
-	 * AutoAway preference has Changed.
-	 *
-	 * @param time The new timer delay in seconds.
-	 */
-	public void autoAwayTimerChange(int time, int selectedIndex) {
-		if (autoAwayTimer != null) {
-			if (time > 0) {
-				autoAwayTimer.setDelay(time);
-			} else {
-				autoAwayTimer.stop();
-			}
-		} else {
-			autoAwayTimer = new Timer(time, this);
-		}
-		try {
-			programPrefsMessage.setInt("awayTime", time);
-			programPrefsMessage.setInt("awayTimeIndex", selectedIndex);
-		} catch (Exception e) {
-		}
-	}
-
-	/**
+	 * }
+	 * <p/>
+	 * /**
 	 * Auto-Update server on startup has changed.
 	 *
 	 * @param autoUpdate <code>True</code> if we should update, <code>false</code> if we shouldn't.

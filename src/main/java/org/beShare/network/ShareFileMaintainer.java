@@ -106,105 +106,105 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 	 * not necessary. It uses several tests to decide what to do.
 	 */
 	public void updateList() {
-		// If we aren't connected, why bother?
-		if (connection.isConnected()) {
-			if (fileList.size() == 0) {
-				// Empty fileList means we are
-				//	1. sharing nothing and this will execute fast,
-				//	2. Connecting to a server.
-//				if (prefs.hasField("sharedPath")) {
-//					String sharedPath;
-//					try {
-//						sharedPath = prefs.getString("sharedPath");
-//						// Create a File Object for the base path.
+//		// If we aren't connected, why bother?
+//		if (connection.isConnected()) {
+//			if (fileList.size() == 0) {
+//				// Empty fileList means we are
+//				//	1. sharing nothing and this will execute fast,
+//				//	2. Connecting to a server.
+////				if (prefs.hasField("sharedPath")) {
+////					String sharedPath;
+////					try {
+////						sharedPath = prefs.getString("sharedPath");
+////						// Create a File Object for the base path.
+////
+////						File baseDir = new File(sharedPath);
+////						// If there's a file selected, grab it's parent directory to share.
+////						if (!baseDir.isDirectory()) {
+////							if (baseDir.getParent() != null) {
+////								baseDir = new File(baseDir.getParent());
+////							} else {
+////								// We have a file with no parent shared - theoretically not
+////								// possible. So we'll disable sharing and bail out.
+////								sharingDisabled();
+////								return;
+////							}
+////						}
+////
+////						recurseDirectory(baseDir);
+////						uploadList();
+////						serverName = connection.getServerName();
+////					} catch (Exception e) {
+////						System.out.println(e.toString());
+////					}
+////				}
+//			} else {
+//				// In this case we have an existing fileList thats got something in it.
+//				// We need to find out if it's up to date and accurate.
+//				// This copy block is ugly, but it is 1.1 safe.
+//				Vector oldFileList = new Vector();
+//				for (int x = 0; x < fileList.size(); x++) {
+//					oldFileList.addElement(fileList.elementAt(x));
+//				}
 //
-//						File baseDir = new File(sharedPath);
-//						// If there's a file selected, grab it's parent directory to share.
-//						if (!baseDir.isDirectory()) {
-//							if (baseDir.getParent() != null) {
-//								baseDir = new File(baseDir.getParent());
-//							} else {
-//								// We have a file with no parent shared - theoretically not
-//								// possible. So we'll disable sharing and bail out.
-//								sharingDisabled();
-//								return;
-//							}
+//				while (fileList.size() > 0) {
+//					fileList.removeElementAt(0);
+//				}
+//
+////				try {
+////					String sharedPath = prefs.getString("sharedPath");
+////					// Create a File Object.
+////					File baseDir = new File(sharedPath);
+////					// Make sure we have a directory shared.
+////					if (!baseDir.isDirectory()) {
+////						if (baseDir.getParent() != null) {
+////							baseDir = new File(baseDir.getParent());
+////						} else {
+////							sharingDisabled();
+////							return;
+////						}
+////					}
+////
+////					recurseDirectory(baseDir);
+////				} catch (Exception e) {
+////					System.out.println(e.toString());
+////				}
+//
+//				// Test #1, are they the same size? If not, instant update.
+//				if (oldFileList.size() != fileList.size()) {
+//					uploadList();
+//				} else if (!serverName.equals(connection.getServerName())) {
+//					// Our connection has changed servers. Clear out all our list data,
+//					// (we need to rebuild it), then force an update immediately.
+//					while (fileList.size() > 0) {
+//						fileList.removeElementAt(0);
+//					}
+//					serverName = connection.getServerName();
+//					updateList();
+//				} else {
+//					// We couldn't find any cosmetic changes, so now it's off to the races.
+//					// Item by item comparison of the contents of the vectors.
+//					int x = 0;
+//					while (x < fileList.size()) {
+//						if (!((SharedFile) fileList.elementAt(x)).equals(((SharedFile) fileList.elementAt(x)))) {
+//							break;
 //						}
-//
-//						recurseDirectory(baseDir);
+//						x++;
+//					}
+//					// See if we bailed out before the full size(), something didn't match.
+//					if (x < fileList.size()) {
+//						fileList = new Vector(oldFileList);
+//						// Re-send fileList to JavaShareTransceiver!
 //						uploadList();
 //						serverName = connection.getServerName();
-//					} catch (Exception e) {
-//						System.out.println(e.toString());
 //					}
 //				}
-			} else {
-				// In this case we have an existing fileList thats got something in it.
-				// We need to find out if it's up to date and accurate.
-				// This copy block is ugly, but it is 1.1 safe.
-				Vector oldFileList = new Vector();
-				for (int x = 0; x < fileList.size(); x++) {
-					oldFileList.addElement(fileList.elementAt(x));
-				}
-
-				while (fileList.size() > 0) {
-					fileList.removeElementAt(0);
-				}
-
-//				try {
-//					String sharedPath = prefs.getString("sharedPath");
-//					// Create a File Object.
-//					File baseDir = new File(sharedPath);
-//					// Make sure we have a directory shared.
-//					if (!baseDir.isDirectory()) {
-//						if (baseDir.getParent() != null) {
-//							baseDir = new File(baseDir.getParent());
-//						} else {
-//							sharingDisabled();
-//							return;
-//						}
-//					}
-//
-//					recurseDirectory(baseDir);
-//				} catch (Exception e) {
-//					System.out.println(e.toString());
-//				}
-
-				// Test #1, are they the same size? If not, instant update.
-				if (oldFileList.size() != fileList.size()) {
-					uploadList();
-				} else if (!serverName.equals(connection.getServerName())) {
-					// Our connection has changed servers. Clear out all our list data,
-					// (we need to rebuild it), then force an update immediately.
-					while (fileList.size() > 0) {
-						fileList.removeElementAt(0);
-					}
-					serverName = connection.getServerName();
-					updateList();
-				} else {
-					// We couldn't find any cosmetic changes, so now it's off to the races.
-					// Item by item comparison of the contents of the vectors.
-					int x = 0;
-					while (x < fileList.size()) {
-						if (!((SharedFile) fileList.elementAt(x)).equals(((SharedFile) fileList.elementAt(x)))) {
-							break;
-						}
-						x++;
-					}
-					// See if we bailed out before the full size(), something didn't match.
-					if (x < fileList.size()) {
-						fileList = new Vector(oldFileList);
-						// Re-send fileList to JavaShareTransceiver!
-						uploadList();
-						serverName = connection.getServerName();
-					}
-				}
-			}
-		} else {
-			// fudge the servername here. Once we have a solid connection
-			// everything gets re-flushed anyhow.
-			serverName = "";
-		}
+//			}
+//		} else {
+//			// fudge the servername here. Once we have a solid connection
+//			// everything gets re-flushed anyhow.
+//			serverName = "";
+//		}
 	}
 
 	/**
