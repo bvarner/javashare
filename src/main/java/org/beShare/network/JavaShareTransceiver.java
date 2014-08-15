@@ -41,6 +41,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private static final int NET_CLIENT_CONNECT_BACK_REQUEST = 3;
 	private static final int NET_CLIENT_PING = 5;
 	private static final int NET_CLIENT_PONG = 6;
+	private static final String[] ALL_SESSIONS = new String[] {"*"};
 	public final String MUSCLE_INTERFACE_VERSION = "JavaShare " + Application.BUILD_VERSION;
 	private final Object serverConnect = new Object();
 	private final Object serverDisconnect = new Object();
@@ -269,15 +270,33 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	}
 
 	/**
-	 * Sends <code>text</code> to user with session of <code>session</code>
+	 * Sends text to the users associated with the FilteredUserDataModel.
+	 *
+	 * @param text
+	 * @param chatDoc
+	 */
+	public void sendChat(final String text, final ChatDocument chatDoc) {
+		this.sendChat(text, chatDoc, null);
+	}
+
+	/**
+	 * Sends text to the users associated with the FilteredUserDataModel from the ChatDocument, <code>chatDoc</code>,
+	 * unless <code>privateSessionIds</code> is specified. When <code>privateSessionIds</code> is not-null, and not-empty, the text
+	 * is sent to only the sessions specified in the array.
 	 *
 	 * @param text    The String to send
 	 * @param chatDoc The document to update with the content you've sent.
+	 * @param privateSessionIds An optional list of sessionIds to receive the message as private.
 	 */
-	public void sendChat(final String text, final ChatDocument chatDoc) {
-		String[] sessions = {"*"};
+	public void sendChat(final String text, final ChatDocument chatDoc, final String[] privateSessionIds) {
+		String[] sessions = ALL_SESSIONS;
 		if (chatDoc.getFilteredUserDataModel().isFiltering()) {
 			sessions = chatDoc.getFilteredUserDataModel().getSessionIds().toArray(new String[0]);
+		}
+
+		// A privateSessionIds param overrides the defaults for the chatDoc (/msg to another user from a frame / panel)
+		if (privateSessionIds != null && privateSessionIds.length > 0) {
+			sessions = privateSessionIds;
 		}
 
 		Message chatMessage = new Message(NET_CLIENT_NEW_CHAT_TEXT);
@@ -294,7 +313,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		}
 
 		// Post back what you sent to the document you're working with.
-		chatDoc.addEchoChatMessage(text, chatMessage.hasField("private"), localSessionID, localUserName);
+		chatDoc.addEchoChatMessage(text, chatMessage.hasField("private"), localSessionID, localUserName, privateSessionIds);
 	}
 
 	/**
@@ -306,17 +325,37 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	public void command(final String command, final ChatDocument chatDoc) {
 		String lowerCommand = command.toLowerCase().trim();
 		if (lowerCommand.startsWith("/me ") || lowerCommand.startsWith("/action ")) {
+			// This isn't really a command...
 			sendChat(command, chatDoc);
 		} else if (lowerCommand.startsWith("/priv")) {
 			// TODO: Implement me.
 			System.out.println("New Private Frame to [" + command.substring(5).trim() + "]");
 		} else if (lowerCommand.startsWith("/msg")) {
-			// TODO: Implement me.
-			System.out.println("New private chat message to [" + command.substring(5).trim() + "]");
-		} else if (lowerCommand.equalsIgnoreCase("/server")) {
-			// TODO: Server name parsing....
-		} else if (lowerCommand.equalsIgnoreCase("/connect")) {
-			// TODO: Server name parsing....
+			int msgStart = command.substring(5).trim().indexOf(" ");
+			if (msgStart <= 0) {
+				chatDoc.addErrorMessage("You didn't include a message to send.");
+				chatDoc.addErrorMessage("Syntax: '/msg [user|sessionId] [message]");
+			} else {
+				String targetUser = command.substring(5).trim().substring(0, msgStart);
+				String message = command.substring(5 + msgStart).trim();
+
+				BeShareUser user = userDataModel.findByNameOrSession(targetUser);
+				if (user != null) {
+					sendChat(message, chatDoc, new String[]{user.getSessionID()});
+				} else {
+					chatDoc.addWarningMessage("Could not find a username or session # for: " + targetUser);
+				}
+			}
+		} else if (lowerCommand.startsWith("/server")) {
+			String serverName = command.substring(7).trim();
+			if (!"".equals(serverName)) {
+				setServerName(serverName);
+			}
+		} else if (lowerCommand.startsWith("/connect")) {
+			String serverName = command.substring(8).trim();
+			if (!"".equals(serverName)) {
+				setServerName(serverName);
+			}
 			connect();
 		} else if (lowerCommand.equalsIgnoreCase("/disconnect")) {
 			disconnect();
@@ -363,22 +402,19 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 				chatDoc.addWarningMessage("No pattern to remove specified.");
 			}
 		} else if (lowerCommand.startsWith("/ping")) {
-			String pingTarget = command.substring(5).trim();
-			// Lookup by name
-			String sessionId = userDataModel.findSessionByName(pingTarget);
-			if ("".equals(sessionId)) {
-				sessionId = pingTarget;
-			}
-			BeShareUser user = userDataModel.getUser(sessionId);
+			String targetUser = command.substring(5).trim();
+			BeShareUser user = userDataModel.findByNameOrSession(targetUser);
 			if (user != null) {
-				pingUser(sessionId);
+				pingUser(user.getSessionID());
 				chatDoc.addSystemMessage("Ping sent to User #" + user.getSessionID() + " (a.k.a. " + user.getName() + ")");
 			} else {
-				chatDoc.addWarningMessage("Could not find a username or session # for: " + pingTarget);
+				chatDoc.addWarningMessage("Could not find a username or session # for: " + targetUser);
 			}
 		} else if (lowerCommand.startsWith("/autopriv")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/ignore")) {
+			// TODO: Implement
+		} else if (lowerCommand.startsWith("/unignore")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/unignore")) {
 			// TODO: Implement
@@ -404,9 +440,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 					                 + "       /connect [serverName] - connect to a server\n"
 					                 + "       /disconnect - disconnect from the server\n"
 					                 + "       /help - show this help text\n"
-					                 + "       /ignore <names or session ids> - specify users to ignore\n"
+					                 + "       /ignore [name | session id] - specify a user to ignore\n"
+									 + "       /unignore [name | session id] - specify a user to stop ignoring\n"
 					                 + "       /me <action> - synonym for /action\n"
-					                 + "       /msg <name or session id> <text> - send a private message\n"
+					                 + "       /msg [name | session id] [message] - send a private message\n"
 					                 + "       /nick <name> - change your user name\n"
 					                 + "       /onlogin command - add a startup command\n"
 					                 + "       /priv <names or session ids> - Open Private Chat Window\n"
@@ -607,12 +644,10 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		} else if (message == serverDisconnect) {
 			connected = false;
 			connectInProgress = false;
+			logSystemMessage("Disconnected from: " + serverName);
 			if (!disconnectExpected && reconnectBackoff < 0) {
-				logSystemMessage("Disconnected from: " + serverName);
 				reconnectBackoff = 0;
 				ThreadPool.getDefaultThreadPool().startThread(new AutoReconnector());
-			} else {
-				logError("Connection failed to: " + serverName);
 			}
 		} else if (message instanceof Message) {
 			try {
@@ -646,7 +681,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// New chat text!
 			case NET_CLIENT_NEW_CHAT_TEXT: {
 				for (ChatDocument doc : chatDocuments) {
-					doc.addRemoteChatMessage(message.getString("text"), message.getString("session"), message.hasField("private"));
+					doc.addRemoteChatMessage(message.getString("text").trim(), message.getString("session"), message.hasField("private"));
 				}
 			}
 			break;

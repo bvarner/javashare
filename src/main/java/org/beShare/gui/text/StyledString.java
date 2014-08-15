@@ -34,6 +34,7 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 	private static final Map<StyleKey, SimpleAttributeSet> KEYWORD_STYLES =
 			Collections.synchronizedMap(new HashMap<StyleKey, SimpleAttributeSet>());
 	private static final String HTTP_PATTERN_NAME = "HTTP";
+	private static final String MAIL_PATTERN_NAME = "MAIL";
 	private static final String AUDIO_PATTERN_NAME = "AUDIO";
 	private static final String SHARE_PATTERN_NAME = "SHARE";
 
@@ -66,6 +67,7 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 		KEYWORD_STYLES.put(new StyleKey(HTTP_PATTERN_NAME, ".*http://.*", false), URI);
 		KEYWORD_STYLES.put(new StyleKey(SHARE_PATTERN_NAME, ".*beshare:.*", false), URI);
 		KEYWORD_STYLES.put(new StyleKey(AUDIO_PATTERN_NAME, ".*audio://.*", false), URI);
+		KEYWORD_STYLES.put(new StyleKey(MAIL_PATTERN_NAME, ".*mailto:.*", false), URI);
 	}
 
 	/**
@@ -214,7 +216,6 @@ public class StyledString extends LinkedHashMap<String, SimpleAttributeSet> {
 								if (endChar < label.length() - 1) {
 									put(label.toString().substring(endChar + 1), defaultStyle);
 								}
-//								put(label.toString().trim().substring(1, label.length() - 2), keyword.getValue());
 
 								// Move the current 'i' pointer to labelend, so we'll start with the default style on the next non-label token.
 								i = labelend;

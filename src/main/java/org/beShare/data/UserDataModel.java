@@ -117,6 +117,21 @@ public class UserDataModel extends AbstractTableModel {
 	}
 
 	/**
+	 * Attempts to lookup a User given a string. The string may be either a full username, or a sessionId.
+	 *
+	 * @param str
+	 * @return A BeShareUser for that name, or sessionId, or <code>null</code> if none is found.
+	 */
+	public BeShareUser findByNameOrSession(final String str) {
+		// Attempt a name lookup.
+		String sessionId = findSessionByName(str);
+		if ("".equals(sessionId)) {
+			sessionId = str;
+		}
+		return getUser(sessionId);
+	}
+
+	/**
 	 * Gets the BeShareUser for the given sessionID
 	 *
 	 * @param sessionID

@@ -77,7 +77,7 @@ public class ChatDocument extends DefaultStyledDocument {
 		}
 	}
 
-	public void addEchoChatMessage(final String message, final boolean isPrivate, final String localSessionId, final String localUserName) {
+	public void addEchoChatMessage(final String message, final boolean isPrivate, final String localSessionId, final String localUserName, final String[] privateSessionIds) {
 		StyledString styledString;
 		SimpleAttributeSet defaultStyle = StyledString.PLAIN;
 		if (isPrivate) {
@@ -89,8 +89,18 @@ public class ChatDocument extends DefaultStyledDocument {
 			styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(" " + message.substring((4)), defaultStyle);
 		} else if (lowerFirstToken.equals("/action")) {
 			styledString = new StyledString("Action: ", StyledString.USER_ACTION).append(localUserName + " ").append(" " + message.substring((8)), defaultStyle);
-		} else {
+		} else if (privateSessionIds == null || privateSessionIds.length == 0) {
 			styledString = new StyledString("(" + localSessionId + ") " + localUserName + ": ", StyledString.LOCAL).append(message, defaultStyle);
+		} else {
+			// Build a list of the usernames in the private chat.
+			StringBuilder userList = new StringBuilder("");
+			for (int i = 0; i < privateSessionIds.length; i++) {
+				userList.append(filteredUserDataModel.getUserDataModel().findNameBySession(privateSessionIds[i]));
+				if (i + 1 < privateSessionIds.length) {
+					userList.append(" ");
+				}
+			}
+			styledString = new StyledString("(" + localSessionId + ") " + localUserName + " -> (" + userList + "): ", StyledString.LOCAL).append(message, defaultStyle);
 		}
 		appendString(styledString);
 	}
@@ -166,6 +176,12 @@ public class ChatDocument extends DefaultStyledDocument {
 						} catch (Exception ex) {
 							System.err.println("Failed to browse to URL: " + link.getURL().trim());
 						}
+					}
+				} else if (link.getURL().startsWith("mailto:")) {
+					try {
+						Desktop.getDesktop().mail(new URI(link.getURL().trim()));
+					} catch (Exception ex) {
+						System.err.println("Failed to browse to URL: " + link.getURL().trim());
 					}
 				}
 			}
