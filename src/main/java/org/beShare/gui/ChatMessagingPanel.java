@@ -52,6 +52,8 @@ public class ChatMessagingPanel extends JPanel {
 	int scrollUpAdjustments;
 	int previousScrollPosition;
 
+	private static Color SCROLL_LOCKED = new Color(205, 255, 255);
+
 	private WindowAdapter windowListener = new WindowAdapter() {
 		@Override
 		public void windowActivated(WindowEvent e) {
@@ -128,19 +130,8 @@ public class ChatMessagingPanel extends JPanel {
 				if (chatText.length() > 0) {
 					String message = "";
 
-					// Check if we're a command.
-					if (chatText.startsWith("/")) {
-						// Handle UI commands here.
-						if (chatText.toUpperCase().equals("/CLEAR")) {
-							chatDoc.clear();
-						}
+					transceiver.handleInput(chatInput.getText(), chatDoc);
 
-						// Push Non-UI commands down to the Transceiver
-						transceiver.command(chatInput.getText(), chatDoc);
-					} else {
-						// Forces the JavaShareTransceiver to update the document appropriately.
-						ChatMessagingPanel.this.transceiver.sendChat(chatInput.getText(), chatDoc);
-					}
 					recentLines.push(chatText);
 					lineIndex = recentLines.size();
 					chatInput.setText("");
@@ -189,6 +180,8 @@ public class ChatMessagingPanel extends JPanel {
 		inputPanel.add(chatInput);
 
 		chatLog = new JTextPane(chatDoc);
+// TODO: Use the default L&F color here.
+ 		chatLog.setBackground(Color.white);
 
 		chatLog.setMargin(new Insets(2, 2, 2, 2));
 		chatLog.setEditable(false);
@@ -198,7 +191,7 @@ public class ChatMessagingPanel extends JPanel {
 			}
 		});
 		logScrollPane = new JScrollPane(chatLog);
-		logScrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+		logScrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
 		// Set the background color on the chatLog when we're in a range that won't auto-scroll.
 		logScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 			@Override
@@ -219,10 +212,18 @@ public class ChatMessagingPanel extends JPanel {
 				}
 				previousScrollPosition = e.getValue();
 
+				Color targetColor = Color.white;
 				if (scrollUpAdjustments >= 10) {
-					chatLog.setBackground(new Color(245, 255, 255));
-				} else {
-					chatLog.setBackground(new Color(255, 255, 255));
+					targetColor = SCROLL_LOCKED;
+				}
+
+				if (!chatLog.getBackground().equals(targetColor)) {
+					chatLog.setBackground(targetColor);
+					// Force the entire contents to repaint
+					logScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
+					chatLog.repaint();
+					// Restore the fast-scroll mode.
+					logScrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
 				}
 			}
 		});

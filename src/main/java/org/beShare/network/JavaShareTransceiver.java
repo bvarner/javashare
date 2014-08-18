@@ -13,8 +13,10 @@ import org.beShare.gui.ChatDocument;
 import org.beShare.gui.text.StyledString;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import java.util.prefs.Preferences;
 
@@ -96,6 +98,10 @@ public class JavaShareTransceiver implements MessageListener {
 
 	private UserDataModel userDataModel = new UserDataModel();
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
+
+	private HashMap<String, String> aliases = new HashMap<>();
+	private List<String> ignoreUsernames = new ArrayList<>();
+	private List<String> loginCommands = new ArrayList<>();
 
 	/**
 	 * Construct a new JavaShareTransceiver,
@@ -292,13 +298,23 @@ public class JavaShareTransceiver implements MessageListener {
 	}
 
 	/**
-	 * Sends text to the users associated with the FilteredUserDataModel.
+	 * Handles input.
 	 *
 	 * @param text
 	 * @param chatDoc
 	 */
-	public void sendChat(final String text, final ChatDocument chatDoc) {
-		this.sendChat(text, chatDoc, null);
+	public void handleInput(final String text, final ChatDocument chatDoc) {
+		// If the input matches any alias...
+		if (aliases.containsKey(text.trim())) {
+			handleInput(aliases.get(text.trim()), chatDoc);
+		} else {
+			// Check if we're a command.
+			if (text.startsWith("/")) {
+				command(text, chatDoc);
+			} else {
+				sendChat(text, chatDoc, null);
+			}
+		}
 	}
 
 	/**
@@ -310,7 +326,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 * @param chatDoc           The document to update with the content you've sent.
 	 * @param privateSessionIds An optional list of sessionIds to receive the message as private.
 	 */
-	public void sendChat(final String text, final ChatDocument chatDoc, final String[] privateSessionIds) {
+	private void sendChat(final String text, final ChatDocument chatDoc, final String[] privateSessionIds) {
 		lastAction = System.currentTimeMillis();
 		String[] sessions = ALL_SESSIONS;
 		if (chatDoc.getFilteredUserDataModel().isFiltering()) {
@@ -350,7 +366,7 @@ public class JavaShareTransceiver implements MessageListener {
 		String lowerCommand = command.toLowerCase().trim();
 		if (lowerCommand.startsWith("/me ") || lowerCommand.startsWith("/action ")) {
 			// This isn't really a command...
-			sendChat(command, chatDoc);
+			sendChat(command, chatDoc, null);
 		} else if (lowerCommand.startsWith("/priv")) {
 			// TODO: Implement me.
 			System.out.println("New Private Frame to [" + command.substring(5).trim() + "]");
@@ -371,7 +387,6 @@ public class JavaShareTransceiver implements MessageListener {
 				}
 			}
 		} else if (lowerCommand.startsWith("/serverinfo")) {
-
 			getServerInfo();
 		} else if (lowerCommand.startsWith("/server")) {
 			String serverName = command.substring(7).trim();
@@ -393,10 +408,48 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/awaymsg")) {
 			// TODO: Create / set the auto-away-status
 			//logSystemMessage("Auto-away message set to " + message);
+
 		} else if (lowerCommand.startsWith("/alias")) {
-			// TODO: Implement
+			String pair = command.substring(6).trim();
+			if (pair.equals("")) {
+				// Print the current list of aliases.
+				StringBuilder sb = new StringBuilder("Current Aliases:\n");
+				for (Map.Entry<String, String> alias : aliases.entrySet()) {
+					sb.append("        ").append(alias.getKey()).append('=').append(alias.getValue()).append('\n');
+				}
+				chatDoc.addSystemMessage(sb.toString());
+			} else {
+				String[] parts = pair.split("=");
+				if (parts.length == 2) {
+					aliases.put(parts[0], parts[1]);
+					chatDoc.addSystemMessage("Set alias [" + parts[0] + "=" + parts[1] + "]");
+				} else {
+					chatDoc.addErrorMessage("Failed to parse alias: " + pair + " into [name=key]");
+				}
+			}
 		} else if (lowerCommand.startsWith("/unalias")) {
-			// TODO: Implement
+			String names = command.substring(8).trim();
+			if (names.length() > 0) {
+				if (names.equals("all")) {
+					StringBuilder removeAll = new StringBuilder("/unalias ");
+					for (String name : aliases.keySet()) {
+						removeAll.append(name + " ");
+					}
+					command(removeAll.toString(), chatDoc);
+				} else {
+					for (String name : names.split(" ")) {
+						String alias = aliases.remove(name);
+						if (alias != null) {
+							chatDoc.addSystemMessage("Removed alias [" + name + "=" + alias + "]");
+						} else {
+							chatDoc.addErrorMessage("No alias found for: " + name);
+						}
+					}
+				}
+			} else {
+				// Show the current aliases.
+				command("/alias", chatDoc);
+			}
 		} else if (lowerCommand.startsWith("/watch")) {
 			if (lowerCommand.equals("/watch")) { // If all they typed was 'watch', then list the current watches.
 				StringBuilder sb = new StringBuilder("Current Watch Expressions:\n");
@@ -405,10 +458,12 @@ public class JavaShareTransceiver implements MessageListener {
 				}
 				chatDoc.addSystemMessage(sb.toString());
 			} else {
-				String watchPattern = command.substring(6).trim();
-				StyledString.addUserPattern(watchPattern, ".*" + watchPattern + ".*", StyledString.WATCH_PATTERN);
+				String watchList = command.substring(6).trim();
+				for (String watchPattern : watchList.split(" ")) {
+					StyledString.addUserPattern(watchPattern, ".*" + watchPattern + ".*", StyledString.WATCH_PATTERN);
 
-				chatDoc.addSystemMessage("Added watch pattern: " + watchPattern);
+					chatDoc.addSystemMessage("Added watch pattern: " + watchPattern);
+				}
 			}
 		} else if (lowerCommand.startsWith("/unwatch")) {
 			if (lowerCommand.length() > 8) {
@@ -443,6 +498,8 @@ public class JavaShareTransceiver implements MessageListener {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/unignore")) {
 			// TODO: Implement
+		} else if (lowerCommand.startsWith("/unautopriv")) {
+			// TODO: Implement
 		} else if (lowerCommand.startsWith("/nick")) {
 			setLocalUserName(command.substring(5).trim());
 		} else if (lowerCommand.startsWith("/onlogin")) {
@@ -453,30 +510,31 @@ public class JavaShareTransceiver implements MessageListener {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/help")) {
 			logSystemMessage("JavaShare Command Refrence\n"
-					                 + "       /action <action> - do something\n"
-					                 + "       /alias [names and value] - create an alias\n"
-					                 + "       /autopriv <names or session ids> - specify AutoPriv users\n"
-					                 + "       /away tag - Force away state\n"
-					                 + "       /awaymsg tag - change the auto-away tag\n"
+					                 + "       /action [action] - do something\n"
+					                 + "       /alias [name=[value]] - create an alias\n"
+					                 + "       /autopriv [* | name | session id ...] - specify AutoPriv users\n"
+					                 + "       /away [status] - Force away state\n"
+					                 + "       /awaymsg [status] - change the auto-away tag\n"
 					                 + "       /clear - clear the chat log\n"
-					                 + "       /clearonlogin - clear startup commands\n"
 					                 + "       /connect [serverName] - connect to a server\n"
 					                 + "       /disconnect - disconnect from the server\n"
 					                 + "       /help - show this help text\n"
-					                 + "       /ignore [name | session id] - specify a user to ignore\n"
-					                 + "       /unignore [name | session id] - specify a user to stop ignoring\n"
-					                 + "       /me <action> - synonym for /action\n"
+					                 + "       /ignore [name | session id ...] - specify a user to ignore\n"
+					                 + "       /unignore [name | session id ...] - specify a user to stop ignoring\n"
+					                 + "       /me [action] - synonym for /action\n"
 					                 + "       /msg [name | session id] [message] - send a private message\n"
-					                 + "       /nick <name> - change your user name\n"
-					                 + "       /onlogin command - add a startup command\n"
-					                 + "       /priv <names or session ids> - Open Private Chat Window\n"
-					                 + "       /ping <names or session ids> - ping other clients\n"
+					                 + "       /nick [name] - change your user name\n"
+					                 + "       /onlogin [command] - add a startup command\n"
+					                 + "       /priv [name | session id ...] - Open Private Chat Window\n"
+					                 + "       /ping [name | session id ...] - ping other clients\n"
 					                 + "       /quit - quit BeShare\n"
+					                 + "       /server [address] - Sets the server address.\n"
 					                 + "       /serverinfo - Request server status\n"
-					                 + "       /status Status - set user status string\n"
-					                 + "       /unalias <name> - remove an alias\n"
-					                 + "       /watch <name or session ids> - specify users to watch\n"
-					                 + "       /server <address> - Sets the server address.\n");
+					                 + "       /status [status] - set user status string\n"
+					                 + "       /unalias [all | name] - remove an alias\n"
+									 + "       /unwatch [all | name | session id ...] - Specify users to stop watching\n"
+									 + "       /unautopriv [all | name | session id ...] - Remove a user from auto-private\n"
+					                 + "       /watch [name | session id ...] - specify users to watch\n");
 		}
 	}
 
