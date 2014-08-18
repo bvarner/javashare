@@ -1,9 +1,7 @@
 package org.beShare.network;
 
 import com.meyer.muscle.client.MessageTransceiver;
-import com.meyer.muscle.client.StorageReflectConstants;
 import com.meyer.muscle.message.Message;
-import com.meyer.muscle.support.TypeConstants;
 import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 import com.meyer.muscle.thread.ThreadPool;
@@ -20,13 +18,37 @@ import java.util.List;
 import java.util.Vector;
 import java.util.prefs.Preferences;
 
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_GETPARAMETERS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_JETTISONRESULTS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_NOOP;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_PING;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_REMOVEDATA;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_REMOVEPARAMETERS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_SETDATA;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_SETPARAMETERS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_KEYS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_REMOVED_DATAITEMS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_SERVER_MEM_AVAILABLE;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_SERVER_MEM_USED;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_SERVER_UPTIME;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_SERVER_VERSION;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_NAME_SESSION_ROOT;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_RESULT_DATAITEMS;
+import static com.meyer.muscle.client.StorageReflectConstants.PR_RESULT_PARAMETERS;
+import static com.meyer.muscle.support.TypeConstants.B_BOOL_TYPE;
+import static com.meyer.muscle.support.TypeConstants.B_INT32_TYPE;
+import static com.meyer.muscle.support.TypeConstants.B_INT64_TYPE;
+import static com.meyer.muscle.support.TypeConstants.B_MESSAGE_TYPE;
+import static com.meyer.muscle.support.TypeConstants.B_STRING_TYPE;
+
+
 /**
  * JavaShareTransceiver - This class handles all incomming/outgoing Muscle messages
  * and then sends the appropriate JavaShareEvents to any registered listener.
  *
  * @author Bryan Varner
  */
-public class JavaShareTransceiver implements MessageListener, StorageReflectConstants, TypeConstants {
+public class JavaShareTransceiver implements MessageListener {
 	public static final int portRange = 50;
 	public static final int startingPortNumber = 7000;
 	private int localUserPort = startingPortNumber;
@@ -974,7 +996,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 					Thread.currentThread().sleep(10);
 					// TODO: If auto-away is enabled....
 					if (true && connected && System.currentTimeMillis() - lastAction >= (awayTimeout * 1000)) {
-					//setLocalUserStatus(getAwayStatus());
+						//setLocalUserStatus(getAwayStatus());
 					}
 				} catch (InterruptedException ie) {
 				}

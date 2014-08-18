@@ -1,9 +1,7 @@
 package org.beShare.network;
 
 import com.meyer.muscle.client.MessageTransceiver;
-import com.meyer.muscle.client.StorageReflectConstants;
 import com.meyer.muscle.message.Message;
-import com.meyer.muscle.support.TypeConstants;
 import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 
@@ -15,7 +13,7 @@ import java.util.Vector;
  *
  * @author Bryan Varner
  */
-public abstract class AbstractTransfer extends Thread implements MessageListener, StorageReflectConstants, TypeConstants {
+public abstract class AbstractTransfer extends Thread implements MessageListener {
 
 	// Status flags.
 	public final static int NO_STATUS = -1;

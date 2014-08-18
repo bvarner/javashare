@@ -15,6 +15,8 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import static com.meyer.muscle.support.TypeConstants.B_RAW_TYPE;
+
 /**
  * A Download Transfer - Read Jeremy Friesner's BeShare File Transfer Descriptions to really understand this.
  * This class implements the Download functionality of a transfer. It fully complies with _all_
