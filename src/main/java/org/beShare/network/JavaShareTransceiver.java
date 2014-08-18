@@ -14,9 +14,11 @@ import org.beShare.gui.text.StyledString;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 import java.util.prefs.Preferences;
 
@@ -100,7 +102,7 @@ public class JavaShareTransceiver implements MessageListener {
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
 
 	private HashMap<String, String> aliases = new HashMap<>();
-	private List<String> ignoreUsernames = new ArrayList<>();
+	private Set<String> ignoreUsernames = new HashSet<>();
 	private List<String> loginCommands = new ArrayList<>();
 
 	/**
@@ -495,9 +497,40 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/autopriv")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/ignore")) {
-			// TODO: Implement
+			String[] ignores = command.substring(7).trim().split(" ");
+			if (ignores.length == 1 && ignores[0].equals("")) {
+				StringBuilder sb = new StringBuilder("Current Users Ignored:\n");
+				for (String name : ignoreUsernames) {
+					sb.append("        ").append(name).append("\n");
+				}
+				chatDoc.addSystemMessage(sb.toString());
+			} else {
+				for (String ignoreNameOrSession : ignores) {
+					BeShareUser user = userDataModel.findByNameOrSession(ignoreNameOrSession);
+					if (user != null) {
+						ignoreUsernames.add(user.getUserName());
+						chatDoc.addSystemMessage("Now ignoring: " + user.getName());
+					} else {
+						chatDoc.addErrorMessage("Could not identify user to ignore for: " + ignoreNameOrSession);
+					}
+				}
+			}
 		} else if (lowerCommand.startsWith("/unignore")) {
-			// TODO: Implement
+			String[] unignores = command.substring(9).trim().split(" ");
+			if (unignores.length == 0) {
+				command("/ignore", chatDoc); // Show all the ignores
+			} else if (unignores.length == 1 && unignores[0].equalsIgnoreCase("all")) {
+				StringBuilder removeAll = new StringBuilder("/unignore ");
+				for (String remove : ignoreUsernames) {
+					removeAll.append(remove).append(" ");
+				}
+				command(removeAll.toString(), chatDoc);
+			} else {
+				for (String remove : unignores) {
+					ignoreUsernames.remove(remove);
+					chatDoc.addSystemMessage("No longer ignoring: " + remove);
+				}
+			}
 		} else if (lowerCommand.startsWith("/unautopriv")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/nick")) {
@@ -761,8 +794,10 @@ public class JavaShareTransceiver implements MessageListener {
 
 			// New chat text!
 			case NET_CLIENT_NEW_CHAT_TEXT: {
-				for (ChatDocument doc : chatDocuments) {
-					doc.addRemoteChatMessage(message.getString("text").trim(), message.getString("session"), message.hasField("private"));
+				if (!ignoreUsernames.contains(userDataModel.findNameBySession(message.getString("session")))) {
+					for (ChatDocument doc : chatDocuments) {
+						doc.addRemoteChatMessage(message.getString("text").trim(), message.getString("session"), message.hasField("private"));
+					}
 				}
 			}
 			break;
