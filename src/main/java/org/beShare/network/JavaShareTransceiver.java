@@ -34,6 +34,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	private static final int HOST_NAME_DEPTH = 1;
 	private static final int SESSION_ID_DEPTH = 2;
 	private static final int BESHARE_HOME_DEPTH = 3;
+
 	// used to separate our stuff from other (non-BeShare) data on the same server
 	private static final int USER_NAME_DEPTH = 4;    // user's handle node would be found here
 	private static final int FILE_INFO_DEPTH = 5;    //This is where file names are
@@ -45,28 +46,34 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	public final String MUSCLE_INTERFACE_VERSION = "JavaShare " + Application.BUILD_VERSION;
 	private final Object serverConnect = new Object();
 	private final Object serverDisconnect = new Object();
+
 	// Connection Management
 	private String serverName = "";
 	private int serverPort = 2960;
 	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
+
 	private String localSessionID = "";
 	private String localUserName = "";
 	private String localUserStatus = "";
 	private long localUserInstallId;
-	private List<ChatDocument> chatDocuments = new ArrayList<>();
-	private boolean requestedServerInfo = false;
+
 	private boolean connectInProgress = false;
 	private boolean connected = false;
 	private boolean firewalled = false;
+
 	private int pingCount = 0;
+
 	private boolean queryActive = false;
+
 	private long lastEvent = System.currentTimeMillis();
 	private long lastAction = System.currentTimeMillis();
 	private boolean disconnectExpected = false;
 	private int reconnectBackoff = -1;
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
 	private int awayTimeout = 300;
+
 	private UserDataModel userDataModel = new UserDataModel();
+	private List<ChatDocument> chatDocuments = new ArrayList<>();
 
 	/**
 	 * Construct a new JavaShareTransceiver,
@@ -341,6 +348,9 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 					chatDoc.addWarningMessage("Could not find a username or session # for: " + targetUser);
 				}
 			}
+		} else if (lowerCommand.startsWith("/serverinfo")) {
+
+			getServerInfo();
 		} else if (lowerCommand.startsWith("/server")) {
 			String serverName = command.substring(7).trim();
 			if (!"".equals(serverName)) {
@@ -417,8 +427,6 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/quit")) {
 			// TODO: Implement
-		} else if (lowerCommand.startsWith("/serverinfo")) {
-			// TODO: Implement
 		} else if (lowerCommand.startsWith("/status")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/help")) {
@@ -464,14 +472,12 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	}
 
 	/**
-	 * Sends a <code>PR_COMMAND_GETPARAMETERS</code> to the server, and sets
-	 * the <code>requestedServerInfo</code> field. This is used when a the user
-	 * requests system Information.
+	 * Sends a <code>PR_COMMAND_GETPARAMETERS</code> to the server.
 	 */
-	public void getServerInfo() {
+	private void getServerInfo() {
+		logSystemMessage("Server status requested.");
 		Message infoMessage = new Message(PR_COMMAND_GETPARAMETERS);
 		beShareTransceiver.sendOutgoingMessage(infoMessage);
-		requestedServerInfo = true;
 	}
 
 	/**
@@ -700,13 +706,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 			// We have to ask for these -- During the connect we ask for our session root so that we can
 			// find out what our session ID is.
 			case PR_RESULT_PARAMETERS: {
-				// Did we ask for it?
-				if (requestedServerInfo) {
-					processServerInfo(message);
-				} else {
-					String sessionRoot = message.getString(PR_NAME_SESSION_ROOT);
-					localSessionID = sessionRoot.substring(sessionRoot.lastIndexOf('/') + 1);
-				}
+				processServerInfo(message);
 			}
 			break;
 
@@ -875,14 +875,12 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 	 * Taks a Server Information message and sends the information out to the JavaShare Listeners
 	 * by calling logSystemMessage();
 	 */
-	protected final void processServerInfo(Message message) throws Exception {
-		requestedServerInfo = false;
-		logSystemMessage("Server status requested.");
+	protected final void processServerInfo(Message message) {
 		if (message.hasField(PR_NAME_SERVER_VERSION)) {
-			logSystemMessage("Server version:  " + message.getString(PR_NAME_SERVER_VERSION));
+			logSystemMessage("Server version:  " + message.getString(PR_NAME_SERVER_VERSION, "<unknown>"));
 		}
 		if (message.hasField(PR_NAME_SERVER_UPTIME)) {
-			long seconds = message.getLong(PR_NAME_SERVER_UPTIME) / 1000000;
+			long seconds = message.getLong(PR_NAME_SERVER_UPTIME, 1000000) / 1000000;
 			long minutes = seconds / 60;
 			seconds = seconds % 60;
 			long hours = minutes / 60;
@@ -895,14 +893,15 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 					                 ":" + minutes + ":" + seconds);
 		}
 		if (message.hasField(PR_NAME_SESSION_ROOT)) {
-			logSystemMessage("Local Session Root:    " + message.getString(PR_NAME_SESSION_ROOT));
+			String sessionRoot = message.getString(PR_NAME_SESSION_ROOT, "/");
+			localSessionID = sessionRoot.substring(sessionRoot.lastIndexOf('/') + 1);
+
 		}
 		if (message.hasField(PR_NAME_SERVER_MEM_AVAILABLE) && message.hasField(PR_NAME_SERVER_MEM_USED)) {
 			final float oneMeg = 1024.0f * 1024.0f;
-			float memAvailableMB = ((float) message.getLong(PR_NAME_SERVER_MEM_AVAILABLE)) / oneMeg;
-			float memUsedMB = ((float) message.getLong(PR_NAME_SERVER_MEM_USED)) / oneMeg;
-			logSystemMessage("Server memory usage:    " + memUsedMB + "MB used (" +
-					                 memAvailableMB + "MB available)");
+			float memAvailableMB = ((float) message.getLong(PR_NAME_SERVER_MEM_AVAILABLE, 0)) / oneMeg;
+			float memUsedMB = ((float) message.getLong(PR_NAME_SERVER_MEM_USED, 0)) / oneMeg;
+			logSystemMessage("Server memory usage:    " + memUsedMB + "MB used (" + memAvailableMB + "MB available)");
 		}
 	}
 
