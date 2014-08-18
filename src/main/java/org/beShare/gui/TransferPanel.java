@@ -40,7 +40,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 
 	QueryProgressIndicator pnlInProgress;
 	JPanel pnlQueryControl;
-	DropMenu recentQueryMenu;
+//	DropMenu recentQueryMenu;
 	JTextField txtQuery;
 	JButton btnStartQuery;
 	JButton btnStopQuery;
@@ -93,7 +93,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 //			}
 //			recentQueryMenu = new DropMenu("Query:", oldQuerys, 15);
 //		} else {
-			recentQueryMenu = new DropMenu("Query:", 15);
+//			recentQueryMenu = new DropMenu("Query:", 15);
 //		}
 
 		txtQuery = new JTextField("*.mp3", 12);
@@ -108,7 +108,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 		pnlQueryControl.setLayout(new BoxLayout(pnlQueryControl, BoxLayout.X_AXIS));
 
 		// Add action Listeners here.
-		recentQueryMenu.addActionListener(this);
+//		recentQueryMenu.addActionListener(this);
 		txtQuery.addActionListener(this);
 		btnStartQuery.addActionListener(this);
 		btnStopQuery.addActionListener(this);
@@ -116,7 +116,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 		pnlQueryControl.add(Box.createHorizontalStrut(3));
 		pnlQueryControl.add(pnlInProgress);
 		pnlQueryControl.add(Box.createHorizontalStrut(3));
-		pnlQueryControl.add(recentQueryMenu);
+//		pnlQueryControl.add(recentQueryMenu);
 		pnlQueryControl.add(txtQuery);
 		pnlQueryControl.add(Box.createHorizontalStrut(6));
 		pnlQueryControl.add(btnStartQuery);
@@ -237,66 +237,66 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	 * Implements ActionListener.
 	 */
 	public void actionPerformed(ActionEvent e) {
-		// The recent query menu was clicked.
-		if (e.getSource() == recentQueryMenu
-				    && (recentQueryMenu.getSelectedIndex() != -1)) {
-			String selMenu = (String) recentQueryMenu.getSelectedItem();
-			if (selMenu != txtQuery.getText()) {
-				txtQuery.setText(selMenu);
-				resetQuery();
-			}
-			// Query textbox had a return pressed.
-		} else if ((e.getSource() == txtQuery) || (e.getSource() == btnStartQuery)) {
-			boolean addNew = true;
-			for (int x = 0; x < recentQueryMenu.getItemCount(); x++) {
-				if (((String) recentQueryMenu.getItemAt(x)).equals(
-						                                                  txtQuery.getText())) {
-					recentQueryMenu.setSelectedIndex(x);
-					addNew = false;
-				}
-			}
-			if (addNew) {
-				recentQueryMenu.addItem(txtQuery.getText());
-				recentQueryMenu.setSelectedIndex(
-						                                recentQueryMenu.getItemCount() - 1);
-				//prefsMessage.setStrings("querys", recentQueryMenu.getStringItems());
-			}
-			resetQuery();
-		} else if (e.getSource() == btnStopQuery) {
-			// The query was stopped.
-			connection.stopQuery();
-			pnlInProgress.setQueryInProgress(false);
-		} else if (e.getSource() == btnDownloadFiles) {
-			// Find out what's selected.
-			int[] selected = queryTable.getSelectedRows();
-			if (selected.length > 0) {
-				String filenames[] = new String[selected.length];
-
-				for (int x = 0; x < selected.length; x++) {
-					// Create the new file info.
-					filenames[x] = queryTable.getModel().getValueAt(selected[x], 1).toString();
-				}
-				BeShareUser tempUser = queryModel.getUser(selected[0]);
-				System.out.println("Downloading from " + tempUser.toString());
-				Download fileTransfer = new Download(filenames,
-						                                    tempUser.getIPAddress(),
-						                                    tempUser.getPort(),
-						                                    transMan.getDownloadPath(),
-						                                    tempUser.getName(),
-						                                    tempUser.getSessionID(),
-						                                    tempUser.getFirewall(),
-						                                    connection);
-				transMan.addTransfer(fileTransfer);
-			}
-		} else if (e.getSource() == btnRemoveDownload) {
-			// clear the completed downloads from the list.
-			int[] selected = lstTransfers.getSelectedIndices();
-			if (selected != null) {
-				for (int x = selected.length; x > 0; x--) {
-					transMan.removeTransfer((AbstractTransfer) transMan.getElementAt(selected[x - 1]));
-				}
-			}
-		}
+//		// The recent query menu was clicked.
+//		if (e.getSource() == recentQueryMenu
+//				    && (recentQueryMenu.getSelectedIndex() != -1)) {
+//			String selMenu = (String) recentQueryMenu.getSelectedItem();
+//			if (selMenu != txtQuery.getText()) {
+//				txtQuery.setText(selMenu);
+//				resetQuery();
+//			}
+//			// Query textbox had a return pressed.
+//		} else if ((e.getSource() == txtQuery) || (e.getSource() == btnStartQuery)) {
+//			boolean addNew = true;
+//			for (int x = 0; x < recentQueryMenu.getItemCount(); x++) {
+//				if (((String) recentQueryMenu.getItemAt(x)).equals(
+//						                                                  txtQuery.getText())) {
+//					recentQueryMenu.setSelectedIndex(x);
+//					addNew = false;
+//				}
+//			}
+//			if (addNew) {
+//				recentQueryMenu.addItem(txtQuery.getText());
+//				recentQueryMenu.setSelectedIndex(
+//						                                recentQueryMenu.getItemCount() - 1);
+//				//prefsMessage.setStrings("querys", recentQueryMenu.getStringItems());
+//			}
+//			resetQuery();
+//		} else if (e.getSource() == btnStopQuery) {
+//			// The query was stopped.
+//			connection.stopQuery();
+//			pnlInProgress.setQueryInProgress(false);
+//		} else if (e.getSource() == btnDownloadFiles) {
+//			// Find out what's selected.
+//			int[] selected = queryTable.getSelectedRows();
+//			if (selected.length > 0) {
+//				String filenames[] = new String[selected.length];
+//
+//				for (int x = 0; x < selected.length; x++) {
+//					// Create the new file info.
+//					filenames[x] = queryTable.getModel().getValueAt(selected[x], 1).toString();
+//				}
+//				BeShareUser tempUser = queryModel.getUser(selected[0]);
+//				System.out.println("Downloading from " + tempUser.toString());
+//				Download fileTransfer = new Download(filenames,
+//						                                    tempUser.getIPAddress(),
+//						                                    tempUser.getPort(),
+//						                                    transMan.getDownloadPath(),
+//						                                    tempUser.getName(),
+//						                                    tempUser.getSessionID(),
+//						                                    tempUser.getFirewall(),
+//						                                    connection);
+//				transMan.addTransfer(fileTransfer);
+//			}
+//		} else if (e.getSource() == btnRemoveDownload) {
+//			// clear the completed downloads from the list.
+//			int[] selected = lstTransfers.getSelectedIndices();
+//			if (selected != null) {
+//				for (int x = selected.length; x > 0; x--) {
+//					transMan.removeTransfer((AbstractTransfer) transMan.getElementAt(selected[x - 1]));
+//				}
+//			}
+//		}
 	}
 
 	/**
@@ -332,7 +332,8 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 	 * Gets the list of querys.
 	 */
 	public String[] getRecentQueries() {
-		return recentQueryMenu.getStringItems();
+		return new String[0];
+//		return recentQueryMenu.getStringItems();
 	}
 
 	/**
@@ -363,7 +364,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 
 			if (newFile.getKind().equals("")) {
 				// Load the generic file icon.
-				fileIcon = AppPanel.loadImage("Images/fileicons/notype.gif", this);
+//				fileIcon = AppPanel.loadImage("Images/fileicons/notype.gif", this);
 				typeIcons.put(newFile.getKind(), fileIcon);
 			} else {
 				// Replace / with ^ and . with &
@@ -372,10 +373,10 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 				fileName = fileName.replace('.', '&');
 				fileName = fileName.concat(".gif");
 				try {
-					fileIcon = AppPanel.loadImage("Images/fileicons/" + fileName, this);
+//					fileIcon = AppPanel.loadImage("Images/fileicons/" + fileName, this);
 					typeIcons.put(newFile.getKind(), fileIcon);
 				} catch (NullPointerException npe) {
-					fileIcon = AppPanel.loadImage("Images/fileicons/notype.gif", this);
+//					fileIcon = AppPanel.loadImage("Images/fileicons/notype.gif", this);
 					typeIcons.put(newFile.getKind(), fileIcon);
 				}
 			}

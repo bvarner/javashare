@@ -103,6 +103,7 @@ public class Download extends AbstractTransfer {
 			setStatus(CONNECTING);
 			connected = true;
 			Message gimmeList = new Message(TRANSFER_COMMAND_FILE_LIST);
+			// TODO Refactor so we send these from the Transceiver.
 			gimmeList.setString("beshare:FromSession", network.getLocalSessionID());
 			// Add the data munging instruction for BeShare clients that support this.
 			gimmeList.setInt("mm", MUNGE_MODE_XOR);

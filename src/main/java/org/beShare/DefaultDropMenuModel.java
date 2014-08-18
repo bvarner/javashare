@@ -8,16 +8,27 @@ import javax.swing.event.ListSelectionListener;
 /**
  * A DefaultListModel that encapsulates a ListSelectionModel and enforces a maximum list model size.
  */
-public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements ListSelectionModel {
+public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements DropMenuModel<E> {
 	private DefaultListSelectionModel selectionModel;
 	private int maxSize = Integer.MAX_VALUE;
 
-	DefaultDropMenuModel() {
+	public DefaultDropMenuModel() {
 		super();
 		selectionModel = new DefaultListSelectionModel();
 		selectionModel.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 	}
 
+	public DefaultDropMenuModel(int maxSize) {
+		this();
+		this.maxSize = maxSize;
+	}
+
+	@Override
+	public int getMaxSize() {
+		return maxSize;
+	}
+
+	@Override
 	public void setMaxSize(int maxSize) {
 		if (maxSize < 2) {
 			throw new IllegalArgumentException("Maximum size must be > 1");
@@ -25,8 +36,17 @@ public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements List
 		this.maxSize = maxSize;
 	}
 
-	public int getMaxSize() {
-		return maxSize;
+	/**
+	 * If necessary, adds the element to the list, then sets it as the selected index.
+	 *
+	 * @param element
+	 */
+	public void ensureSelected(E element) {
+		if (!contains(element)) {
+			addElement(element);
+		}
+		int index = indexOf(element);
+		setSelectionInterval(index, index);
 	}
 
 	@Override
@@ -48,6 +68,19 @@ public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements List
 		if (index == getMinSelectionIndex()) {
 			selectionModel.setSelectionInterval(index, index);
 		}
+	}
+
+	/**
+	 * Gets the selected object.
+	 *
+	 * @return
+	 */
+	@Override
+	public E getSelectedItem() {
+		if (selectionModel.isSelectionEmpty()) {
+			return null;
+		}
+		return get(selectionModel.getMinSelectionIndex());
 	}
 
 	@Override
@@ -121,13 +154,18 @@ public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements List
 	}
 
 	@Override
+	public boolean getValueIsAdjusting() {
+		return selectionModel.getValueIsAdjusting();
+	}
+
+	@Override
 	public void setValueIsAdjusting(boolean valueIsAdjusting) {
 		selectionModel.setValueIsAdjusting(valueIsAdjusting);
 	}
 
 	@Override
-	public boolean getValueIsAdjusting() {
-		return selectionModel.getValueIsAdjusting();
+	public int getSelectionMode() {
+		return selectionModel.getSelectionMode();
 	}
 
 	@Override
@@ -136,11 +174,6 @@ public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements List
 			throw new IllegalArgumentException("invalid selectionMode");
 		}
 		selectionModel.setSelectionMode(selectionMode);
-	}
-
-	@Override
-	public int getSelectionMode() {
-		return selectionModel.getSelectionMode();
 	}
 
 	@Override

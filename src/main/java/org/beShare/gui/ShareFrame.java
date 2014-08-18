@@ -8,7 +8,6 @@ package org.beShare.gui;
 
 import blv.swing.AboutDialog;
 import org.beShare.Application;
-import org.beShare.data.BeShareDefaultSettings;
 import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.AbstractAction;
@@ -38,15 +37,15 @@ public class ShareFrame extends JFrame {
 	public ShareFrame(final JavaShareTransceiver transceiver) {
 		super("JavaShare " + Application.BUILD_VERSION);
 		this.transceiver = transceiver;
-		this.appPanel = new AppPanel(transceiver, BeShareDefaultSettings.createDefaultSettings());
+		this.appPanel = new AppPanel(transceiver);
 
-		ImageIcon JavaShareIcon = AppPanel.loadImage("Images/BeShare.gif", this);
+		ImageIcon JavaShareIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/BeShare.gif"));
 		this.setIconImage(JavaShareIcon.getImage());
 		this.setContentPane(appPanel);
 		this.setJMenuBar(new MenuBar());
 		this.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-		// TODO: Add listeners here to the transceiver to keep our state in line.
+		// TODO: monitor the connection status in the Transceiver...
 
 		// TODO: Refactor The majority of AppPanel into this class.
 	}

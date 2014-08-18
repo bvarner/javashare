@@ -42,7 +42,7 @@ public class PrefsFrame extends JDialog {
 	public PrefsFrame(final JFrame owner) {
 		super(owner, "JavaShare Preferences");
 
-		ImageIcon JavaShareIcon = AppPanel.loadImage("Images/BeShare.gif", this);
+		ImageIcon JavaShareIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/BeShare.gif"));
 		this.setIconImage(JavaShareIcon.getImage());
 
 		JPanel buttonPanel = new JPanel(new BorderLayout());

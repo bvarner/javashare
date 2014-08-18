@@ -6,12 +6,16 @@ import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 import com.meyer.muscle.thread.ThreadPool;
 import org.beShare.Application;
+import org.beShare.DefaultDropMenuModel;
+import org.beShare.DropMenuModel;
 import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
 import org.beShare.gui.ChatDocument;
 import org.beShare.gui.text.StyledString;
 
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,13 +78,15 @@ public class JavaShareTransceiver implements MessageListener {
 	private final Object serverDisconnect = new Object();
 
 	// Connection Management
-	private String serverName = "";
 	private int serverPort = 2960;
 	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
 
 	private String localSessionID = "";
-	private String localUserName = "";
-	private String localUserStatus = "";
+
+	private DefaultDropMenuModel<String> serverModel = new DefaultDropMenuModel<>(10);
+	private DefaultDropMenuModel<String> nameModel = new DefaultDropMenuModel<>(5);
+	private DefaultDropMenuModel<String> statusModel = new DefaultDropMenuModel<>(5);
+
 	private long localUserInstallId;
 
 	private boolean connectInProgress = false;
@@ -111,6 +117,33 @@ public class JavaShareTransceiver implements MessageListener {
 	public JavaShareTransceiver(final Preferences preferences) {
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
+
+		serverModel.addListSelectionListener(new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (connected || connectInProgress) {
+					connect();
+				}
+			}
+		});
+
+		nameModel.addListSelectionListener(new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				sendUserName();
+			}
+		});
+
+		statusModel.addListSelectionListener(new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				sendUserStatus();
+			}
+		});
+	}
+
+	public boolean isConnected() {
+		return connected;
 	}
 
 	/**
@@ -123,26 +156,67 @@ public class JavaShareTransceiver implements MessageListener {
 	}
 
 	/**
-	 * Get the name of the server we're connecting to.
+	 * Gets the model for tracking serverNames and the selected server.
 	 *
-	 * @return the Name of the server to connect to.
+	 * @return
 	 */
-	public String getServerName() {
-		return serverName;
+	public DefaultDropMenuModel<String> getServerModel() {
+		return serverModel;
 	}
 
 	/**
-	 * Sets the name of the server to connect to.
+	 * Gets the model for tracking user names the selected username.
 	 *
-	 * @param sName - the Name of the server to connect to.
+	 * @return
 	 */
-	public void setServerName(final String sName) {
-		if (!sName.equalsIgnoreCase(this.serverName)) {
-			this.serverName = sName;
-			if (connected || connectInProgress) {
-				connect();
-			}
+	public DefaultDropMenuModel<String> getNameModel() {
+		return nameModel;
+	}
+
+
+	/**
+	 * Gets the model for tracking status and the selected status.
+	 *
+	 * @return
+	 */
+	public DefaultDropMenuModel<String> getStatusModel() {
+		return statusModel;
+	}
+
+
+	/**
+	 * Sends our username
+	 */
+	private void sendUserName() {
+		// Remove the existing Username pattern.
+		StyledString.removePattern(StyledString.USERNAME_PATTERN_NAME);
+		String localUserName = nameModel.getSelectedItem();
+
+		if (connected) {
+			Message nameMessage = new Message();
+			nameMessage.setString("name", localUserName);
+			nameMessage.setInt("port", localUserPort);
+			nameMessage.setLong("installid", localUserInstallId);
+			nameMessage.setString("version_name", "JavaShare");
+			nameMessage.setString("version_num", "v" + Application.BUILD_VERSION);
+			setDataNodeValue("beshare/name", nameMessage);
 		}
+
+		logSystemMessage("Your name has been changed to " + localUserName);
+		StyledString.addSystemPattern(StyledString.USERNAME_PATTERN_NAME, ".*" + localUserName + ".*", StyledString.LOCAL_USER_MENTIONED);
+	}
+
+	/**
+	 * sends our status
+	 */
+	private void sendUserStatus() {
+		String localUserStatus = statusModel.getSelectedItem();
+		if (connected) {
+			Message statusMessage = new Message();
+			statusMessage.setString("userstatus", localUserStatus);
+			setDataNodeValue("beshare/userstatus", statusMessage);
+		}
+		logSystemMessage("Your status has been changed to " + localUserStatus);
 	}
 
 	/**
@@ -150,17 +224,9 @@ public class JavaShareTransceiver implements MessageListener {
 	 *
 	 * @return String the local SessionID of this user.
 	 */
+	@Deprecated
 	public String getLocalSessionID() {
 		return localSessionID;
-	}
-
-	/**
-	 * Returns the port number to connect with.
-	 *
-	 * @return the port to connect with.
-	 */
-	public int getServerPort() {
-		return serverPort;
 	}
 
 	/**
@@ -177,10 +243,20 @@ public class JavaShareTransceiver implements MessageListener {
 		}
 	}
 
+	/**
+	 * Add a ChatDocument to receive content from this JavaShareTransceiver.
+	 *
+	 * @param chatDocument
+	 */
 	public void addChatDocument(final ChatDocument chatDocument) {
 		chatDocuments.add(chatDocument);
 	}
 
+	/**
+	 * Remove a ChatDocument so it no longer receives content from this JavaShareTransceiver.
+	 *
+	 * @param chatDocument
+	 */
 	public void removeChatDocument(final ChatDocument chatDocument) {
 		chatDocuments.remove(chatDocument);
 	}
@@ -241,7 +317,7 @@ public class JavaShareTransceiver implements MessageListener {
 		Message cbackMsg = new Message(NET_CLIENT_CONNECT_BACK_REQUEST);
 		String target = "/*/" + targetSessionID + "/beshare";
 		cbackMsg.setString(PR_NAME_KEYS, target);
-		cbackMsg.setString("session", getLocalSessionID());
+		cbackMsg.setString("session", localSessionID);
 		cbackMsg.setInt("port", port);
 		beShareTransceiver.sendOutgoingMessage(cbackMsg);
 		System.out.println("JavaShareTransceiver: Connectback request Sent.");
@@ -273,6 +349,7 @@ public class JavaShareTransceiver implements MessageListener {
 		beShareTransceiver.disconnect();
 		userDataModel.clear();
 
+		String serverName = serverModel.getSelectedItem();
 		logSystemMessage("Connecting to: " + serverName);
 		beShareTransceiver.connect(serverName, serverPort, serverConnect, serverDisconnect);
 	}
@@ -290,8 +367,8 @@ public class JavaShareTransceiver implements MessageListener {
 	 * Sends a message subscribing to the BeShare nodes.
 	 */
 	private void beShareSubscribe() {
-		beShareTransceiver.sendOutgoingMessage(
-				                                      new Message(PR_COMMAND_GETPARAMETERS));
+		// Get our local session info.
+		beShareTransceiver.sendOutgoingMessage(new Message(PR_COMMAND_GETPARAMETERS));
 		// set up a subscription to the beShare tree.
 		Message queryMsg = new Message(PR_COMMAND_SETPARAMETERS);
 		queryMsg.setBoolean("SUBSCRIBE:beshare/*", true);
@@ -353,7 +430,7 @@ public class JavaShareTransceiver implements MessageListener {
 		}
 
 		// Post back what you sent to the document you're working with.
-		chatDoc.addEchoChatMessage(text, chatMessage.hasField("private"), localSessionID, localUserName, privateSessionIds);
+		chatDoc.addEchoChatMessage(text, chatMessage.hasField("private"), localSessionID, nameModel.getSelectedItem(), privateSessionIds);
 	}
 
 	/**
@@ -392,12 +469,12 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/server")) {
 			String serverName = command.substring(7).trim();
 			if (!"".equals(serverName)) {
-				setServerName(serverName);
+				serverModel.ensureSelected(serverName);
 			}
 		} else if (lowerCommand.startsWith("/connect")) {
 			String serverName = command.substring(8).trim();
 			if (!"".equals(serverName)) {
-				setServerName(serverName);
+				serverModel.ensureSelected(serverName);
 			}
 			connect();
 		} else if (lowerCommand.equalsIgnoreCase("/disconnect")) {
@@ -533,7 +610,7 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/unautopriv")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/nick")) {
-			setLocalUserName(command.substring(5).trim());
+			nameModel.ensureSelected(command.substring(5).trim());
 		} else if (lowerCommand.startsWith("/onlogin")) {
 			String startup = command.substring(8).trim();
 			if (startup.equals("")) {
@@ -618,46 +695,6 @@ public class JavaShareTransceiver implements MessageListener {
 	}
 
 	/**
-	 * Uploads UserName information to the MUSCLE server
-	 *
-	 * @param uName     The Users handle
-	 * @param port      the port they use for filesharing.
-	 * @param installid the unique identifier for this install.
-	 */
-	private void setLocalUserName(final String uName, final int port, final long installid) {
-		if (uName != null && !"".equals(uName) && !localUserName.equals(uName)) {
-			if (this.localUserName != null) {
-				StyledString.removePattern(StyledString.USERNAME_PATTERN_NAME);
-			}
-
-			this.localUserName = uName;
-			this.localUserPort = port;
-			this.localUserInstallId = installid;
-
-			if (connected) {
-				Message nameMessage = new Message();
-				nameMessage.setString("name", localUserName);
-				nameMessage.setInt("port", this.localUserPort);
-				nameMessage.setLong("installid", this.localUserInstallId);
-				nameMessage.setString("version_name", "JavaShare");
-				nameMessage.setString("version_num", "v" + Application.BUILD_VERSION);
-				setDataNodeValue("beshare/name", nameMessage);
-			}
-
-			logSystemMessage("Your name has been changed to " + localUserName);
-			StyledString.addSystemPattern(StyledString.USERNAME_PATTERN_NAME, ".*" + localUserName + ".*", StyledString.LOCAL_USER_MENTIONED);
-		}
-	}
-
-	public String getLocalUserName() {
-		return this.localUserName;
-	}
-
-	public void setLocalUserName(final String name) {
-		setLocalUserName(name, this.localUserPort, this.localUserInstallId);
-	}
-
-	/**
 	 * Uploads Bandwidth information to the MUSCLE server
 	 *
 	 * @param lbl String label 'T1', 'Cable', ...
@@ -670,26 +707,6 @@ public class JavaShareTransceiver implements MessageListener {
 			bwMessage.setInt("bps", bps);
 			setDataNodeValue("beshare/bandwidth", bwMessage);
 		}
-	}
-
-	public String getLocalUserStatus() {
-		return this.localUserStatus;
-	}
-
-	/**
-	 * Uploads the local user status to the MUSCLE server
-	 *
-	 * @param uStatus The Users current status
-	 */
-	public void setLocalUserStatus(final String uStatus) {
-		this.localUserStatus = uStatus;
-
-		if (connected) {
-			Message statusMessage = new Message();
-			statusMessage.setString("userstatus", this.localUserStatus);
-			setDataNodeValue("beshare/userstatus", statusMessage);
-		}
-		logSystemMessage("Your status has been changed to " + getLocalUserStatus());
 	}
 
 	/**
@@ -772,8 +789,8 @@ public class JavaShareTransceiver implements MessageListener {
 
 			// Send our current User information to the server.
 			beShareSubscribe();
-			setLocalUserName(localUserName);
-			setLocalUserStatus(localUserStatus);
+			sendUserName();
+			sendUserStatus();
 			setUploadBandwidth("?", 0);
 
 			if (!chatDocuments.isEmpty()) {
@@ -787,7 +804,7 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (message == serverDisconnect) {
 			connected = false;
 			connectInProgress = false;
-			logSystemMessage("Disconnected from: " + serverName);
+			logSystemMessage("Disconnected from: " + serverModel.getSelectedItem());
 			if (!disconnectExpected && reconnectBackoff < 0) {
 				reconnectBackoff = 0;
 				ThreadPool.getDefaultThreadPool().startThread(new AutoReconnector());
@@ -1038,7 +1055,7 @@ public class JavaShareTransceiver implements MessageListener {
 		}
 		if (message.hasField(PR_NAME_SESSION_ROOT)) {
 			String sessionRoot = message.getString(PR_NAME_SESSION_ROOT, "/");
-			localSessionID = sessionRoot.substring(sessionRoot.lastIndexOf('/') + 1);
+			this.localSessionID = sessionRoot.substring(sessionRoot.lastIndexOf('/') + 1);
 
 		}
 		if (message.hasField(PR_NAME_SERVER_MEM_AVAILABLE) && message.hasField(PR_NAME_SERVER_MEM_USED)) {
