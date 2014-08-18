@@ -199,8 +199,7 @@ public class JavaShareTransceiver implements MessageListener {
 		String temp = "SUBSCRIBE:/*/";
 		temp += sessionExpression;
 		temp += "/beshare/";
-		temp +=
-				getFirewalled() ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
+		temp += getFirewalled() ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
 		temp += fileExpression;
 
 		// Send the subscription!
@@ -536,7 +535,31 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/nick")) {
 			setLocalUserName(command.substring(5).trim());
 		} else if (lowerCommand.startsWith("/onlogin")) {
-			// TODO: Implement
+			String startup = command.substring(8).trim();
+			if (startup.equals("")) {
+				StringBuilder sb = new StringBuilder("Current Startup Commands:\n");
+				for (String cmd : loginCommands) {
+					sb.append("        ").append(cmd).append("\n");
+				}
+				chatDoc.addSystemMessage(sb.toString());
+			} else {
+				loginCommands.add(startup);
+			}
+		} else if (lowerCommand.startsWith("/unonlogin")) {
+			String remove = command.substring(10).trim();
+			if (remove.equals("")) {
+				command("/onlogin", chatDoc); // Show all current commands.
+			} else if (remove.equals("all")) {
+				StringBuilder sb = new StringBuilder("/unonlogin ");
+				loginCommands.clear();
+				chatDoc.addSystemMessage("All startup commands removed.");
+			} else {
+				if (loginCommands.remove(remove)) {
+					chatDoc.addSystemMessage("Removed startup command: " + remove);
+				} else {
+					chatDoc.addErrorMessage("The command you entered: " + remove + " did not match any startup commands.");
+				}
+			}
 		} else if (lowerCommand.startsWith("/quit")) {
 			System.exit(0);
 		} else if (lowerCommand.startsWith("/status")) {
@@ -565,6 +588,7 @@ public class JavaShareTransceiver implements MessageListener {
 					                 + "       /serverinfo - Request server status\n"
 					                 + "       /status [status] - set user status string\n"
 					                 + "       /unalias [all | name] - remove an alias\n"
+									 + "       /unonlogin [command] - remove a startup command\n"
 									 + "       /unwatch [all | name | session id ...] - Specify users to stop watching\n"
 									 + "       /unautopriv [all | name | session id ...] - Remove a user from auto-private\n"
 					                 + "       /watch [name | session id ...] - specify users to watch\n");
@@ -752,7 +776,12 @@ public class JavaShareTransceiver implements MessageListener {
 			setLocalUserStatus(localUserStatus);
 			setUploadBandwidth("?", 0);
 
-			// TODO: Execute any 'onlogin' commands.
+			if (!chatDocuments.isEmpty()) {
+				for (String command : loginCommands) {
+					// Hack hack hackity hack hack
+					handleInput(command, chatDocuments.get(0));
+				}
+			}
 
 			// TODO: Update the list of files you share.
 		} else if (message == serverDisconnect) {
