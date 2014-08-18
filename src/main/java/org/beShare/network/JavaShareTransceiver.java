@@ -426,7 +426,7 @@ public class JavaShareTransceiver implements MessageListener, StorageReflectCons
 		} else if (lowerCommand.startsWith("/onlogin")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/quit")) {
-			// TODO: Implement
+			System.exit(0);
 		} else if (lowerCommand.startsWith("/status")) {
 			// TODO: Implement
 		} else if (lowerCommand.startsWith("/help")) {
