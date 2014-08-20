@@ -14,9 +14,6 @@ import java.awt.BorderLayout;
  * @author Bryan Varner
  */
 public class AppPanel extends JPanel {
-
-	public static final String AutoUpdateURL = "http://beshare.tycomsystems.com/servers.txt";
-
 	ChatMessagingPanel chatterPanel;
 
 	/**

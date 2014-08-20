@@ -7,7 +7,6 @@ import com.meyer.muscle.thread.MessageQueue;
 import com.meyer.muscle.thread.ThreadPool;
 import org.beShare.Application;
 import org.beShare.DefaultDropMenuModel;
-import org.beShare.DropMenuModel;
 import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
@@ -117,6 +116,7 @@ public class JavaShareTransceiver implements MessageListener {
 	public JavaShareTransceiver(final Preferences preferences) {
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
+		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel));
 
 		serverModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
