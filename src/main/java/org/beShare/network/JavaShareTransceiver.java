@@ -11,10 +11,13 @@ import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
 import org.beShare.gui.ChatDocument;
+import org.beShare.gui.PrivateDialog;
 import org.beShare.gui.text.StyledString;
 
+import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import java.awt.Frame;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -121,6 +124,7 @@ public class JavaShareTransceiver implements MessageListener {
 		serverModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
+				logSystemMessage("Current server changed to " + serverModel.getSelectedItem());
 				if (connected || connectInProgress) {
 					connect();
 				}
@@ -446,8 +450,7 @@ public class JavaShareTransceiver implements MessageListener {
 			// This isn't really a command...
 			sendChat(command, chatDoc, null);
 		} else if (lowerCommand.startsWith("/priv")) {
-			// TODO: Implement me.
-			System.out.println("New Private Frame to [" + command.substring(5).trim() + "]");
+			new PrivateDialog(null, this, new String[]{command.substring(5).trim()}).setVisible(true);
 		} else if (lowerCommand.startsWith("/msg")) {
 			int msgStart = command.substring(5).trim().indexOf(" ");
 			if (msgStart <= 0) {
@@ -841,8 +844,13 @@ public class JavaShareTransceiver implements MessageListener {
 			// New chat text!
 			case NET_CLIENT_NEW_CHAT_TEXT: {
 				if (!ignoreUsernames.contains(userDataModel.findNameBySession(message.getString("session")))) {
-					for (ChatDocument doc : chatDocuments) {
-						doc.addRemoteChatMessage(message.getString("text").trim(), message.getString("session"), message.hasField("private"));
+					for (int i = chatDocuments.size() - 1; i >= 0; i--) {
+						// if the message is added, and we were filtering, bail out.
+						if (chatDocuments.get(i).addRemoteChatMessage(message.getString("text").trim(), message.getString("session"), message.hasField("private")) &&
+							chatDocuments.get(i).getFilteredUserDataModel().isFiltering())
+						{
+							break;
+						}
 					}
 				}
 			}

@@ -7,7 +7,9 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.plaf.SplitPaneUI;
 import java.awt.BorderLayout;
+import java.awt.Graphics;
 
 
 /**
@@ -29,7 +31,7 @@ public class AppPanel extends JPanel {
 //        } catch (Exception e) {
 //        }
 
-		// First we need to check our L&F setting!
+// First we need to check our L&F setting!
 //		if (programPrefsMessage.hasField("LaF")) {
 //			try {
 //				UIManager.setLookAndFeel(programPrefsMessage.getString("LaF", UIManager.getCrossPlatformLookAndFeelClassName()));

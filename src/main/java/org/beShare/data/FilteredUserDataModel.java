@@ -3,9 +3,11 @@ package org.beShare.data;
 import org.beShare.gui.swingAddons.TableMap;
 
 import javax.swing.event.TableModelEvent;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,25 +32,6 @@ public class FilteredUserDataModel extends TableMap {
 	}
 
 	/**
-	 * Adds a session ID to the filter.
-	 *
-	 * @param sessionId
-	 */
-	public void addSessionId(final String sessionId) {
-		sessionIds.put(sessionId, new RowMap());
-		checkModel();
-	}
-
-	/**
-	 * Removes a session ID from the filter.
-	 *
-	 * @param sessionId
-	 */
-	public void removeSessionId(final String sessionId) {
-		sessionIds.remove(sessionId);
-	}
-
-	/**
 	 * Returns a read-only copy of the current sessionIds.
 	 *
 	 * @return
@@ -60,14 +43,26 @@ public class FilteredUserDataModel extends TableMap {
 	/**
 	 * Removes any existing session IDs and adds only the given Ids to the filter.
 	 *
-	 * @param sessionIds
+	 * @param sessions
 	 */
-	public void setSessionIds(final String sessionIds) {
-		this.sessionIds.clear();
-		for (String sessionId : sessionIds.split(" ")) {
+	public void setSessionIds(final String sessions) {
+		LinkedHashMap<String, RowMap> oldMapping = this.sessionIds;
+		this.sessionIds = new LinkedHashMap<>();
+		for (String sessionId : sessions.split(" ")) {
 			this.sessionIds.put(sessionId, new RowMap());
 		}
 		checkModel();
+
+		// Fire that all content rows have changed, and if oldMapping.size() > this.sessionIds.size() = those were removed.
+		fireTableRowsUpdated(0, this.sessionIds.size() - 1);
+
+		if (this.sessionIds.size() < oldMapping.size()) {
+			fireTableRowsDeleted(this.sessionIds.size(), oldMapping.size());
+		}
+
+		if (this.sessionIds.size() > oldMapping.size()) {
+			fireTableRowsInserted(oldMapping.size(), this.sessionIds.size() - 1);
+		}
 	}
 
 	/**
@@ -125,7 +120,6 @@ public class FilteredUserDataModel extends TableMap {
 				if (entry.getValue().backingRow == -1) {
 					removeLocal.add(entry.getKey());
 				}
-
 				ourRow++;
 			}
 

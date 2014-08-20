@@ -12,6 +12,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -62,7 +64,7 @@ public class ChatMessagingPanel extends JPanel {
 	};
 
 	public ChatMessagingPanel(final JavaShareTransceiver transceiver) {
-		this(transceiver, new String[0]);
+		this(transceiver, null);
 	}
 
 	public ChatMessagingPanel(final JavaShareTransceiver transceiver, final String[] sessionIds) {
@@ -75,9 +77,15 @@ public class ChatMessagingPanel extends JPanel {
 		chatWithPanel = new JPanel();
 		chatWithPanel.setLayout(new BoxLayout(chatWithPanel, BoxLayout.X_AXIS));
 		chatWithSessions = new JTextField("");
+		if (sessionIds != null) {
+			for (String sessionId : sessionIds) {
+				chatWithSessions.setText(chatWithSessions.getText() + " " + sessionId);
+			}
+			updateUsers();
+		}
 		chatWithPanel.add(new JLabel("Chat With: "));
 		chatWithPanel.add(chatWithSessions);
-		chatWithPanel.setVisible(sessionIds.length > 0);
+		chatWithPanel.setVisible(sessionIds != null);
 
 		this.scrollUpAdjustments = 0;
 		this.previousScrollPosition = 0;
@@ -89,39 +97,15 @@ public class ChatMessagingPanel extends JPanel {
 		chatWithSessions.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String[] sessionsOrNames = chatWithSessions.getText().split(" ");
-
-				// Normalize the text to be all sessionIds.
-				StringBuilder sessions = new StringBuilder();
-				boolean prefix = false;
-				for (int i = 0; i < sessionsOrNames.length; i++) {
-					if (prefix) {
-						sessions.append(" ");
-						prefix = false;
-					}
-
-					if (sessionsOrNames[i].matches("[0-9]*")) {
-						sessions.append(sessionsOrNames[i]);
-						prefix = true;
-					} else {
-						// See if we can find a match by treating it as a userName
-						String sessionId =
-								chatDoc.getFilteredUserDataModel().getUserDataModel().findSessionByName(sessionsOrNames[i]);
-						if (!"".equals(sessionId)) {
-							sessions.append(sessionId);
-							prefix = true;
-						}
-					}
-				}
-
-				// Set the text.
-				chatWithSessions.setText(sessions.toString());
-
-				// Set the filter.
-				chatDoc.getFilteredUserDataModel().setSessionIds(sessions.toString());
+				updateUsers();
 			}
 		});
-
+		chatWithSessions.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusLost(FocusEvent e) {
+				updateUsers();
+			}
+		});
 
 		chatInput.addActionListener(new ActionListener() {
 			@Override
@@ -372,6 +356,39 @@ public class ChatMessagingPanel extends JPanel {
 		} catch (NullPointerException npe) {
 		}
 		this.validate();
+	}
+
+	private void updateUsers() {
+		String[] sessionsOrNames = chatWithSessions.getText().trim().split(" ");
+
+		// Normalize the text to be all sessionIds.
+		StringBuilder sessions = new StringBuilder();
+		boolean prefix = false;
+		for (int i = 0; i < sessionsOrNames.length; i++) {
+			if (prefix) {
+				sessions.append(" ");
+				prefix = false;
+			}
+
+			if (sessionsOrNames[i].matches("[0-9]*")) {
+				sessions.append(sessionsOrNames[i]);
+				prefix = true;
+			} else {
+				// See if we can find a match by treating it as a userName
+				String sessionId =
+						chatDoc.getFilteredUserDataModel().getUserDataModel().findSessionByName(sessionsOrNames[i]);
+				if (!"".equals(sessionId)) {
+					sessions.append(sessionId);
+					prefix = true;
+				}
+			}
+		}
+
+		// Set the text.
+		chatWithSessions.setText(sessions.toString().trim());
+
+		// Set the filter.
+		chatDoc.getFilteredUserDataModel().setSessionIds(sessions.toString());
 	}
 
 	/**

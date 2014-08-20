@@ -47,9 +47,10 @@ public class ChatDocument extends DefaultStyledDocument {
 		appendString(new StyledString("Error: ", StyledString.SYSTEM_ERROR).append(message, StyledString.SYSTEM_ERROR));
 	}
 
-	public void addRemoteChatMessage(final String message, final String sourceSessionId, final boolean isPrivate) {
-		// Only do anything if we're not filtering, or we contain this sessionId.
-		if (!filteredUserDataModel.isFiltering() || filteredUserDataModel.getSessionIds().contains(sourceSessionId)) {
+	public boolean addRemoteChatMessage(final String message, final String sourceSessionId, final boolean isPrivate) {
+		// If the message is private, make sure we're the intended target.
+		// OR if we're not filtering... display it.
+		if ((isPrivate && filteredUserDataModel.getSessionIds().contains(sourceSessionId)) || !filteredUserDataModel.isFiltering()) {
 			SimpleAttributeSet remoteStyle = StyledString.PLAIN;
 			if (isPrivate) {
 				remoteStyle = StyledString.PRIVATE;
@@ -74,7 +75,9 @@ public class ChatDocument extends DefaultStyledDocument {
 			}
 
 			appendString(styledString);
+			return true;
 		}
+		return false;
 	}
 
 	public void addEchoChatMessage(final String message, final boolean isPrivate, final String localSessionId, final String localUserName, final String[] privateSessionIds) {
