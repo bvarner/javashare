@@ -21,5 +21,6 @@ public class PrivateDialog extends JDialog {
 		super(owner, "Private Chat with: ", false);
 		setContentPane(new ChatMessagingPanel(transceiver, sessionIds));
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		pack();
 	}
 }
