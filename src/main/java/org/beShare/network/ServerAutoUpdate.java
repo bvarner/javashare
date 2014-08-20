@@ -9,22 +9,16 @@ import java.net.URL;
 import java.util.StringTokenizer;
 
 /**
- * <p>ServerAutoUpdate - A Class which takes a URL, parses the file for BeShare
- * server information, and creates a list of servers based upon it.
- * To do the work, call Run() - it's a separate thread! Yeah!
- * <p/>
- * <p>Class Started: 2-08-2002
- * <p>Last Update: 12-19-2002
+ * <p>ServerAutoUpdate - A runnable that updates a DefaultDropMenuModel for available server names.
  *
  * @author Bryan Varner
- * @version 2.0
  */
 class ServerAutoUpdate implements Runnable {
 	private static final String SERVER_LIST_URL = "http://beshare.tycomsystems.com/servers.txt";
 	private DefaultDropMenuModel<String> serverModel;
 
 	/**
-	 * Creates a new ServerAutoUpdate
+	 * Creates a new ServerAutoUpdate that modifies the given model.
 	 */
 	public ServerAutoUpdate(DefaultDropMenuModel<String> serverModel) {
 		this.serverModel = serverModel;
