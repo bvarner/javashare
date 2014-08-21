@@ -11,21 +11,17 @@ import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
 import org.beShare.gui.ChatDocument;
-import org.beShare.gui.PrivateDialog;
+import org.beShare.gui.PrivateFrame;
 import org.beShare.gui.text.StyledString;
 
-import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import java.awt.Frame;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
@@ -63,12 +59,12 @@ import static com.meyer.muscle.support.TypeConstants.B_STRING_TYPE;
 public class JavaShareTransceiver implements MessageListener {
 	public static final int portRange = 50;
 	public static final int startingPortNumber = 7000;
+	// Connection Management
 	private int localUserPort = startingPortNumber;
 	private static final int ROOT_DEPTH = 0;    // root node
 	private static final int HOST_NAME_DEPTH = 1;
 	private static final int SESSION_ID_DEPTH = 2;
 	private static final int BESHARE_HOME_DEPTH = 3;
-
 	// used to separate our stuff from other (non-BeShare) data on the same server
 	private static final int USER_NAME_DEPTH = 4;    // user's handle node would be found here
 	private static final int FILE_INFO_DEPTH = 5;    //This is where file names are
@@ -77,22 +73,15 @@ public class JavaShareTransceiver implements MessageListener {
 	private static final int NET_CLIENT_PING = 5;
 	private static final int NET_CLIENT_PONG = 6;
 	private static final String[] ALL_SESSIONS = new String[]{"*"};
-	public final String MUSCLE_INTERFACE_VERSION = "JavaShare " + Application.BUILD_VERSION;
-	private final Object serverConnect = new Object();
-	private final Object serverDisconnect = new Object();
-
-	// Connection Management
+	private static final Object serverConnect = new Object();
+	private static final Object serverDisconnect = new Object();
 	private int serverPort = 2960;
 	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
-
 	private String localSessionID = "";
-
 	private DefaultDropMenuModel<String> serverModel = new DefaultDropMenuModel<>(10);
 	private DefaultDropMenuModel<String> nameModel = new DefaultDropMenuModel<>(5);
 	private DefaultDropMenuModel<String> statusModel = new DefaultDropMenuModel<>(5);
-
-	private long localUserInstallId;
-
+	private long installId;
 	private boolean connectInProgress = false;
 	private boolean connected = false;
 	private boolean firewalled = false;
@@ -111,9 +100,10 @@ public class JavaShareTransceiver implements MessageListener {
 	private UserDataModel userDataModel = new UserDataModel();
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
 
-	private HashMap<String, String> aliases = new HashMap<>();
-	private Set<String> ignoreUsernames = new HashSet<>();
 	private List<String> loginCommands = new ArrayList<>();
+	private HashMap<String, String> aliases = new HashMap<>();
+
+	private HashMap<String, Pattern> ignores = new LinkedHashMap<>();
 	private HashMap<String, Pattern> autopriv = new LinkedHashMap<>();
 
 	/**
@@ -147,6 +137,9 @@ public class JavaShareTransceiver implements MessageListener {
 				sendUserStatus();
 			}
 		});
+
+		// Load state from Preferences.
+		preferences.getLong("installId", 0l);
 	}
 
 	public boolean isConnected() {
@@ -203,9 +196,9 @@ public class JavaShareTransceiver implements MessageListener {
 			Message nameMessage = new Message();
 			nameMessage.setString("name", localUserName);
 			nameMessage.setInt("port", localUserPort);
-			nameMessage.setLong("installid", localUserInstallId);
+			nameMessage.setLong("installid", installId);
 			nameMessage.setString("version_name", "JavaShare");
-			nameMessage.setString("version_num", "v" + Application.BUILD_VERSION);
+			nameMessage.setString("version_num", Application.VERSION);
 			setDataNodeValue("beshare/name", nameMessage);
 		}
 
@@ -282,7 +275,8 @@ public class JavaShareTransceiver implements MessageListener {
 		String temp = "SUBSCRIBE:/*/";
 		temp += sessionExpression;
 		temp += "/beshare/";
-		temp += getFirewalled() ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
+		temp +=
+				getFirewalled() ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
 		temp += fileExpression;
 
 		// Send the subscription!
@@ -453,7 +447,7 @@ public class JavaShareTransceiver implements MessageListener {
 			// This isn't really a command, but we'll handle it here.
 			sendChat(command, chatDoc, null);
 		} else if (lowerCommand.startsWith("/priv")) {
-			new PrivateDialog(null, this, new String[]{command.substring(5).trim()}).setVisible(true);
+			new PrivateFrame(this, new String[]{command.substring(5).trim()}).setVisible(true);
 		} else if (lowerCommand.startsWith("/msg")) {
 			int msgStart = command.substring(5).trim().indexOf(" ");
 			if (msgStart <= 0) {
@@ -488,6 +482,8 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.equalsIgnoreCase("/clear")) {
 			chatDoc.clear();
 		} else if (lowerCommand.equalsIgnoreCase("/away")) {
+
+
 			// TODO: Set the status to the 'away' message.
 		} else if (lowerCommand.startsWith("/awaymsg")) {
 			// TODO: Create / set the auto-away-status
@@ -596,20 +592,15 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/ignore")) {
 			String[] ignores = command.substring(7).trim().split(" ");
 			if (ignores.length == 1 && ignores[0].equals("")) {
-				StringBuilder sb = new StringBuilder("Current Users Ignored:\n");
-				for (String name : ignoreUsernames) {
-					sb.append("        ").append(name).append("\n");
+				StringBuilder sb = new StringBuilder("Current Ignore User Patterns:\n");
+				for (Map.Entry<String, Pattern> ignore : this.ignores.entrySet()) {
+					sb.append("        ").append(ignore.getKey()).append("\n");
 				}
 				chatDoc.addSystemMessage(sb.toString());
 			} else {
-				for (String ignoreNameOrSession : ignores) {
-					BeShareUser user = userDataModel.findByNameOrSession(ignoreNameOrSession);
-					if (user != null) {
-						ignoreUsernames.add(user.getUserName());
-						chatDoc.addSystemMessage("Now ignoring: " + user.getName());
-					} else {
-						chatDoc.addErrorMessage("Could not identify user to ignore for: " + ignoreNameOrSession);
-					}
+				for (String ignore : ignores) {
+					this.ignores.put(ignore, Pattern.compile(ignore));
+					chatDoc.addSystemMessage("Added ignore pattern: " + ignore);
 				}
 			}
 		} else if (lowerCommand.startsWith("/unignore")) {
@@ -617,15 +608,12 @@ public class JavaShareTransceiver implements MessageListener {
 			if (unignores.length == 0) {
 				command("/ignore", chatDoc); // Show all the ignores
 			} else if (unignores.length == 1 && unignores[0].equalsIgnoreCase("all")) {
-				StringBuilder removeAll = new StringBuilder("/unignore ");
-				for (String remove : ignoreUsernames) {
-					removeAll.append(remove).append(" ");
-				}
-				command(removeAll.toString(), chatDoc);
+				this.ignores.clear();
+				chatDoc.addSystemMessage("All ignore patterns removed.");
 			} else {
 				for (String remove : unignores) {
-					ignoreUsernames.remove(remove);
-					chatDoc.addSystemMessage("No longer ignoring: " + remove);
+					this.ignores.remove(remove);
+					chatDoc.addSystemMessage("Removed ignore pattern: " + remove);
 				}
 			}
 		} else if (lowerCommand.startsWith("/unautopriv")) {
@@ -675,7 +663,8 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.startsWith("/quit")) {
 			System.exit(0);
 		} else if (lowerCommand.startsWith("/status")) {
-			// TODO: Implement
+			String status = command.substring(7).trim();
+			statusModel.ensureSelected(status);
 		} else if (lowerCommand.startsWith("/help")) {
 			logSystemMessage("JavaShare Command Refrence\n"
 					                 + "       /action [action] - do something\n"
@@ -700,9 +689,9 @@ public class JavaShareTransceiver implements MessageListener {
 					                 + "       /serverinfo - Request server status\n"
 					                 + "       /status [status] - set user status string\n"
 					                 + "       /unalias [all | name] - remove an alias\n"
-									 + "       /unonlogin [command] - remove a startup command\n"
-									 + "       /unwatch [all | name | session id ...] - Specify users to stop watching\n"
-									 + "       /unautopriv [all | name | session id ...] - Remove a user from auto-private\n"
+					                 + "       /unonlogin [command] - remove a startup command\n"
+					                 + "       /unwatch [all | name | session id ...] - Specify users to stop watching\n"
+					                 + "       /unautopriv [all | name | session id ...] - Remove a user from auto-private\n"
 					                 + "       /watch [name | session id ...] - specify users to watch\n");
 		}
 	}
@@ -868,7 +857,7 @@ public class JavaShareTransceiver implements MessageListener {
 				message.what = NET_CLIENT_PONG;
 				message.setString(PR_NAME_KEYS, "/*/" + message.getString("session") + "/beshare");
 				message.setString("session", localSessionID);
-				message.setString("version", MUSCLE_INTERFACE_VERSION);
+				message.setString("version", Application.VERSION);
 				beShareTransceiver.sendOutgoingMessage(message);
 			}
 			break;
@@ -878,20 +867,29 @@ public class JavaShareTransceiver implements MessageListener {
 				String sourceSessionId = message.getString("session");
 				String sourceUserName = userDataModel.findNameBySession(message.getString("session"));
 				boolean isPrivate = message.hasField("private");
+				boolean isIgnored = false;
 
-				// If we're not ignoring the user.
-				if (!ignoreUsernames.contains(sourceUserName)) {
-					boolean privExists = false;
-					for (int i = chatDocuments.size() - 1; isPrivate && i >= 0 && !privExists; i--) {
-						privExists = chatDocuments.get(i).willConsumePrivate(sourceSessionId);
+				// Check against the ignore patterns.
+				for (Map.Entry<String, Pattern> ignore : this.ignores.entrySet()) {
+					if (ignore.getValue().matcher(sourceUserName).matches()) {
+						isIgnored = true;
+						break;
+					}
+				}
+
+				// If we're not ignored...
+				if (!isIgnored) {
+					boolean privateChatExists = false;
+					for (int i = chatDocuments.size() - 1; isPrivate && i >= 0 && !privateChatExists; i--) {
+						privateChatExists = chatDocuments.get(i).willConsumePrivate(sourceSessionId);
 					}
 
 					// If there is no private, and we match an autoPrivate pattern...
-					if (isPrivate && !privExists) {
+					if (isPrivate && !privateChatExists) {
 						for (Map.Entry<String, Pattern> privEntry : autopriv.entrySet()) {
 							if (privEntry.getValue().matcher(sourceUserName).matches()) {
 								// Create a new Private Dialog
-								new PrivateDialog(null, this, new String[] {sourceSessionId}).setVisible(true);
+								new PrivateFrame(this, new String[]{sourceSessionId}).setVisible(true);
 								break;
 							}
 						}
@@ -899,7 +897,8 @@ public class JavaShareTransceiver implements MessageListener {
 
 					boolean consumed = false;
 					for (int i = chatDocuments.size() - 1; i >= 0 && !consumed; i--) {
-						consumed = chatDocuments.get(i).addRemoteChatMessage(message.getString("text").trim(), sourceSessionId, isPrivate);
+						consumed =
+								chatDocuments.get(i).addRemoteChatMessage(message.getString("text").trim(), sourceSessionId, isPrivate);
 					}
 				}
 			}
