@@ -12,10 +12,12 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -60,6 +62,7 @@ public class PrefsFrame extends JDialog {
 		DefaultListModel catList = new DefaultListModel();
 
 		categoryList = new JList(catList);
+		categoryList.setPreferredSize(new Dimension(175, 100));
 		categoryList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		categoryList.addListSelectionListener(new ListSelectionListener() {
 			@Override
@@ -77,6 +80,7 @@ public class PrefsFrame extends JDialog {
 		prefHolder.setLayout(prefStack);
 
 		mainPanel = new JPanel(new BorderLayout());
+		mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
 		mainPanel.add(catPanel, BorderLayout.WEST);
 		mainPanel.add(prefHolder, BorderLayout.CENTER);
@@ -101,6 +105,6 @@ public class PrefsFrame extends JDialog {
 //		catList.addElement("File Types");
 
 		categoryList.setSelectedIndex(0);
-		setResizable(false);
+		setResizable(true);
 	}
 }

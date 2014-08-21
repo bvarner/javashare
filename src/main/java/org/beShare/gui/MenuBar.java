@@ -137,13 +137,15 @@ class MenuBar extends JMenuBar {
 				chatterPanel.paste();
 			}
 		});
-		edit.addSeparator();
-		edit.add(new AbstractGUIAction("Preferences", KeyEvent.VK_P, KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, platformMask)) {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				doPrefs();
-			}
-		});
+		if (!macOS) {
+			edit.addSeparator();
+			edit.add(new AbstractGUIAction("Preferences", KeyEvent.VK_P, KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, platformMask)) {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					doPrefs();
+				}
+			});
+		}
 
 		final JMenu window = new JMenu("Window");
 		window.addMenuListener(new MenuListener() {

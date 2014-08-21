@@ -18,7 +18,6 @@ public class GeneralPrefs extends JPanel implements ActionListener {
 	JCheckBox chkAutoUpdateServers;
 	JCheckBox chkFirewall;
 	JCheckBox chkLogin;
-	JCheckBox chkMiniBrowser;
 	JCheckBox chkSaveUserSort;
 
 	public GeneralPrefs() {
@@ -42,16 +41,12 @@ public class GeneralPrefs extends JPanel implements ActionListener {
 		chkFirewall = new JCheckBox("I'm Firewalled", false);
 
 		chkLogin = new JCheckBox("Login on startup", true);
-
-		chkMiniBrowser = new JCheckBox("Use Mini-Browser for http:// Links", true);
-
 		chkSaveUserSort = new JCheckBox("Save User Table Sort Column", false);
 
 		add(autoAwayPanel);
 		add(chkFirewall);
 		add(chkAutoUpdateServers);
 		add(chkLogin);
-		add(chkMiniBrowser);
 		add(chkSaveUserSort);
 
 		setBorder(BorderFactory.createTitledBorder("General Preferences"));
@@ -68,7 +63,6 @@ public class GeneralPrefs extends JPanel implements ActionListener {
 		chkAutoUpdateServers.addActionListener(this);
 		chkFirewall.addActionListener(this);
 		chkLogin.addActionListener(this);
-		chkMiniBrowser.addActionListener(this);
 		chkSaveUserSort.addActionListener(this);
 	}
 
