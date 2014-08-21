@@ -95,7 +95,11 @@ public class JavaShareTransceiver implements MessageListener {
 	private boolean disconnectExpected = false;
 	private int reconnectBackoff = -1;
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
+
 	private int awayTimeout = 300;
+	private transient String restoreStatus = "";
+	private String awayStatus = "";
+	private boolean isAway = false;
 
 	private UserDataModel userDataModel = new UserDataModel();
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
@@ -117,6 +121,7 @@ public class JavaShareTransceiver implements MessageListener {
 		serverModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
+				checkAwayStatus();
 				logSystemMessage("Current server changed to " + serverModel.getSelectedItem());
 				if (connected || connectInProgress) {
 					connect();
@@ -127,6 +132,7 @@ public class JavaShareTransceiver implements MessageListener {
 		nameModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
+				checkAwayStatus();
 				sendUserName();
 			}
 		});
@@ -406,7 +412,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 * @param privateSessionIds An optional list of sessionIds to receive the message as private, which overrides the sessions obtained from a FilteredUserDataModel obtained from the chatDoc.
 	 */
 	private void sendChat(final String text, final ChatDocument chatDoc, final String[] privateSessionIds) {
-		lastAction = System.currentTimeMillis();
+		checkAwayStatus();
 		String[] sessions = ALL_SESSIONS;
 		if (chatDoc.getFilteredUserDataModel().isFiltering()) {
 			sessions = chatDoc.getFilteredUserDataModel().getSessionIds().toArray(new String[0]);
@@ -434,6 +440,20 @@ public class JavaShareTransceiver implements MessageListener {
 		chatDoc.addEchoChatMessage(text, chatMessage.hasField("private"), localSessionID, nameModel.getSelectedItem(), privateSessionIds);
 	}
 
+	private void checkAwayStatus() {
+		lastAction = System.currentTimeMillis();
+		if (isAway) {
+			isAway = false;
+			statusModel.ensureSelected(restoreStatus);
+		}
+	}
+
+	private void setAway() {
+		restoreStatus = statusModel.getSelectedItem();
+		isAway = true;
+		statusModel.ensureSelected(awayStatus);
+	}
+
 	/**
 	 * Handles text commands, echoing output to the given chatDoc.
 	 *
@@ -441,7 +461,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 * @param chatDoc
 	 */
 	public void command(final String command, final ChatDocument chatDoc) {
-		lastAction = System.currentTimeMillis();
+		checkAwayStatus();
 		String lowerCommand = command.toLowerCase().trim();
 		if (lowerCommand.startsWith("/me ") || lowerCommand.startsWith("/action ")) {
 			// This isn't really a command, but we'll handle it here.
@@ -482,13 +502,13 @@ public class JavaShareTransceiver implements MessageListener {
 		} else if (lowerCommand.equalsIgnoreCase("/clear")) {
 			chatDoc.clear();
 		} else if (lowerCommand.equalsIgnoreCase("/away")) {
-
-
-			// TODO: Set the status to the 'away' message.
+			setAway();
 		} else if (lowerCommand.startsWith("/awaymsg")) {
-			// TODO: Create / set the auto-away-status
-			//logSystemMessage("Auto-away message set to " + message);
-
+			awayStatus = command.substring(8).trim();
+			if (!statusModel.contains(awayStatus)) {
+				statusModel.addElement(awayStatus);
+			}
+			logSystemMessage("Auto-away status set to " + awayStatus);
 		} else if (lowerCommand.startsWith("/alias")) {
 			String pair = command.substring(6).trim();
 			if (pair.equals("")) {
@@ -1188,10 +1208,10 @@ public class JavaShareTransceiver implements MessageListener {
 		public void run() {
 			while (true) {
 				try {
-					Thread.currentThread().sleep(10);
+					Thread.currentThread().sleep(1000);
 					// TODO: If auto-away is enabled....
-					if (true && connected && System.currentTimeMillis() - lastAction >= (awayTimeout * 1000)) {
-						//setLocalUserStatus(getAwayStatus());
+					if (connected && System.currentTimeMillis() - lastAction >= (awayTimeout * 1000) && !isAway) {
+						setAway();
 					}
 				} catch (InterruptedException ie) {
 				}
