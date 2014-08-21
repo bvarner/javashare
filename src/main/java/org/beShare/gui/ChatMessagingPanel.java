@@ -4,10 +4,32 @@ import org.beShare.data.FilteredUserDataModel;
 import org.beShare.gui.swingAddons.TableSorter;
 import org.beShare.network.JavaShareTransceiver;
 
-import javax.swing.*;
+import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.JTextPane;
+import javax.swing.JViewport;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import java.awt.*;
+import java.awt.Adjustable;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -30,32 +52,24 @@ import java.util.Stack;
  * @author Bryan Varner
  */
 public class ChatMessagingPanel extends JPanel {
+	private static Color SCROLL_LOCKED = new Color(205, 255, 255);
 	JavaShareTransceiver transceiver;
-
 	// Private Chat panel and Session / Name Text Box
 	JPanel chatWithPanel;
 	JTextField chatWithSessions;
-
 	// Chat Log and Input Box
 	JTextPane chatLog;
+	Color defaultBackground;
 	ChatInputLine chatInput = new ChatInputLine(25);
-
 	ChatDocument chatDoc;
-
 	// User table
 	JTable userTable;
-
 	Stack recentLines;
 	int lineIndex;
-
 	JScrollPane logScrollPane;
-
 	Timer scrollTimer;
 	int scrollUpAdjustments;
 	int previousScrollPosition;
-
-	private static Color SCROLL_LOCKED = new Color(205, 255, 255);
-
 	private WindowAdapter windowListener = new WindowAdapter() {
 		@Override
 		public void windowActivated(WindowEvent e) {
@@ -68,7 +82,7 @@ public class ChatMessagingPanel extends JPanel {
 	}
 
 	public ChatMessagingPanel(final JavaShareTransceiver transceiver, final String[] sessionIds) {
-		super(new BorderLayout());
+		super(new BorderLayout(5, 5));
 		this.transceiver = transceiver;
 		setPreferredSize(new Dimension(400, 150));
 
@@ -166,8 +180,8 @@ public class ChatMessagingPanel extends JPanel {
 		inputPanel.add(chatInput);
 
 		chatLog = new JTextPane(chatDoc);
-// TODO: Use the default L&F color here.
- 		chatLog.setBackground(Color.white);
+		defaultBackground = UIManager.getColor("EditorPane.background");
+		chatLog.setBackground(defaultBackground);
 
 		chatLog.setMargin(new Insets(2, 2, 2, 2));
 		chatLog.setEditable(false);
@@ -198,7 +212,7 @@ public class ChatMessagingPanel extends JPanel {
 				}
 				previousScrollPosition = e.getValue();
 
-				Color targetColor = Color.white;
+				Color targetColor = defaultBackground;
 				if (scrollUpAdjustments >= 10) {
 					targetColor = SCROLL_LOCKED;
 				}
@@ -214,7 +228,7 @@ public class ChatMessagingPanel extends JPanel {
 			}
 		});
 
-		JPanel chatPanel = new JPanel(new BorderLayout());
+		JPanel chatPanel = new JPanel(new BorderLayout(5, 5));
 		chatPanel.add(logScrollPane, BorderLayout.CENTER);
 		chatPanel.add(inputPanel, BorderLayout.SOUTH);
 
@@ -267,7 +281,7 @@ public class ChatMessagingPanel extends JPanel {
 
 		// Final setup for the panel
 		JSplitPane chatUserSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, chatPanel, new JScrollPane(userTable));
-		chatUserSplit.setOneTouchExpandable(true);
+		chatUserSplit.setBorder(BorderFactory.createEmptyBorder());
 		chatUserSplit.setResizeWeight(0.80);
 
 		add(chatWithPanel, BorderLayout.NORTH);
@@ -300,6 +314,12 @@ public class ChatMessagingPanel extends JPanel {
 			public void changedUpdate(DocumentEvent e) {
 			}
 		});
+	}
+
+	@Override
+	public void updateUI() {
+		super.updateUI();
+		defaultBackground = UIManager.getColor("EditorPane.background");
 	}
 
 	@Override

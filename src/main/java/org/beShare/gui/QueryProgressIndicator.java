@@ -3,8 +3,15 @@
 */
 package org.beShare.gui;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -24,7 +31,7 @@ public class QueryProgressIndicator extends JPanel {
 
 	public QueryProgressIndicator(JButton btn) {
 		super.setPreferredSize(new Dimension(btn.getPreferredSize().height, btn.getPreferredSize().height));
-		setBorder(BorderFactory.createEtchedBorder());
+		setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(3, 0, 3, 0), BorderFactory.createEtchedBorder()));
 		queryInProgress = false;
 		progressRepainter = new Timer(100,
 				                             new ActionListener() {

@@ -4,6 +4,7 @@ import org.beShare.DefaultDropMenuModel;
 import org.beShare.DropMenuItemFactory;
 import org.beShare.DropMenuModel;
 
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -12,8 +13,11 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -58,19 +62,19 @@ public class DropMenu<T> extends JPanel {
 	public DropMenu(final String label, int textSize, final DropMenuModel<T> model, final DropMenuItemFactory<T> itemFactory) {
 		super();
 		this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+		this.setBorder(BorderFactory.createEmptyBorder());
 		this.model = model;
 		this.itemFactory = itemFactory;
 
 		button = new JButton(label);
+		button.putClientProperty("JButton.buttonType", "square");
 		button.setHorizontalTextPosition(SwingConstants.LEADING);
 		button.setIcon(new ImageIcon(getClass().getClassLoader().getResource("Images/DownArrow.gif")));
-		button.setMargin(new Insets(2, 2, 2, 2));
 		button.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				createMenu().show(e.getComponent(), button.getX(), button.getY() + button.getHeight());
 			}
 		});
-		this.add(button);
 
 		text = new JTextField("", textSize);
 		text.addActionListener(new ActionListener() {
@@ -115,6 +119,7 @@ public class DropMenu<T> extends JPanel {
 			}
 		});
 
+		this.add(button);
 		this.add(text);
 
 		this.model.addListSelectionListener(new ListSelectionListener() {
@@ -140,6 +145,13 @@ public class DropMenu<T> extends JPanel {
 			menu.add(item);
 		}
 		return menu;
+	}
+
+	@Override
+	public Dimension getPreferredSize() {
+		Dimension buttonSize = button.getPreferredSize();
+		Dimension textSize = text.getPreferredSize();
+		return new Dimension(buttonSize.width + textSize.width, Math.max(textSize.height, buttonSize.height));
 	}
 
 	/**

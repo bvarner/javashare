@@ -14,6 +14,7 @@ import org.beShare.network.ShareFileMaintainer;
 import org.beShare.network.TransferManager;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -74,11 +75,13 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 		typeIcons = new Hashtable();
 
 		this.setLayout(new BorderLayout());
-		pnlQuery = new JPanel(new BorderLayout());
-		pnlTransfer = new JPanel(new BorderLayout());
+		pnlQuery = new JPanel(new BorderLayout(5, 5));
+		pnlQuery.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+		pnlTransfer = new JPanel(new BorderLayout(5, 5));
+		pnlTransfer.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
 		transferSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, false, pnlQuery, pnlTransfer);
-		transferSplit.setOneTouchExpandable(true);
+		transferSplit.setBorder(BorderFactory.createEmptyBorder());
 		pnlQuery.setPreferredSize(new Dimension(400, 200));
 		transferSplit.setResizeWeight(.80);
 
