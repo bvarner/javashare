@@ -78,9 +78,11 @@ public class ChatMessagingPanel extends JPanel {
 		chatWithPanel.setLayout(new BoxLayout(chatWithPanel, BoxLayout.X_AXIS));
 		chatWithSessions = new JTextField("");
 		if (sessionIds != null) {
+			StringBuilder chatWith = new StringBuilder();
 			for (String sessionId : sessionIds) {
-				chatWithSessions.setText(chatWithSessions.getText() + " " + sessionId);
+				chatWith.append(sessionId).append(" ");
 			}
+			chatWithSessions.setText(chatWith.toString());
 			updateUsers();
 		}
 		chatWithPanel.add(new JLabel("Chat With: "));
@@ -384,11 +386,11 @@ public class ChatMessagingPanel extends JPanel {
 			}
 		}
 
-		// Set the text.
-		chatWithSessions.setText(sessions.toString().trim());
-
 		// Set the filter.
-		chatDoc.getFilteredUserDataModel().setSessionIds(sessions.toString());
+		chatDoc.getFilteredUserDataModel().setSessionIds(sessions.toString().trim());
+
+		// Trim the text.
+		chatWithSessions.setText(chatWithSessions.getText().trim());
 	}
 
 	/**

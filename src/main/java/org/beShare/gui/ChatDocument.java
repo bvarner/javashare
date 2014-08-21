@@ -47,6 +47,15 @@ public class ChatDocument extends DefaultStyledDocument {
 		appendString(new StyledString("Error: ", StyledString.SYSTEM_ERROR).append(message, StyledString.SYSTEM_ERROR));
 	}
 
+	/**
+	 * Determines if this ChatDocument would consume a message from the given sourceSessionId with the given private flag.
+	 * @param sourceSessionId
+	 * @return
+	 */
+	public boolean willConsumePrivate(final String sourceSessionId) {
+		return filteredUserDataModel.isFiltering() && filteredUserDataModel.getSessionIds().contains(sourceSessionId);
+	}
+
 	public boolean addRemoteChatMessage(final String message, final String sourceSessionId, final boolean isPrivate) {
 		// If the message is private, make sure we're the intended target.
 		// OR if we're not filtering... display it.

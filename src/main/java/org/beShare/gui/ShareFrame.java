@@ -11,12 +11,17 @@ import org.beShare.Application;
 import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.AbstractAction;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
 import javax.swing.KeyStroke;
 import javax.swing.WindowConstants;
+import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
@@ -31,17 +36,42 @@ public class ShareFrame extends JFrame {
 
 	private final static String JAVASHARE_COMMAND = "JavaShareCommand";
 	private JavaShareTransceiver transceiver;
-	private AppPanel appPanel;
+	private ChatMessagingPanel chatterPanel;
 
 
 	public ShareFrame(final JavaShareTransceiver transceiver) {
 		super("JavaShare " + Application.BUILD_VERSION);
 		this.transceiver = transceiver;
-		this.appPanel = new AppPanel(transceiver);
 
 		ImageIcon JavaShareIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/BeShare.gif"));
 		this.setIconImage(JavaShareIcon.getImage());
-		this.setContentPane(appPanel);
+
+		JPanel mainPanel = new JPanel(new BorderLayout());
+		chatterPanel = new ChatMessagingPanel(transceiver);
+
+		// Setup a panel with the server, nickname, status DropMenus.
+		JPanel connectPanel = new JPanel();
+		connectPanel.setLayout(new BoxLayout(connectPanel, BoxLayout.X_AXIS));
+		connectPanel.add(new DropMenu<String>("Server:", 20, transceiver.getServerModel(), new StringItemFactory()));
+		connectPanel.add(Box.createHorizontalStrut(6));
+		connectPanel.add(new DropMenu<String>("Name:", 10, transceiver.getNameModel(), new StringItemFactory()));
+		connectPanel.add(Box.createHorizontalStrut(6));
+		connectPanel.add(new DropMenu<String>("Status:", 10, transceiver.getStatusModel(), new StringItemFactory()));
+
+
+		TransferPanel transPan = new TransferPanel(transceiver);
+
+		JSplitPane queryChatSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		queryChatSplit.add(transPan);
+		queryChatSplit.add(chatterPanel);
+
+		chatterPanel.chatDoc.addSystemMessage("Welcome to JavaShare!\n" +
+				                                      "Type /help for a list of commands.");
+
+		mainPanel.add(connectPanel, BorderLayout.NORTH);
+		mainPanel.add(queryChatSplit);
+		this.setContentPane(mainPanel);
+
 		this.setJMenuBar(new MenuBar());
 		this.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -116,19 +146,19 @@ public class ShareFrame extends JFrame {
 			edit.add(new AbstractGUIAction("Cut", KeyEvent.VK_C, KeyStroke.getKeyStroke(KeyEvent.VK_X, editOptsMask)) {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					appPanel.chatterPanel.cut();
+					chatterPanel.cut();
 				}
 			});
 			edit.add(new AbstractGUIAction("Copy", KeyEvent.VK_O, KeyStroke.getKeyStroke(KeyEvent.VK_C, editOptsMask)) {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					appPanel.chatterPanel.copy();
+					chatterPanel.copy();
 				}
 			});
 			edit.add(new AbstractGUIAction("Paste", KeyEvent.VK_T, KeyStroke.getKeyStroke(KeyEvent.VK_V, editOptsMask)) {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					appPanel.chatterPanel.paste();
+					chatterPanel.paste();
 				}
 			});
 			edit.addSeparator();
@@ -173,7 +203,7 @@ public class ShareFrame extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ShareFrame.this.transceiver.command(getValue(JAVASHARE_COMMAND).toString(), ShareFrame.this.appPanel.chatterPanel.chatDoc);
+				ShareFrame.this.transceiver.command(getValue(JAVASHARE_COMMAND).toString(), ShareFrame.this.chatterPanel.chatDoc);
 			}
 		}
 	}

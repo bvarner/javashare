@@ -25,6 +25,22 @@ public class Application {
 	public static void main(String args[]) {
 		final JavaShareTransceiver transceiver = new JavaShareTransceiver(Preferences.userNodeForPackage(Application.class));
 
+// Add support for the beoslaf.jar
+//        try {
+//            ClassLoader.getSystemClassLoader().loadClass("com.sun.java.swing.plaf.beos.BeOSLookAndFeel");
+//            UIManager.installLookAndFeel(new UIManager.LookAndFeelInfo("BeOS R5", "com.sun.java.swing.plaf.beos.BeOSLookAndFeel"));
+//        } catch (Exception e) {
+//        }
+
+// First we need to check our L&F setting!
+//		if (programPrefsMessage.hasField("LaF")) {
+//			try {
+//				UIManager.setLookAndFeel(programPrefsMessage.getString("LaF", UIManager.getCrossPlatformLookAndFeelClassName()));
+//			} catch (Exception ex) {
+//				System.err.println("Failed to set LookandFeel: " + ex.getMessage());
+//			}
+//		}
+
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				ShareFrame shareFrame = new ShareFrame(transceiver);

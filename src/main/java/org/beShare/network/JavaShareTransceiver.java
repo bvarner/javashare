@@ -22,11 +22,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.prefs.Preferences;
+import java.util.regex.Pattern;
 
 import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_GETPARAMETERS;
 import static com.meyer.muscle.client.StorageReflectConstants.PR_COMMAND_JETTISONRESULTS;
@@ -112,6 +114,7 @@ public class JavaShareTransceiver implements MessageListener {
 	private HashMap<String, String> aliases = new HashMap<>();
 	private Set<String> ignoreUsernames = new HashSet<>();
 	private List<String> loginCommands = new ArrayList<>();
+	private HashMap<String, Pattern> autopriv = new LinkedHashMap<>();
 
 	/**
 	 * Construct a new JavaShareTransceiver,
@@ -406,7 +409,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 *
 	 * @param text              The String to send
 	 * @param chatDoc           The document to update with the content you've sent.
-	 * @param privateSessionIds An optional list of sessionIds to receive the message as private.
+	 * @param privateSessionIds An optional list of sessionIds to receive the message as private, which overrides the sessions obtained from a FilteredUserDataModel obtained from the chatDoc.
 	 */
 	private void sendChat(final String text, final ChatDocument chatDoc, final String[] privateSessionIds) {
 		lastAction = System.currentTimeMillis();
@@ -447,7 +450,7 @@ public class JavaShareTransceiver implements MessageListener {
 		lastAction = System.currentTimeMillis();
 		String lowerCommand = command.toLowerCase().trim();
 		if (lowerCommand.startsWith("/me ") || lowerCommand.startsWith("/action ")) {
-			// This isn't really a command...
+			// This isn't really a command, but we'll handle it here.
 			sendChat(command, chatDoc, null);
 		} else if (lowerCommand.startsWith("/priv")) {
 			new PrivateDialog(null, this, new String[]{command.substring(5).trim()}).setVisible(true);
@@ -574,7 +577,22 @@ public class JavaShareTransceiver implements MessageListener {
 				chatDoc.addWarningMessage("Could not find a username or session # for: " + targetUser);
 			}
 		} else if (lowerCommand.startsWith("/autopriv")) {
-			// TODO: Implement
+			if (lowerCommand.equals("/autopriv")) { // If all that's entered is '/autopriv', list all current patterns.
+				StringBuilder sb = new StringBuilder("Current Auto-Private Expressions:\n");
+				for (String pattern : autopriv.keySet()) {
+					sb.append("        ").append(pattern).append("\n");
+				}
+				chatDoc.addSystemMessage(sb.toString());
+			} else {
+				for (String pattern : command.substring(9).trim().split(" ")) {
+					if (pattern.equals("*")) {
+						autopriv.put(pattern, Pattern.compile(".*"));
+					} else {
+						autopriv.put(pattern, Pattern.compile(".*" + pattern + ".*"));
+					}
+					chatDoc.addSystemMessage("Added Auto-Private pattern: " + pattern);
+				}
+			}
 		} else if (lowerCommand.startsWith("/ignore")) {
 			String[] ignores = command.substring(7).trim().split(" ");
 			if (ignores.length == 1 && ignores[0].equals("")) {
@@ -611,7 +629,21 @@ public class JavaShareTransceiver implements MessageListener {
 				}
 			}
 		} else if (lowerCommand.startsWith("/unautopriv")) {
-			// TODO: Implement
+			if (lowerCommand.length() > 11) {
+				String removePattern = command.substring(11).trim();
+
+				// If you type '/unautopriv all' it will remove all patterns.
+				if (removePattern.equals("all")) {
+					autopriv.clear();
+					chatDoc.addSystemMessage("All Auto-Private patterns removed.");
+				} else if (autopriv.remove(removePattern) != null) {
+					chatDoc.addSystemMessage("Removed Auto-Private pattern: " + removePattern);
+				} else {
+					chatDoc.addErrorMessage("The pattern you entered, '" + removePattern + "', did not match a known Auto-Private pattern.");
+				}
+			} else {
+				chatDoc.addWarningMessage("No pattern to remove specified.");
+			}
 		} else if (lowerCommand.startsWith("/nick")) {
 			nameModel.ensureSelected(command.substring(5).trim());
 		} else if (lowerCommand.startsWith("/onlogin")) {
@@ -843,14 +875,31 @@ public class JavaShareTransceiver implements MessageListener {
 
 			// New chat text!
 			case NET_CLIENT_NEW_CHAT_TEXT: {
-				if (!ignoreUsernames.contains(userDataModel.findNameBySession(message.getString("session")))) {
-					for (int i = chatDocuments.size() - 1; i >= 0; i--) {
-						// if the message is added, and we were filtering, bail out.
-						if (chatDocuments.get(i).addRemoteChatMessage(message.getString("text").trim(), message.getString("session"), message.hasField("private")) &&
-							chatDocuments.get(i).getFilteredUserDataModel().isFiltering())
-						{
-							break;
+				String sourceSessionId = message.getString("session");
+				String sourceUserName = userDataModel.findNameBySession(message.getString("session"));
+				boolean isPrivate = message.hasField("private");
+
+				// If we're not ignoring the user.
+				if (!ignoreUsernames.contains(sourceUserName)) {
+					boolean privExists = false;
+					for (int i = chatDocuments.size() - 1; isPrivate && i >= 0 && !privExists; i--) {
+						privExists = chatDocuments.get(i).willConsumePrivate(sourceSessionId);
+					}
+
+					// If there is no private, and we match an autoPrivate pattern...
+					if (isPrivate && !privExists) {
+						for (Map.Entry<String, Pattern> privEntry : autopriv.entrySet()) {
+							if (privEntry.getValue().matcher(sourceUserName).matches()) {
+								// Create a new Private Dialog
+								new PrivateDialog(null, this, new String[] {sourceSessionId}).setVisible(true);
+								break;
+							}
 						}
+					}
+
+					boolean consumed = false;
+					for (int i = chatDocuments.size() - 1; i >= 0 && !consumed; i--) {
+						consumed = chatDocuments.get(i).addRemoteChatMessage(message.getString("text").trim(), sourceSessionId, isPrivate);
 					}
 				}
 			}
