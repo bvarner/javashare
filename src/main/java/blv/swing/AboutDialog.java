@@ -68,8 +68,13 @@ public class AboutDialog extends JDialog implements ActionListener {
 		getRootPane().setDefaultButton(btnOk);
 
 		setContentPane(mainPanel);
-		setResizable(false);
 		pack();
+
+		Dimension d = getSize();
+		d.height += 100;
+		setPreferredSize(d);
+		setResizable(false);
+
 		recenter();
 	}
 
@@ -178,6 +183,9 @@ public class AboutDialog extends JDialog implements ActionListener {
 		 */
 		public void paint(Graphics g) {
 			super.paint(g);
+
+			Graphics2D g2d = (Graphics2D)g;
+			g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
 			// Iterate through the String array, top to bottom, drawing each line. If a line would be clipped
 			// by the graphics bounding rect, we don't display it.

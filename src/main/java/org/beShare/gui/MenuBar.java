@@ -1,6 +1,12 @@
 package org.beShare.gui;
 
 import blv.swing.AboutDialog;
+import com.apple.eawt.AboutHandler;
+import com.apple.eawt.AppEvent;
+import com.apple.eawt.PreferencesHandler;
+import com.apple.eawt.QuitHandler;
+import com.apple.eawt.QuitResponse;
+import com.apple.eawt.QuitStrategy;
 import org.beShare.Application;
 import org.beShare.network.JavaShareTransceiver;
 
@@ -31,6 +37,17 @@ class MenuBar extends JMenuBar {
 	private JavaShareTransceiver transceiver;
 	private ChatMessagingPanel chatterPanel;
 
+	// Setup static props for MacOS...
+	static {
+		try {
+			com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
+			application.setDockIconImage(new ImageIcon(Application.class.getClassLoader().getResource("Images/BeShare.gif")).getImage());
+			application.setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
+		} catch (Exception ex) {
+		} catch (Error er) {
+		}
+	}
+
 	MenuBar(final JFrame owner, final JavaShareTransceiver transceiver, final ChatMessagingPanel chatterPanel) {
 		super();
 
@@ -41,9 +58,36 @@ class MenuBar extends JMenuBar {
 		int editOptsMask = ActionEvent.CTRL_MASK;
 		int platformMask = ActionEvent.ALT_MASK;
 
+		boolean macOS = false;
 		if (System.getProperty("os.name").toLowerCase().startsWith("mac os")) {
+			macOS = true;
 			platformMask = ActionEvent.META_MASK;
 			editOptsMask = ActionEvent.META_MASK;
+
+			try {
+				com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
+				application.setPreferencesHandler(new PreferencesHandler() {
+					@Override
+					public void handlePreferences(AppEvent.PreferencesEvent preferencesEvent) {
+						doPrefs();
+					}
+				});
+				application.setAboutHandler(new AboutHandler() {
+					@Override
+					public void handleAbout(AppEvent.AboutEvent aboutEvent) {
+						doAbout();
+					}
+				});
+				application.setQuitHandler(new QuitHandler() {
+					@Override
+					public void handleQuitRequestWith(AppEvent.QuitEvent quitEvent, QuitResponse quitResponse) {
+						quitResponse.cancelQuit();
+						owner.dispatchEvent(new WindowEvent(owner, WindowEvent.WINDOW_CLOSING));
+					}
+				});
+			} catch (Exception ex) {
+			} catch (Error error) {
+			}
 		}
 
 		JMenu file = new JMenu("File");
@@ -54,45 +98,23 @@ class MenuBar extends JMenuBar {
 		file.addSeparator();
 		file.add(new CommandAction("Open Private Chat Window", "/PRIV", KeyEvent.VK_C));
 		file.add(new CommandAction("Clear Chat Log", "/CLEAR", KeyStroke.getKeyStroke(KeyEvent.VK_L, platformMask)));
-		file.addSeparator();
-		file.add(new AbstractGUIAction("About JavaShare", KeyEvent.VK_A, KeyStroke.getKeyStroke(KeyEvent.VK_F11, platformMask)) {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				String[] aboutText = {"JavaShare",
-				                      "Version " + Application.VERSION,
-				                      "",
-				                      "Special Thanks to:",
-				                      "     Tori Anderson",
-				                      "     Jonathon Beige",
-				                      "     Adam McNutt",
-				                      "     Michael Paine",
-				                      "     David Varner",
-				                      "     Douglas Varner",
-				                      "     Helmar Rudolph",
-				                      "     John Slevin",
-				                      "     The Wonderful BeOS Community!",
-				                      "",
-				                      "And especially:",
-				                      "   Those who have submitted bug-reports!",
-				                      "   The graphics aid of Mikko Heikkinen",
-				                      "   The awesome generosity of",
-				                      "      Chris Gelatt",
-				                      "      Austin Brower",
-				                      "      Alan Ellis",
-				                      "      Silent Computing"};
-				AboutDialog dialog =
-						new AboutDialog(owner, "About JavaShare", true, aboutText, new ImageIcon(this.getClass().getClassLoader().getResource("Images/BeShare.gif")), 2, 20);
-				dialog.pack();
-				dialog.setVisible(true);
-			}
-		});
-		file.addSeparator();
-		file.add(new AbstractGUIAction("Quit", KeyEvent.VK_Q, KeyStroke.getKeyStroke(KeyEvent.VK_Q, platformMask)) {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				owner.dispatchEvent(new WindowEvent(owner, WindowEvent.WINDOW_CLOSING));
-			}
-		});
+		if (!macOS) {
+			file.addSeparator();
+			file.add(new AbstractGUIAction("About JavaShare", KeyEvent.VK_A, KeyStroke.getKeyStroke(KeyEvent.VK_F11, platformMask)) {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					doAbout();
+				}
+			});
+
+			file.addSeparator();
+			file.add(new AbstractGUIAction("Quit", KeyEvent.VK_Q, KeyStroke.getKeyStroke(KeyEvent.VK_Q, platformMask)) {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					owner.dispatchEvent(new WindowEvent(owner, WindowEvent.WINDOW_CLOSING));
+				}
+			});
+		}
 
 		JMenu edit = new JMenu("Edit");
 		edit.setMnemonic(KeyEvent.VK_E);
@@ -119,9 +141,7 @@ class MenuBar extends JMenuBar {
 		edit.add(new AbstractGUIAction("Preferences", KeyEvent.VK_P, KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, platformMask)) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				PrefsFrame preferences = new PrefsFrame(owner);
-				preferences.pack();
-				preferences.setVisible(true);
+				doPrefs();
 			}
 		});
 
@@ -150,6 +170,44 @@ class MenuBar extends JMenuBar {
 		this.add(window);
 	}
 
+	private void doAbout() {
+		String[] aboutText = {"JavaShare",
+		                      "Version " + Application.VERSION,
+		                      "",
+		                      "Code Contributions by:",
+							  "     bvarner (Bryan Varner)",
+		                      "     waddlesplash (Augustin Cavalier)",
+		                      "",
+		                      "Special Thanks to:",
+		                      "     Tori Anderson",
+		                      "     Jonathon Beige",
+		                      "     Adam McNutt",
+		                      "     Michael Paine",
+		                      "     David Varner",
+		                      "     Douglas Varner",
+		                      "     Helmar Rudolph",
+		                      "     John Slevin",
+		                      "     The Wonderful BeOS Community!",
+		                      "",
+		                      "And especially:",
+		                      "   Those who have submitted bug-reports!",
+		                      "   The graphics aid of Mikko Heikkinen",
+		                      "   The awesome generosity of",
+		                      "      Chris Gelatt",
+		                      "      Austin Brower",
+		                      "      Alan Ellis",
+		                      "      Silent Computing"};
+		AboutDialog dialog =
+				new AboutDialog(owner, "About JavaShare", true, aboutText, new ImageIcon(this.getClass().getClassLoader().getResource("Images/BeShare.gif")), 2, 20);
+		dialog.pack();
+		dialog.setVisible(true);
+	}
+
+	private void doPrefs() {
+		PrefsFrame preferences = new PrefsFrame(owner);
+		preferences.pack();
+		preferences.setVisible(true);
+	}
 
 	private abstract class AbstractGUIAction extends AbstractAction {
 		AbstractGUIAction(final String text, final int key, final KeyStroke keystroke) {
@@ -191,7 +249,7 @@ class MenuBar extends JMenuBar {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			((Window)getValue(JAVASHARE_WINDOW)).setVisible(true);
+			((Window) getValue(JAVASHARE_WINDOW)).setVisible(true);
 		}
 	}
 }

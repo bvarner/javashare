@@ -23,6 +23,7 @@
                 <filtering>false</filtering>
                 <excludes>
                     <exclude>**/version.txt</exclude>
+                    <exclude>**/*.xcf</exclude>
                 </excludes>
             </resource>
         </resources>
