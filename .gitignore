@@ -17,3 +17,6 @@ hs_err_pid*
 .idea
 target
 nb*.xml
+
+# Always include everything in src/main/build-resources.
+!src/main/build-resources/**

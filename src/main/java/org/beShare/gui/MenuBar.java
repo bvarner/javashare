@@ -37,17 +37,6 @@ class MenuBar extends JMenuBar {
 	private JavaShareTransceiver transceiver;
 	private ChatMessagingPanel chatterPanel;
 
-	// Setup static props for MacOS...
-	static {
-		try {
-			com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
-			application.setDockIconImage(new ImageIcon(Application.class.getClassLoader().getResource("Images/BeShare.gif")).getImage());
-			application.setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
-		} catch (Exception ex) {
-		} catch (Error er) {
-		}
-	}
-
 	MenuBar(final JFrame owner, final JavaShareTransceiver transceiver, final ChatMessagingPanel chatterPanel) {
 		super();
 

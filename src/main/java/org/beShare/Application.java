@@ -38,9 +38,6 @@ public class Application {
 			System.exit(1);
 		}
 
-		System.setProperty("apple.laf.useScreenMenuBar", "true");
-		System.setProperty("com.apple.mrj.application.apple.menu.about.name", "JavaShare");
-
 		// Load preferences, generate an installId and save it.
 		Preferences prefs = Preferences.userNodeForPackage(Application.class);
 		long installId =
