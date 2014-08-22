@@ -117,6 +117,14 @@ public class JavaShareTransceiver implements MessageListener {
 	 */
 	public JavaShareTransceiver(final Preferences preferences) {
 		this.preferences = preferences;
+		this.installId = preferences.getLong("installId", 0l);
+		this.awayTimeout = preferences.getInt("awayTimeout", 300);
+
+		// TODO: Load the loginCommands
+		// TODO: Load the aliases
+		// TODO: Load the ignores
+		// TODO: Load the autopriv
+
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
 		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel));
@@ -153,9 +161,6 @@ public class JavaShareTransceiver implements MessageListener {
 		});
 		statusModel.loadFrom(preferences, "status", "Here|Away");
 		awayStatus = preferences.get("awayStatus", "Away");
-
-		// Load state from Preferences.
-		installId = preferences.getLong("installId", 0l);
 	}
 
 	public boolean isConnected() {
