@@ -4,7 +4,6 @@ import org.beShare.gui.ShareFrame;
 import org.beShare.network.JavaShareTransceiver;
 
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 import java.awt.Frame;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -53,15 +52,6 @@ public class Application {
 //            UIManager.installLookAndFeel(new UIManager.LookAndFeelInfo("BeOS R5", "com.sun.java.swing.plaf.beos.BeOSLookAndFeel"));
 //        } catch (Exception e) {
 //        }
-
-// First we need to check our L&F setting!
-//		if (programPrefsMessage.hasField("LaF")) {
-//		try {
-//			UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-//		} catch (Exception ex) {
-//			System.err.println("Failed to set LookAndFeel: " + ex.getMessage());
-//		}
-//		}
 
 		// Start the GUI.
 		SwingUtilities.invokeLater(new Runnable() {
