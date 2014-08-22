@@ -17,9 +17,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.WindowConstants;
-import javax.swing.border.Border;
 import java.awt.BorderLayout;
-import java.awt.Color;
 
 /**
  * ShareFrame is a parent window of a connection to a BeShare (MUSCLE) server.
@@ -45,11 +43,11 @@ public class ShareFrame extends JFrame {
 		JPanel connectPanel = new JPanel();
 		connectPanel.setLayout(new BoxLayout(connectPanel, BoxLayout.X_AXIS));
 		connectPanel.setBorder(BorderFactory.createEmptyBorder());
-		connectPanel.add(new DropMenu<String>("Server:", 20, transceiver.getServerModel(), new StringItemFactory()));
+		connectPanel.add(new DropMenu<String>("Server:", 20, transceiver.getServerModel()));
 		connectPanel.add(Box.createHorizontalStrut(5));
-		connectPanel.add(new DropMenu<String>("Name:", 10, transceiver.getNameModel(), new StringItemFactory()));
+		connectPanel.add(new DropMenu<String>("Name:", 10, transceiver.getNameModel()));
 		connectPanel.add(Box.createHorizontalStrut(5));
-		connectPanel.add(new DropMenu<String>("Status:", 10, transceiver.getStatusModel(), new StringItemFactory()));
+		connectPanel.add(new DropMenu<String>("Status:", 10, transceiver.getStatusModel()));
 
 		TransferPanel transPan = new TransferPanel(transceiver);
 
@@ -59,12 +57,12 @@ public class ShareFrame extends JFrame {
 		queryChatSplit.setBorder(BorderFactory.createEmptyBorder());
 
 		chatterPanel.chatDoc.addSystemMessage("Welcome to JavaShare!\n" +
-				                              "Type /help for a list of commands.");
+				                                      "Type /help for a list of commands.");
 
 		JPanel mainPanel = new JPanel(new BorderLayout());
 		mainPanel.add(connectPanel, BorderLayout.NORTH);
 		mainPanel.add(queryChatSplit);
-		mainPanel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+		mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		this.setContentPane(mainPanel);
 
 		this.setJMenuBar(new MenuBar(this, transceiver, chatterPanel));

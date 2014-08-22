@@ -1,24 +1,25 @@
-package org.beShare;
+package org.beShare.gui;
 
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionListener;
+import java.util.prefs.Preferences;
 
 /**
  * A DefaultListModel that encapsulates a ListSelectionModel and enforces a maximum list model size.
  */
-public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements DropMenuModel<E> {
+public abstract class AbstractDropMenuModel<E> extends DefaultListModel<E> implements DropMenuModel<E> {
 	private DefaultListSelectionModel selectionModel;
 	private int maxSize = Integer.MAX_VALUE;
 
-	public DefaultDropMenuModel() {
+	public AbstractDropMenuModel() {
 		super();
 		selectionModel = new DefaultListSelectionModel();
 		selectionModel.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 	}
 
-	public DefaultDropMenuModel(int maxSize) {
+	public AbstractDropMenuModel(int maxSize) {
 		this();
 		this.maxSize = maxSize;
 	}
@@ -81,6 +82,44 @@ public class DefaultDropMenuModel<E> extends DefaultListModel<E> implements Drop
 			return null;
 		}
 		return get(selectionModel.getMinSelectionIndex());
+	}
+
+	public void saveTo(final Preferences prefs, final String baseKeyName) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < size(); i++) {
+			sb.append(elementToString(get(i)) + "|");
+		}
+		prefs.put(baseKeyName, sb.toString());
+		prefs.put(baseKeyName + "-selected", elementToString(getSelectedItem()));
+	}
+
+	public void loadFrom(final Preferences prefs, final String baseKeyName) {
+		loadFrom(prefs, baseKeyName, "");
+	}
+
+	public void loadFrom(final Preferences prefs, final String baseKeyName, final String defaults) {
+		String value = prefs.get(baseKeyName, defaults);
+		// If the current value is empty, but the default should not be, use the defaults, since it's probably a prior
+		// save, or a bug.
+		if (("".equals(value) || "|".equals(value)) && !"".equals(defaults)) {
+			value = defaults;
+		}
+
+		for (String item : value.split("\\|")) {
+			if (!"".equals(item.trim())) {
+				E element = elementFromString(item.trim());
+				if (!contains(element)) {
+					addElement(element);
+				}
+			}
+		}
+
+		String selected = prefs.get(baseKeyName + "-selected", "").trim();
+		if (!"".equals(selected)) {
+			ensureSelected(elementFromString(selected));
+		} else if (size() > 0) {
+			setSelectionInterval(0, 0);
+		}
 	}
 
 	@Override

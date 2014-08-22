@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /**
@@ -37,21 +38,42 @@ public class Application {
 			System.exit(1);
 		}
 
-		// Load preferences, generate an installId and save it.
-		Preferences prefs = Preferences.userNodeForPackage(Application.class);
-		long installId =
-				prefs.getLong("installId", (((long) (Math.random() * Integer.MAX_VALUE)) << 32) | ((long) (Math.random() * Integer.MAX_VALUE)));
-		prefs.putLong("installId", installId);
-
-		// Create the transceiver
-		final JavaShareTransceiver transceiver = new JavaShareTransceiver(prefs);
-
 // Add support for the beoslaf.jar
 //        try {
 //            ClassLoader.getSystemClassLoader().loadClass("com.sun.java.swing.plaf.beos.BeOSLookAndFeel");
 //            UIManager.installLookAndFeel(new UIManager.LookAndFeelInfo("BeOS R5", "com.sun.java.swing.plaf.beos.BeOSLookAndFeel"));
 //        } catch (Exception e) {
 //        }
+
+		// Load preferences, generate an installId and save it.
+		final Preferences prefs = Preferences.userNodeForPackage(Application.class);
+
+		// If we're told to clear the prefs, do this here.
+		if (args.length > 0 && args[0].equals("clearPrefs")) {
+			try {
+				prefs.clear();
+			} catch (BackingStoreException e) {
+				e.printStackTrace();
+			}
+		}
+
+		long installId =
+				prefs.getLong("installId", (((long) (Math.random() * Integer.MAX_VALUE)) << 32) | ((long) (Math.random() * Integer.MAX_VALUE)));
+		prefs.putLong("installId", installId);
+
+		// When shutdown, flush the preferences.
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					prefs.flush();
+				} catch (BackingStoreException e) {
+				}
+			}
+		}));
+
+		// Create the transceiver
+		final JavaShareTransceiver transceiver = new JavaShareTransceiver(prefs);
 
 		// Start the GUI.
 		SwingUtilities.invokeLater(new Runnable() {

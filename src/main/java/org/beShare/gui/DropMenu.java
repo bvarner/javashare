@@ -1,9 +1,5 @@
 package org.beShare.gui;
 
-import org.beShare.DefaultDropMenuModel;
-import org.beShare.DropMenuItemFactory;
-import org.beShare.DropMenuModel;
-
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -13,12 +9,9 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.border.Border;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -42,29 +35,19 @@ public class DropMenu<T> extends JPanel {
 	private JTextField text;
 	private boolean caseInsensitive = true;
 	private DropMenuModel<T> model;
-	private DropMenuItemFactory<T> itemFactory;
-
-	/**
-	 * Creates a DropMenu that uses the itemFactory for object / item translation
-	 */
-	public DropMenu(final DropMenuItemFactory itemFactory) {
-		this("", 20, new DefaultDropMenuModel<T>(), itemFactory);
-	}
 
 	/**
 	 * Creates the DropMenu and assigns a Label to the button.
 	 *
-	 * @param label       The Label for the DropMenu button.
-	 * @param textSize    The size of the text field.
-	 * @param model       The DropMenuModel
-	 * @param itemFactory to use for creating JMenuItems.
+	 * @param label    The Label for the DropMenu button.
+	 * @param textSize The size of the text field.
+	 * @param model    The DropMenuModel
 	 */
-	public DropMenu(final String label, int textSize, final DropMenuModel<T> model, final DropMenuItemFactory<T> itemFactory) {
+	public DropMenu(final String label, int textSize, final DropMenuModel<T> model) {
 		super();
 		this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 		this.setBorder(BorderFactory.createEmptyBorder());
 		this.model = model;
-		this.itemFactory = itemFactory;
 
 		button = new JButton(label);
 		button.putClientProperty("JButton.buttonType", "square");
@@ -77,17 +60,22 @@ public class DropMenu<T> extends JPanel {
 		});
 
 		text = new JTextField("", textSize);
+
+		if (model.getSelectedItem() != null) {
+			text.setText(model.elementToString(model.getSelectedItem()));
+		}
+
 		text.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String currentValue = DropMenu.this.text.getText();
 				for (int i = 0; i < model.getSize(); i++) {
-					if (caseInsensitive && itemFactory.toString(model.getElementAt(i)).equalsIgnoreCase(currentValue)) {
+					if (caseInsensitive && model.elementToString(model.getElementAt(i)).equalsIgnoreCase(currentValue)) {
 						if (model.getMinSelectionIndex() != i) {
 							model.setSelectionInterval(i, i);
 						}
 						return;
-					} else if (itemFactory.toString(model.getElementAt(i)).equals(currentValue)) {
+					} else if (model.elementToString(model.getElementAt(i)).equals(currentValue)) {
 						if (model.getMinSelectionIndex() != i) {
 							model.setSelectionInterval(i, i);
 						}
@@ -95,18 +83,15 @@ public class DropMenu<T> extends JPanel {
 					}
 				}
 
-				// If we couldn't find the item
-				if (model instanceof DefaultDropMenuModel) {
+				// If we couldn't find the item, and it's not empty.
+				if (model instanceof AbstractDropMenuModel && !"".equals(currentValue.trim())) {
 					// Create and add the item.
-					T newItem = itemFactory.fromString(currentValue);
-					((DefaultDropMenuModel<T>) model).addElement(newItem);
 
-					// Update the index to select.
-					int i = ((DefaultDropMenuModel<T>) model).indexOf(newItem);
-					model.setSelectionInterval(i, i);
+					T newItem = model.elementFromString(currentValue);
+					((AbstractDropMenuModel<T>) model).ensureSelected(newItem);
 				} else {
-					// If we can't create it, reset the text (force input to entries)
-					DropMenu.this.text.setText(itemFactory.toString(model.getSelectedItem()));
+					// If we can't create it or locate it, reset the text (force input to entries)
+					DropMenu.this.text.setText(model.elementToString(model.getSelectedItem()));
 				}
 			}
 		});
@@ -125,16 +110,26 @@ public class DropMenu<T> extends JPanel {
 		this.model.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
-				text.setText(itemFactory.toString(model.getSelectedItem()));
+				text.setText(model.elementToString(model.getSelectedItem()));
 			}
 		});
+	}
+
+	@Override
+	public void addNotify() {
+		super.addNotify();
+
+		// If we don't have a selected item yet, select the first item in the list before we get added.
+		if (model.isSelectionEmpty() && model.getSize() > 0) {
+			model.setSelectionInterval(0, 0);
+		}
 	}
 
 	private JPopupMenu createMenu() {
 		JPopupMenu menu = new JPopupMenu();
 		for (int i = 0; i < model.getSize(); i++) {
 			final int itemIndex = i;
-			JMenuItem item = new JMenuItem(itemFactory.toString(model.getElementAt(itemIndex)));
+			JMenuItem item = new JMenuItem(model.elementToString(model.getElementAt(itemIndex)));
 			item.addActionListener(new ActionListener() {
 				                       @Override
 				                       public void actionPerformed(ActionEvent e) {

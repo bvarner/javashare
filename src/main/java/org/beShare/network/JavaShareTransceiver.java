@@ -6,10 +6,10 @@ import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 import com.meyer.muscle.thread.ThreadPool;
 import org.beShare.Application;
-import org.beShare.DefaultDropMenuModel;
 import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
+import org.beShare.gui.AbstractDropMenuModel;
 import org.beShare.gui.ChatDocument;
 import org.beShare.gui.PrivateFrame;
 import org.beShare.gui.text.StyledString;
@@ -78,9 +78,9 @@ public class JavaShareTransceiver implements MessageListener {
 	private int serverPort = 2960;
 	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
 	private String localSessionID = "";
-	private DefaultDropMenuModel<String> serverModel = new DefaultDropMenuModel<>(10);
-	private DefaultDropMenuModel<String> nameModel = new DefaultDropMenuModel<>(5);
-	private DefaultDropMenuModel<String> statusModel = new DefaultDropMenuModel<>(5);
+	private AbstractDropMenuModel<String> serverModel = new StringDropMenuModel(10);
+	private AbstractDropMenuModel<String> nameModel = new StringDropMenuModel(5);
+	private AbstractDropMenuModel<String> statusModel = new StringDropMenuModel(5);
 	private long installId;
 	private boolean connectInProgress = false;
 	private boolean connected = false;
@@ -110,10 +110,13 @@ public class JavaShareTransceiver implements MessageListener {
 	private HashMap<String, Pattern> ignores = new LinkedHashMap<>();
 	private HashMap<String, Pattern> autopriv = new LinkedHashMap<>();
 
+	private Preferences preferences;
+
 	/**
 	 * Construct a new JavaShareTransceiver,
 	 */
 	public JavaShareTransceiver(final Preferences preferences) {
+		this.preferences = preferences;
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
 		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel));
@@ -123,29 +126,36 @@ public class JavaShareTransceiver implements MessageListener {
 			public void valueChanged(ListSelectionEvent e) {
 				checkAwayStatus();
 				logSystemMessage("Current server changed to " + serverModel.getSelectedItem());
+				serverModel.saveTo(preferences, "servers");
 				if (connected || connectInProgress) {
 					connect();
 				}
 			}
 		});
+		serverModel.loadFrom(preferences, "servers");
 
 		nameModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
 				checkAwayStatus();
+				nameModel.saveTo(preferences, "names");
 				sendUserName();
 			}
 		});
+		nameModel.loadFrom(preferences, "names", "Binky");
 
 		statusModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
+				statusModel.saveTo(preferences, "status");
 				sendUserStatus();
 			}
 		});
+		statusModel.loadFrom(preferences, "status", "Here|Away");
+		awayStatus = preferences.get("awayStatus", "Away");
 
 		// Load state from Preferences.
-		preferences.getLong("installId", 0l);
+		installId = preferences.getLong("installId", 0l);
 	}
 
 	public boolean isConnected() {
@@ -166,7 +176,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 *
 	 * @return
 	 */
-	public DefaultDropMenuModel<String> getServerModel() {
+	public AbstractDropMenuModel<String> getServerModel() {
 		return serverModel;
 	}
 
@@ -175,7 +185,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 *
 	 * @return
 	 */
-	public DefaultDropMenuModel<String> getNameModel() {
+	public AbstractDropMenuModel<String> getNameModel() {
 		return nameModel;
 	}
 
@@ -185,7 +195,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 *
 	 * @return
 	 */
-	public DefaultDropMenuModel<String> getStatusModel() {
+	public AbstractDropMenuModel<String> getStatusModel() {
 		return statusModel;
 	}
 
@@ -508,6 +518,7 @@ public class JavaShareTransceiver implements MessageListener {
 			if (!statusModel.contains(awayStatus)) {
 				statusModel.addElement(awayStatus);
 			}
+			preferences.put("awayStatus", awayStatus);
 			logSystemMessage("Auto-away status set to " + awayStatus);
 		} else if (lowerCommand.startsWith("/alias")) {
 			String pair = command.substring(6).trim();
@@ -1253,6 +1264,26 @@ public class JavaShareTransceiver implements MessageListener {
 					reconnectBackoff *= 2;
 				}
 			}
+		}
+	}
+
+	private class StringDropMenuModel extends AbstractDropMenuModel<String> {
+		StringDropMenuModel() {
+			super();
+		}
+
+		StringDropMenuModel(int size) {
+			super(size);
+		}
+
+		@Override
+		public String elementToString(String obj) {
+			return obj;
+		}
+
+		@Override
+		public String elementFromString(String obj) {
+			return obj;
 		}
 	}
 }

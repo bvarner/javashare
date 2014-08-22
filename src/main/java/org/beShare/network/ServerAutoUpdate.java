@@ -1,6 +1,6 @@
 package org.beShare.network;
 
-import org.beShare.DefaultDropMenuModel;
+import org.beShare.gui.AbstractDropMenuModel;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,12 +15,12 @@ import java.util.StringTokenizer;
  */
 class ServerAutoUpdate implements Runnable {
 	private static final String SERVER_LIST_URL = "http://beshare.tycomsystems.com/servers.txt";
-	private DefaultDropMenuModel<String> serverModel;
+	private AbstractDropMenuModel<String> serverModel;
 
 	/**
 	 * Creates a new ServerAutoUpdate that modifies the given model.
 	 */
-	public ServerAutoUpdate(DefaultDropMenuModel<String> serverModel) {
+	public ServerAutoUpdate(AbstractDropMenuModel<String> serverModel) {
 		this.serverModel = serverModel;
 	}
 
@@ -32,7 +32,10 @@ class ServerAutoUpdate implements Runnable {
 					StringTokenizer tt = new StringTokenizer(line, "#=");
 					while (tt.hasMoreTokens()) {
 						tt.nextToken();
-						serverModel.addElement(tt.nextToken().trim());
+						String serverName = tt.nextToken().trim();
+						if (!serverModel.contains(serverName)) {
+							serverModel.addElement(serverName);
+						}
 						tt.nextToken();
 					}
 				} else if (line.startsWith("beshare_removeserver")) {

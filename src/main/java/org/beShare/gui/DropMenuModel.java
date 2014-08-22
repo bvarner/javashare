@@ -1,4 +1,4 @@
-package org.beShare;
+package org.beShare.gui;
 
 import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
@@ -14,4 +14,7 @@ public interface DropMenuModel<E> extends ListModel<E>, ListSelectionModel {
 
 	public E getSelectedItem();
 
+	public String elementToString(final E obj);
+
+	public E elementFromString(final String obj);
 }
