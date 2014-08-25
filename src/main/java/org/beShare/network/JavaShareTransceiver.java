@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
 
@@ -117,14 +118,6 @@ public class JavaShareTransceiver implements MessageListener {
 	 */
 	public JavaShareTransceiver(final Preferences preferences) {
 		this.preferences = preferences;
-		this.installId = preferences.getLong("installId", 0l);
-		this.awayTimeout = preferences.getInt("awayTimeout", 300);
-
-		// TODO: Load the loginCommands
-		// TODO: Load the aliases
-		// TODO: Load the ignores
-		// TODO: Load the autopriv
-
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
 		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel));
@@ -140,7 +133,6 @@ public class JavaShareTransceiver implements MessageListener {
 				}
 			}
 		});
-		serverModel.loadFrom(preferences, "servers");
 
 		nameModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
@@ -150,7 +142,6 @@ public class JavaShareTransceiver implements MessageListener {
 				sendUserName();
 			}
 		});
-		nameModel.loadFrom(preferences, "names", "Binky");
 
 		statusModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
@@ -159,8 +150,39 @@ public class JavaShareTransceiver implements MessageListener {
 				sendUserStatus();
 			}
 		});
-		statusModel.loadFrom(preferences, "status", "Here|Away");
-		awayStatus = preferences.get("awayStatus", "Away");
+
+		// Load the preferences.
+		this.serverModel.loadFrom(preferences, "servers");
+		this.nameModel.loadFrom(preferences, "names", "Binky");
+		this.statusModel.loadFrom(preferences, "status", "Here|Away");
+
+		this.awayStatus = preferences.get("awayStatus", "Away");
+		this.installId = preferences.getLong("installId", 0l);
+		this.awayTimeout = preferences.getInt("awayTimeout", 300);
+
+		Preferences prefNode = preferences.node("loginCommands");
+		for (int i = 0; i < prefNode.getInt("count", 0); i++) {
+			this.loginCommands.add(prefNode.get("" + i, ""));
+		}
+		prefNode = preferences.node("aliases");
+		for (int i = 0; i < prefNode.getInt("count", 0); i++) {
+			this.aliases.put(prefNode.get("key" + i, ""), prefNode.get("value" + i, ""));
+		}
+		prefNode = preferences.node("ignores");
+		for (int i = 0; i < prefNode.getInt("count", 0); i++) {
+			this.ignores.put(prefNode.get("" + i, ""), Pattern.compile(prefNode.get("" + i, "")));
+		}
+		prefNode = preferences.node("autopriv");
+		for (int i = 0; i < prefNode.getInt("count", 0); i++) {
+			String pattern = prefNode.get("" + i, "");
+			if (pattern.equals("*")) {
+				this.autopriv.put(pattern, Pattern.compile(".*"));
+			} else {
+				this.autopriv.put(pattern, Pattern.compile(".*" + pattern + ".*"));
+			}
+		}
+
+		Runtime.getRuntime().addShutdownHook(new Thread(new PreferenceSaver()));
 	}
 
 	public boolean isConnected() {
@@ -194,7 +216,6 @@ public class JavaShareTransceiver implements MessageListener {
 		return nameModel;
 	}
 
-
 	/**
 	 * Gets the model for tracking status and the selected status.
 	 *
@@ -203,7 +224,6 @@ public class JavaShareTransceiver implements MessageListener {
 	public AbstractDropMenuModel<String> getStatusModel() {
 		return statusModel;
 	}
-
 
 	/**
 	 * Sends our username
@@ -328,7 +348,6 @@ public class JavaShareTransceiver implements MessageListener {
 		beShareTransceiver.sendOutgoingMessage(cancel);
 	}
 
-
 	/**
 	 * Sends a message to the host at targetSessionID requesting they connect
 	 * to us on <code>port</code> so we can transfer a file from them.
@@ -391,10 +410,14 @@ public class JavaShareTransceiver implements MessageListener {
 	private void beShareSubscribe() {
 		// Get our local session info.
 		beShareTransceiver.sendOutgoingMessage(new Message(PR_COMMAND_GETPARAMETERS));
+
 		// set up a subscription to the beShare tree.
 		Message queryMsg = new Message(PR_COMMAND_SETPARAMETERS);
 		queryMsg.setBoolean("SUBSCRIBE:beshare/*", true);
 		beShareTransceiver.sendOutgoingMessage(queryMsg);
+
+		// Send another PR_COMMAND_GETPARAMETERS, so we know once we've gotten all the initial user-data.
+		beShareTransceiver.sendOutgoingMessage(new Message(PR_COMMAND_GETPARAMETERS));
 	}
 
 	/**
@@ -680,6 +703,7 @@ public class JavaShareTransceiver implements MessageListener {
 				chatDoc.addSystemMessage(sb.toString());
 			} else {
 				loginCommands.add(startup);
+				chatDoc.addSystemMessage("Added Startup Command: " + startup);
 			}
 		} else if (lowerCommand.startsWith("/unonlogin")) {
 			String remove = command.substring(10).trim();
@@ -1124,10 +1148,6 @@ public class JavaShareTransceiver implements MessageListener {
 		return node.substring(1, node.indexOf('/', 1));
 	}
 
-	/**
-	 * Taks a Server Information message and sends the information out to the JavaShare Listeners
-	 * by calling logSystemMessage();
-	 */
 	protected final void processServerInfo(Message message) {
 		if (message.hasField(PR_NAME_SERVER_VERSION)) {
 			logSystemMessage("Server version:  " + message.getString(PR_NAME_SERVER_VERSION, "<unknown>"));
@@ -1191,6 +1211,71 @@ public class JavaShareTransceiver implements MessageListener {
 			}
 		}
 		return depth;
+	}
+
+	private class PreferenceSaver implements Runnable {
+		public void run() {
+			preferences.put("awayStatus", awayStatus);
+			preferences.putLong("installId", installId);
+			preferences.putInt("awayTimeout", awayTimeout);
+
+			Preferences prefNode = preferences.node("loginCommands");
+			try {
+				prefNode.clear();
+			} catch (BackingStoreException e) {
+				e.printStackTrace();
+			}
+			prefNode.putInt("count", loginCommands.size());
+			for (int i = 0; i < loginCommands.size(); i++) {
+				prefNode.put("" + i, loginCommands.get(i));
+			}
+
+			prefNode = preferences.node("aliases");
+			try {
+				prefNode.clear();
+			} catch (BackingStoreException e) {
+				e.printStackTrace();
+			}
+			prefNode.putInt("count", aliases.size());
+			int i = 0;
+			for (Map.Entry<String, String> alias : aliases.entrySet()) {
+				prefNode.put("key" + i, alias.getKey());
+				prefNode.put("value" + i, alias.getValue());
+				i++;
+			}
+
+			prefNode = preferences.node("ignores");
+			try {
+				prefNode.clear();
+			} catch (BackingStoreException e) {
+				e.printStackTrace();
+			}
+			prefNode.putInt("count", ignores.size());
+			i = 0;
+			for (String ignore : ignores.keySet()) {
+				prefNode.put("" + i, ignore);
+				i++;
+			}
+
+			prefNode = preferences.node("autopriv");
+			try {
+				prefNode.clear();
+			} catch (BackingStoreException e) {
+				e.printStackTrace();
+			}
+			prefNode.putInt("count", autopriv.size());
+			i = 0;
+			for (String pattern : autopriv.keySet()) {
+				prefNode.put("" + i, pattern);
+				i++;
+			}
+
+			try {
+				preferences.flush();
+			} catch (BackingStoreException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**
