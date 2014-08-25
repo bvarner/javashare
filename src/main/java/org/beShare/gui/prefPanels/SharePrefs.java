@@ -9,8 +9,12 @@ import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.BorderLayout;
 import java.awt.Dialog;
@@ -44,7 +48,7 @@ public class SharePrefs extends JPanel {
 		JPanel pnlShared = new JPanel();
 		pnlShared.setLayout(new BoxLayout(pnlShared, BoxLayout.X_AXIS));
 
-		final JTextField txtDownloadPath = new JTextField(preferences.get("downloadLocation", ""), 20);
+		final JTextField txtDownloadPath = new JTextField(preferences.get("downloadLocation", System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads"), 20);
 		txtDownloadPath.setEditable(false);
 		final JTextField txtSharedPath = new JTextField(preferences.get("sharedLocation", ""), 20);
 		txtSharedPath.setEditable(false);
@@ -79,9 +83,36 @@ public class SharePrefs extends JPanel {
 		pnlShared.add(txtSharedPath, BorderLayout.CENTER);
 		pnlShared.add(btnChooseSharePath, BorderLayout.EAST);
 
+		JPanel downloadControl = new JPanel();
+		downloadControl.setLayout(new BoxLayout(downloadControl, BoxLayout.X_AXIS));
+		final JSpinner numDownloads = new JSpinner(new SpinnerNumberModel(preferences.getInt("concDownloads", 3), 1, 10, 1));
+		numDownloads.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				preferences.putInt("concDownloads", ((Number)numDownloads.getModel().getValue()).intValue());
+			}
+		});
+		downloadControl.add(new JLabel("Maximum Concurrent Downloads: "));
+		downloadControl.add(numDownloads);
+
+
+		JPanel uploadControl = new JPanel();
+		uploadControl.setLayout(new BoxLayout(uploadControl, BoxLayout.X_AXIS));
+		final JSpinner numUploads = new JSpinner(new SpinnerNumberModel(preferences.getInt("concUploads", 2), 1, 10, 1));
+		numUploads.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				preferences.putInt("concUploads", ((Number)numUploads.getModel().getValue()).intValue());
+			}
+		});
+		uploadControl.add(new JLabel("Maximum Concurrent Uploads: "));
+		uploadControl.add(numUploads);
+
 		this.add(pnlDownload);
+		this.add(downloadControl);
 		this.add(chkSharingEnabled);
 		this.add(pnlShared);
+		this.add(uploadControl);
 	}
 
 

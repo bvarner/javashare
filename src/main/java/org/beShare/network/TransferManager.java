@@ -1,15 +1,15 @@
 package org.beShare.network;
 
-import com.meyer.muscle.message.Message;
-
-import javax.swing.*;
+import javax.swing.AbstractListModel;
+import java.util.prefs.PreferenceChangeEvent;
+import java.util.prefs.PreferenceChangeListener;
 
 /**
  * Manages queueing/starting/stopping of file-transfers.
  */
 public class TransferManager extends AbstractListModel implements TransferProgressListener {
-	TransferQueue upQueue;
-	TransferQueue downQueue;
+	TransferList uploads;
+	TransferList downloads;
 
 	String baseDownloadPath;
 	String baseSharedPath;
@@ -19,36 +19,41 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	/**
 	 * Constructor - not much to see here, really.
 	 */
-	public TransferManager(JavaShareTransceiver connection) {
+	public TransferManager(final JavaShareTransceiver connection) {
 		this.connection = connection;
-//		this.prefsMessage = prefsMessage;
+		this.baseDownloadPath =
+				connection.getPreferences().get("downloadLocation", System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads");
 
-//		try {
-//			baseDownloadPath = prefsMessage.getString("downloadPath");
-//		} catch (Exception e) {
-			baseDownloadPath = System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads";
-//		}
+		uploads = new TransferList(connection.getPreferences().getInt("concUploads", 2));
+		downloads = new TransferList(connection.getPreferences().getInt("concDownloads", 3));
 
-		// Read Max Transfer Settings from prefsMessage
-		upQueue = new TransferQueue(2);
-		downQueue = new TransferQueue(3);
+		connection.getPreferences().addPreferenceChangeListener(new PreferenceChangeListener() {
+			@Override
+			public void preferenceChange(PreferenceChangeEvent evt) {
+				if ("concUploads".equals(evt.getKey())) {
+					uploads.setMax(connection.getPreferences().getInt("concUploads", 2));
+				} else if ("concDownloads".equals(evt.getKey())) {
+					downloads.setMax(connection.getPreferences().getInt("concDownloads", 3));
+				}
+			}
+		});
 	}
 
 	/**
 	 * Returns the size of the collective queues
 	 */
 	public int getSize() {
-		return downQueue.size() + upQueue.size();
+		return downloads.size() + uploads.size();
 	}
 
 	/**
 	 * Returns the element at location in the combined list of queues
 	 */
 	public Object getElementAt(int index) {
-		if (index < downQueue.size()) {
-			return downQueue.elementAt(index);
-		} else if (index > downQueue.size() && (index < downQueue.size() + upQueue.size())) {
-			return upQueue.elementAt(index - downQueue.size());
+		if (index < downloads.size()) {
+			return downloads.get(index);
+		} else if (index > downloads.size() && (index < downloads.size() + uploads.size())) {
+			return uploads.get(index - downloads.size());
 		} else {
 			return "";
 		}
@@ -60,11 +65,11 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	public void addTransfer(AbstractTransfer t) {
 		t.addTransferProgressListener(this);
 		if (t instanceof Download) {
-			downQueue.addTransfer(t);
+			downloads.add(t);
 			fireIntervalAdded(this, 0, getSize());
-			//} else if (t instanceof Upload) {
-			//	upQueue.addTransfer(t);
-			//	fireIntervalAdded(this, 0, getSize());
+//		} else if (t instanceof Upload) {
+//			uploads.add(t);
+//			fireIntervalAdded(this, 0, getSize());
 		}
 	}
 
@@ -73,11 +78,11 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	 */
 	public void removeTransfer(AbstractTransfer t) {
 		if (t instanceof Download) {
-			downQueue.removeTransfer(t);
+			downloads.remove(t);
 			fireIntervalRemoved(this, 0, getSize());
-			//} else if (t instanceof Upload) {
-			//	upQueue.removeTransfer(t);
-			//	fireIntervalRemoved(this, 0, getSize());
+//		} else if (t instanceof Upload) {
+//			uploads.remove(t);
+//			fireIntervalRemoved(this, 0, getSize());
 		}
 	}
 
@@ -87,12 +92,12 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	 * It also forces the Queues to check if they should start the next transfer.
 	 */
 	public void transferStatusUpdate(AbstractTransfer t) {
-		int index = downQueue.indexOf(t);
+		int index = downloads.indexOf(t);
 		if (index == -1) {
-			index = upQueue.indexOf(t);
+			index = uploads.indexOf(t);
 			if (index != -1) {
 				// Upload changed
-				index += downQueue.size();
+				index += downloads.size();
 			} else {
 				// Couldn't figure out what changed.
 				fireContentsChanged(this, 0, getSize());
@@ -101,8 +106,8 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 		}
 
 		fireContentsChanged(this, index, index);
-		downQueue.checkQueue();
-		upQueue.checkQueue();
+		downloads.checkQueue();
+		uploads.checkQueue();
 	}
 
 	/**

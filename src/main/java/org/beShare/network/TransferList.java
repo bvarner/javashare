@@ -4,41 +4,26 @@
 */
 package org.beShare.network;
 
-import java.util.Vector;
+import java.util.ArrayList;
 
-/**
- * TransferQueue - An extension of Vector that implements type-safe add and remove.
- * It will also Start any unstarted transfers up to <code>getMax()</code> any time
- * a Transfer is added or removed from the queue.
- *
- * @author Bryan Varner
- * @version 2.0 1.14.2003
- */
-public class TransferQueue extends Vector {
-	int max = 0;
-
-	/**
-	 * Creates a new Queue for transfers. The max transfers defaults to 0
-	 */
-	public TransferQueue() {
-		super();
-	}
+public class TransferList extends ArrayList<AbstractTransfer> {
+	int maxActive = 0;
 
 	/**
 	 * Creates a new queue for transfers.
 	 *
 	 * @param maxConcurrent The Maximum number of tranfers that can simultaneously run.
 	 */
-	public TransferQueue(int maxConcurrent) {
-		this();
-		max = maxConcurrent;
+	public TransferList(int maxConcurrent) {
+		super();
+		maxActive = maxConcurrent;
 	}
 
 	/**
 	 * @return the number of transfers that can run simultaneously.
 	 */
 	public int getMax() {
-		return max;
+		return maxActive;
 	}
 
 	/**
@@ -47,7 +32,7 @@ public class TransferQueue extends Vector {
 	 * @param maxConcurrent The Maximum number of transfers that can simultaneously run.
 	 */
 	public void setMax(int maxConcurrent) {
-		max = maxConcurrent;
+		this.maxActive = maxConcurrent;
 	}
 
 	/**
@@ -69,7 +54,7 @@ public class TransferQueue extends Vector {
 	public int countRunning() {
 		int running = 0;
 		for (int x = 0; x < size(); x++) {
-			AbstractTransfer tran = (AbstractTransfer) elementAt(x);
+			AbstractTransfer tran = get(x);
 			if (tran.isStarted()) {
 				if ((tran.getStatus() == AbstractTransfer.FINISHED) || (tran.getStatus() == AbstractTransfer.ERROR)) {
 					// Do nothing, it's not running.
@@ -105,8 +90,8 @@ public class TransferQueue extends Vector {
 
 		int x = 0;
 		while (x < size() && next == null) {
-			if (!((AbstractTransfer) elementAt(x)).isStarted()) {
-				next = (AbstractTransfer) elementAt(x);
+			if (!get(x).isStarted()) {
+				next = get(x);
 				return next;
 			}
 			x++;
@@ -118,20 +103,20 @@ public class TransferQueue extends Vector {
 	/**
 	 * Adds a Transfer to this queue, the queue automatically checks to see if it should start the transfer.
 	 */
-	public void addTransfer(AbstractTransfer trans) {
+	@Override
+	public boolean add(AbstractTransfer trans) {
 		trans.setName("Transfer" + size() + 1);
 		trans.setStatus(AbstractTransfer.LOCALLY_QUEUED);
-		addElement(trans);
+		boolean ret = super.add(trans);
 		checkQueue();
+		return ret;
 	}
 
-	/**
-	 * Removes the transfer from the queue. The queue will check if it should start another transfer.
-	 */
-	public void removeTransfer(AbstractTransfer trans) {
-		removeElement(trans);
-		trans.abort();
-
+	@Override
+	public boolean remove(Object o) {
+		boolean ret = super.remove(o);
+		((AbstractTransfer) o).abort();
 		checkQueue();
+		return ret;
 	}
 }
