@@ -28,10 +28,11 @@ import java.awt.event.WindowEvent;
 /**
  * Pulled out into it's own class.
  */
-class MenuBar extends JMenuBar {
+public class MenuBar extends JMenuBar {
 	private final static String JAVASHARE_COMMAND = "JavaShareCommand";
 	private final static String JAVASHARE_WINDOW = "JavaShareWindow";
 
+	public static boolean isMacOS = false;
 	private static boolean osXInstalled = false;
 
 	private JFrame owner;
@@ -48,9 +49,8 @@ class MenuBar extends JMenuBar {
 		int editOptsMask = ActionEvent.CTRL_MASK;
 		int platformMask = ActionEvent.ALT_MASK;
 
-		boolean macOS = false;
 		if (System.getProperty("os.name").toLowerCase().startsWith("mac os")) {
-			macOS = true;
+			isMacOS = true;
 			if (!osXInstalled) {
 				osXInstalled = true;
 				platformMask = ActionEvent.META_MASK;
@@ -94,7 +94,7 @@ class MenuBar extends JMenuBar {
 		file.addSeparator();
 		file.add(new CommandAction("Open Private Chat Window", "/PRIV", KeyEvent.VK_C));
 		file.add(new CommandAction("Clear Chat Log", "/CLEAR", KeyStroke.getKeyStroke(KeyEvent.VK_L, platformMask)));
-		if (!macOS) {
+		if (!isMacOS) {
 			file.addSeparator();
 			file.add(new AbstractGUIAction("About JavaShare", KeyEvent.VK_A, KeyStroke.getKeyStroke(KeyEvent.VK_F11, platformMask)) {
 				@Override
@@ -136,7 +136,7 @@ class MenuBar extends JMenuBar {
 				chatterPanel.paste();
 			}
 		});
-		if (!macOS) {
+		if (!isMacOS) {
 			edit.addSeparator();
 			edit.add(new AbstractGUIAction("Preferences", KeyEvent.VK_P, KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, platformMask)) {
 				@Override

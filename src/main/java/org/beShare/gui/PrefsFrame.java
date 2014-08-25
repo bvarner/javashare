@@ -2,6 +2,7 @@ package org.beShare.gui;
 
 import org.beShare.gui.prefPanels.ConnectionPrefs;
 import org.beShare.gui.prefPanels.GeneralPrefs;
+import org.beShare.gui.prefPanels.SharePrefs;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
@@ -86,18 +87,12 @@ public class PrefsFrame extends JDialog {
 
 		prefHolder.add(new GeneralPrefs(preferences), "General");
 		prefHolder.add(new ConnectionPrefs(preferences), "Connection");
-//		prefHolder.add(new DisplayPrefs(), "Display");
-//		prefHolder.add(new AppearancePrefs(), "Appearance");
-//		prefHolder.add(new SoundPrefs(), "Sounds");
-//		prefHolder.add(new SharePrefs(), "File-Transfer");
+		prefHolder.add(new SharePrefs(preferences), "File-Transfer");
 //		prefHolder.add(new MimePrefs(), "File Types");
 
 		catList.addElement("General");
 		catList.addElement("Connection");
-//		catList.addElement("Display");
-//		catList.addElement("Appearance");
-//		catList.addElement("Sounds");
-//		catList.addElement("File-Transfer");
+		catList.addElement("File-Transfer");
 //		catList.addElement("File Types");
 
 		categoryList.setSelectedIndex(0);
