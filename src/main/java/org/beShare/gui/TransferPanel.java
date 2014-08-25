@@ -3,6 +3,7 @@
 */
 package org.beShare.gui;
 
+import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
 import org.beShare.gui.swingAddons.TableSorter;
 import org.beShare.network.AbstractTransfer;
@@ -15,7 +16,6 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
-import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JList;
@@ -23,7 +23,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -37,7 +36,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
 import java.util.Hashtable;
-import java.util.Vector;
 
 /**
  * The panel in charge of querys, and file transfer queue viewing. This is a jack-of-all-trades
@@ -45,25 +43,18 @@ import java.util.Vector;
  *
  * @author Bryan Varner
  */
-public class TransferPanel extends JPanel implements ActionListener {
+public class TransferPanel extends JPanel {
 	ShareFileMaintainer sharedFileLister;
 
 	JPanel pnlQuery;
 	JPanel pnlTransfer;
 	JSplitPane transferSplit;
 
-	QueryProgressIndicator pnlInProgress;
-	JPanel pnlQueryControl;
-	//	DropMenu recentQueryMenu;
-	JTextField txtQuery;
-	JButton btnStartQuery;
-	JButton btnStopQuery;
+	DropMenu<String> queryMenu = new DropMenu<>("Query: ", 15, new StringDropMenuModel(20));
 
 	QueryTable queryTable;
-	QueryTableModel queryModel;
 	TableSorter querySorter;
 	JScrollPane tableScroller;
-	Vector colNames;
 
 	JButton btnDownloadFiles;
 	JButton btnRemoveDownload;
@@ -75,17 +66,12 @@ public class TransferPanel extends JPanel implements ActionListener {
 	String session;
 	String files;
 
-	Hashtable typeIcons;
-
 	JList lstTransfers;
-	DefaultListModel transferList;
 
-	public TransferPanel(JavaShareTransceiver connection) {
+	public TransferPanel(final JavaShareTransceiver connection) {
 		this.connection = connection;
 
 		transMan = new TransferManager(connection);
-
-		typeIcons = new Hashtable();
 
 		this.setLayout(new BorderLayout());
 		pnlQuery = new JPanel(new BorderLayout(5, 5));
@@ -100,63 +86,78 @@ public class TransferPanel extends JPanel implements ActionListener {
 
 		this.add(transferSplit, BorderLayout.CENTER);
 
-		// Query preference stuff
-//		if (prefsMessage.hasField("querys")) {
-//			Vector oldQuerys = new Vector();
-//			String[] oldStrings = prefsMessage.getStrings("querys");
-//			for (int x = 0; x < oldStrings.length; x++) {
-//				oldQuerys.addElement(oldStrings[x]);
-//			}
-//			recentQueryMenu = new DropMenu("Query:", oldQuerys, 15);
-//		} else {
-//			recentQueryMenu = new DropMenu("Query:", 15);
-//		}
-
-		txtQuery = new JTextField("*.mp3", 12);
-		btnStartQuery = new JButton("Start Query");
-		btnStopQuery = new JButton("Stop Query");
+		final JButton btnStopQuery = new JButton("Stop Query");
+		final QueryProgressIndicator pnlInProgress = new QueryProgressIndicator();
+		pnlInProgress.setPreferredSize(btnStopQuery.getPreferredSize());
+		btnStopQuery.setEnabled(false);
+		btnStopQuery.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				btnStopQuery.setEnabled(false);
+				connection.stopQuery();
+				pnlInProgress.setQueryInProgress(false);
+			}
+		});
 		btnDownloadFiles = new JButton("Download Selected");
 		btnDownloadFiles.setEnabled(false);
-		btnDownloadFiles.addActionListener(this);
-		pnlInProgress = new QueryProgressIndicator(btnStartQuery);
+		btnDownloadFiles.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// Find out what's selected.
+				int[] selected = queryTable.getSelectedRows();
+				if (selected.length > 0) {
+					String filenames[] = new String[selected.length];
 
-		pnlQueryControl = new JPanel();
+					for (int x = 0; x < selected.length; x++) {
+						// Create the new file info.
+						filenames[x] = queryTable.getModel().getValueAt(selected[x], 1).toString();
+					}
+					BeShareUser tempUser = connection.getQueryTableModel().getUser(selected[0]);
+					Download fileTransfer = new Download(filenames,
+							                                    tempUser.getIPAddress(),
+							                                    tempUser.getPort(),
+							                                    transMan.getDownloadPath(),
+							                                    tempUser.getName(),
+							                                    tempUser.getSessionID(),
+							                                    tempUser.getFirewall(),
+							                                    connection);
+					transMan.add(fileTransfer);
+				}
+			}
+		});
+
+		JPanel pnlQueryControl = new JPanel();
 		pnlQueryControl.setLayout(new BoxLayout(pnlQueryControl, BoxLayout.X_AXIS));
 
-		// Add action Listeners here.
-//		recentQueryMenu.addActionListener(this);
-		txtQuery.addActionListener(this);
-		btnStartQuery.addActionListener(this);
-		btnStopQuery.addActionListener(this);
+		queryMenu.getModel().addListSelectionListener(new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				btnStopQuery.setEnabled(true);
+				// start new query.
+				session = "*";
+				files = queryMenu.getModel().getSelectedItem();
+				if (files.lastIndexOf("@") > -1) {
+					session = files.substring(files.lastIndexOf("@") + 1).trim();
+					session = connection.getUserDataModel().findByNameOrSession(session).getSessionID();
+
+					files = files.substring(0, files.lastIndexOf("@"));
+				}
+				connection.startQuery(session, files);
+				pnlInProgress.setQueryInProgress(true);
+			}
+		});
 
 		pnlQueryControl.add(Box.createHorizontalStrut(3));
 		pnlQueryControl.add(pnlInProgress);
 		pnlQueryControl.add(Box.createHorizontalStrut(3));
-//		pnlQueryControl.add(recentQueryMenu);
-		pnlQueryControl.add(txtQuery);
+		pnlQueryControl.add(queryMenu);
 		pnlQueryControl.add(Box.createHorizontalStrut(6));
-		pnlQueryControl.add(btnStartQuery);
-		pnlQueryControl.add(Box.createHorizontalStrut(3));
 		pnlQueryControl.add(btnStopQuery);
 		pnlQueryControl.add(Box.createHorizontalStrut(6));
 		pnlQueryControl.add(btnDownloadFiles);
 		pnlQueryControl.add(Box.createHorizontalStrut(3));
 
-		// Query table!
-		colNames = new Vector();
-		colNames.addElement("");
-		colNames.addElement("File Name");
-		colNames.addElement("File Size");
-		colNames.addElement("User");
-		colNames.addElement("Path");
-		colNames.addElement("Kind");
-		colNames.addElement("Connection");
-		//colNames.addElement("Modified");
-
-		Vector tableData = new Vector();
-
-		queryModel = new QueryTableModel(tableData, colNames);
-		querySorter = new TableSorter(queryModel);
+		querySorter = new TableSorter(connection.getQueryTableModel());
 		queryTable = new QueryTable(querySorter);
 
 		queryTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -180,7 +181,18 @@ public class TransferPanel extends JPanel implements ActionListener {
 
 		btnRemoveDownload = new JButton("Remove");
 		btnRemoveDownload.setEnabled(false);
-		btnRemoveDownload.addActionListener(this);
+		btnRemoveDownload.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+//			// clear the completed downloads from the list.
+				int[] selected = lstTransfers.getSelectedIndices();
+				if (selected != null) {
+					for (int x = selected.length; x > 0; x--) {
+						transMan.remove(transMan.getElementAt(selected[x - 1]));
+					}
+				}
+			}
+		});
 
 		//transferList = new DefaultListModel();
 		lstTransfers = new JList(transMan);
@@ -203,221 +215,11 @@ public class TransferPanel extends JPanel implements ActionListener {
 	}
 
 	/**
-	 * Implements part of the Prefs listener.
-	 */
-	public void sharingEnableChange(boolean enabled) {
-		shareAutoUpdateEnableChange(enabled);
-		if (enabled) {
-			sharedFileLister.resetShareList();
-			sharedFileLister.updateList();
-			// Have JavaShareTransceiver start listening for transfers.
-		} else {
-			sharedFileLister.sharingDisabled();
-			// Have JavaShareTransceiver stop listening for transfers.
-		}
-	}
-
-	/**
-	 * Implements part of the Prefs listener.
-	 */
-	public void sharePathChanged() {
-		sharedFileLister.updateList();
-	}
-
-	/**
-	 * Implements part of the Prefs listener.
-	 */
-	public void shareUpdateDelayChanged(int delay) {
-		sharedFileLister.setDelay(delay);
-	}
-
-	/**
-	 * Implements part of the Prefs listener.
-	 */
-	public void shareAutoUpdateEnableChange(boolean enabled) {
-		if (enabled) {
-			sharedFileLister.setDelay(sharedFileLister.getDelay());
-		} else {
-			sharedFileLister.setDelay(-1);
-		}
-	}
-
-	/**
-	 * Forces a re-uploading of the shared file list.
-	 */
-	public void resetShareList() {
-		sharedFileLister.resetShareList();
-	}
-
-	/**
-	 * Implements ActionListener.
-	 */
-	public void actionPerformed(ActionEvent e) {
-//		// The recent query menu was clicked.
-//		if (e.getSource() == recentQueryMenu
-//				    && (recentQueryMenu.getSelectedIndex() != -1)) {
-//			String selMenu = (String) recentQueryMenu.getSelectedItem();
-//			if (selMenu != txtQuery.getText()) {
-//				txtQuery.setText(selMenu);
-//				resetQuery();
-//			}
-//			// Query textbox had a return pressed.
-//		} else if ((e.getSource() == txtQuery) || (e.getSource() == btnStartQuery)) {
-//			boolean addNew = true;
-//			for (int x = 0; x < recentQueryMenu.getItemCount(); x++) {
-//				if (((String) recentQueryMenu.getItemAt(x)).equals(
-//						                                                  txtQuery.getText())) {
-//					recentQueryMenu.setSelectedIndex(x);
-//					addNew = false;
-//				}
-//			}
-//			if (addNew) {
-//				recentQueryMenu.addItem(txtQuery.getText());
-//				recentQueryMenu.setSelectedIndex(
-//						                                recentQueryMenu.getItemCount() - 1);
-//				//prefsMessage.setStrings("querys", recentQueryMenu.getStringItems());
-//			}
-//			resetQuery();
-//		} else if (e.getSource() == btnStopQuery) {
-//			// The query was stopped.
-//			connection.stopQuery();
-//			pnlInProgress.setQueryInProgress(false);
-//		} else if (e.getSource() == btnDownloadFiles) {
-//			// Find out what's selected.
-//			int[] selected = queryTable.getSelectedRows();
-//			if (selected.length > 0) {
-//				String filenames[] = new String[selected.length];
-//
-//				for (int x = 0; x < selected.length; x++) {
-//					// Create the new file info.
-//					filenames[x] = queryTable.getModel().getValueAt(selected[x], 1).toString();
-//				}
-//				BeShareUser tempUser = queryModel.getUser(selected[0]);
-//				System.out.println("Downloading from " + tempUser.toString());
-//				Download fileTransfer = new Download(filenames,
-//						                                    tempUser.getIPAddress(),
-//						                                    tempUser.getPort(),
-//						                                    transMan.getDownloadPath(),
-//						                                    tempUser.getName(),
-//						                                    tempUser.getSessionID(),
-//						                                    tempUser.getFirewall(),
-//						                                    connection);
-//				transMan.addTransfer(fileTransfer);
-//			}
-//		} else if (e.getSource() == btnRemoveDownload) {
-//			// clear the completed downloads from the list.
-//			int[] selected = lstTransfers.getSelectedIndices();
-//			if (selected != null) {
-//				for (int x = selected.length; x > 0; x--) {
-//					transMan.removeTransfer((AbstractTransfer) transMan.getElementAt(selected[x - 1]));
-//				}
-//			}
-//		}
-	}
-
-	/**
-	 * Resets the JavaShareTransceiver query info. This also parses the text of txtQuery to build the query.
-	 */
-	private void resetQuery() {
-		queryModel.clearTable();
-		// start new query.
-		session = "*";
-		files = "*";
-		if (txtQuery.getText().lastIndexOf("@") > -1) {
-			session = txtQuery.getText().substring(
-					                                      txtQuery.getText().lastIndexOf("@") + 1,
-					                                      txtQuery.getText().length());
-			// Try parsing the session as an int. if it succeedes we don't need to do jack squat.
-			// If it fails, we can assume it is a username, and do a reverselookup for a session ID.
-			try {
-				Integer.parseInt(session);
-			} catch (NumberFormatException nfe) {
-				session = connection.getUserDataModel().findSessionByName(session);
-			}
-			if (txtQuery.getText().lastIndexOf("@") > 0) {
-				files = txtQuery.getText().substring(0, txtQuery.getText().lastIndexOf("@"));
-			}
-		} else {
-			files = txtQuery.getText();
-		}
-		connection.startQuery(session, files);
-		pnlInProgress.setQueryInProgress(true);
-	}
-
-	/**
-	 * Gets the list of querys.
-	 */
-	public String[] getRecentQueries() {
-		return new String[0];
-//		return recentQueryMenu.getStringItems();
-	}
-
-	/**
-	 * Clears the query results.
-	 */
-	public void clearQueryResults() {
-		connection.stopQuery();
-		queryModel.clearTable();
-	}
-
-	/**
-	 * Adds a new file to the result list
-	 */
-	public void addResult(SharedFile newFile) {
-		String size = (Long.toString(newFile.getSize()));
-		if (size.length() <= 3) {
-			size = size + "bytes";
-		} else if (size.length() <= 6) {
-			size = (newFile.getSize() / 1024) + " kb";
-		} else if (size.length() <= 9) {
-			size = ((double) (newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
-		}
-
-		ImageIcon fileIcon = new ImageIcon();
-
-		// Here we go baby, the dynamic pre-loading of file icons.
-		if (!typeIcons.containsKey(newFile.getKind())) {
-
-			if (newFile.getKind().equals("")) {
-				// Load the generic file icon.
-//				fileIcon = AppPanel.loadImage("Images/fileicons/notype.gif", this);
-				typeIcons.put(newFile.getKind(), fileIcon);
-			} else {
-				// Replace / with ^ and . with &
-				String fileName = newFile.getKind();
-				fileName = fileName.replace('/', '^');
-				fileName = fileName.replace('.', '&');
-				fileName = fileName.concat(".gif");
-				try {
-//					fileIcon = AppPanel.loadImage("Images/fileicons/" + fileName, this);
-					typeIcons.put(newFile.getKind(), fileIcon);
-				} catch (NullPointerException npe) {
-//					fileIcon = AppPanel.loadImage("Images/fileicons/notype.gif", this);
-					typeIcons.put(newFile.getKind(), fileIcon);
-				}
-			}
-		} else {
-			fileIcon = (ImageIcon) typeIcons.get(newFile.getKind());
-		}
-
-		Object[] fileData = {fileIcon, // Icon image name here later!
-		                     newFile.getName(),
-		                     size,
-		                     connection.getUserDataModel().getUser(newFile.getSessionID()),
-		                     newFile.getPath(),
-		                     newFile.getKind(),
-		                     connection.getUserDataModel().getUser(newFile.getSessionID()).getBandwidthLabel()};
-		queryModel.insertRow(0, fileData);
-
-		Thread.yield(); // Force the query to play nice.
-	}
-
-	/**
 	 * Removes the file from the result set.
 	 */
 	public void removeResult(SharedFile killFile) {
 		//Get the name and session id of the file, remove it from the table.
-		queryModel.removeFile(connection.getUserDataModel().findNameBySession(killFile.getSessionID()), killFile.getName());
+		connection.getQueryTableModel().removeFile(connection.getUserDataModel().findNameBySession(killFile.getSessionID()), killFile.getName());
 	}
 
 	/**
@@ -431,13 +233,6 @@ public class TransferPanel extends JPanel implements ActionListener {
 				clmModel.getColumn(x).setPreferredWidth(colWidths[x]);
 			}
 		}
-	}
-
-	/**
-	 * Returns the position of the divider between the query and transfer list.
-	 */
-	public int getDividerLocation() {
-		return transferSplit.getDividerLocation();
 	}
 
 	/**
@@ -562,7 +357,7 @@ public class TransferPanel extends JPanel implements ActionListener {
 	}
 
 	/**
-	 * Sets the Download butten enabled/disabled
+	 * Sets the Download button enabled/disabled
 	 */
 	private class QuerySelectionListener implements ListSelectionListener {
 		public void valueChanged(ListSelectionEvent e) {

@@ -5,9 +5,12 @@
 package org.beShare.gui;
 
 import org.beShare.data.BeShareUser;
+import org.beShare.data.SharedFile;
+import org.beShare.data.UserDataModel;
 
+import javax.swing.ImageIcon;
 import javax.swing.table.DefaultTableModel;
-import java.util.Vector;
+import java.util.HashMap;
 
 /**
  * QueryTableModel - A model for displaying and storing data for <code>JTable
@@ -18,12 +21,67 @@ import java.util.Vector;
  */
 
 public class QueryTableModel extends DefaultTableModel {
+	private HashMap<String, ImageIcon> icons = new HashMap<>();
+	private UserDataModel userDataModel;
+
 	/**
 	 * Creates a new model with Column headers <code>cols</code> and data model
 	 * <code>data</code>
 	 */
-	public QueryTableModel(Vector cols, Vector data) {
-		super(cols, data);
+	public QueryTableModel(final UserDataModel userDataModel) {
+		super(new String[]{"", "File Name", "File Size", "User", "Path", "Kind", "Connection"}, 0);
+		this.userDataModel = userDataModel;
+	}
+
+	/**
+	 * Adds a new file to the result list
+	 */
+	public void addResult(SharedFile newFile) {
+		String size = (Long.toString(newFile.getSize()));
+		if (size.length() <= 3) {
+			size = size + "bytes";
+		} else if (size.length() <= 6) {
+			size = (newFile.getSize() / 1024) + " kb";
+		} else if (size.length() <= 9) {
+			size = ((double) (newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
+		}
+
+		ImageIcon fileIcon = new ImageIcon();
+
+		if (!icons.containsKey(newFile.getKind())) {
+			if (newFile.getKind().equals("")) {
+				// Load the generic file icon.
+				fileIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
+				icons.put(newFile.getKind(), fileIcon);
+			} else {
+				// Replace / with ^ and . with &
+				String fileName = newFile.getKind();
+				fileName = fileName.replace('/', '^');
+				fileName = fileName.replace('.', '&');
+				fileName = fileName.concat(".gif");
+				try {
+					fileIcon =
+							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/" + fileName));
+					icons.put(newFile.getKind(), fileIcon);
+				} catch (NullPointerException npe) {
+					fileIcon =
+							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
+					icons.put(newFile.getKind(), fileIcon);
+				}
+			}
+		} else {
+			fileIcon = icons.get(newFile.getKind());
+		}
+
+		BeShareUser user = userDataModel.getUser(newFile.getSessionID());
+		Object[] fileData = {fileIcon, // Icon image name here later!
+		                     newFile.getName(),
+		                     size,
+		                     user,
+		                     newFile.getPath(),
+		                     newFile.getKind(),
+		                     user.getBandwidthLabel()};
+		insertRow(0, fileData);
 	}
 
 	/**

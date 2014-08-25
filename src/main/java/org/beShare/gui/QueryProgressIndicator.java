@@ -29,8 +29,7 @@ public class QueryProgressIndicator extends JPanel {
 	boolean queryInProgress;
 	Timer progressRepainter;
 
-	public QueryProgressIndicator(JButton btn) {
-		super.setPreferredSize(new Dimension(btn.getPreferredSize().height, btn.getPreferredSize().height));
+	public QueryProgressIndicator() {
 		setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(3, 0, 3, 0), BorderFactory.createEtchedBorder()));
 		queryInProgress = false;
 		progressRepainter = new Timer(100,
@@ -80,11 +79,7 @@ public class QueryProgressIndicator extends JPanel {
 				} else {
 					alpha += 10;
 				}
-				try {
-					drawColor = new Color(drawColor.getRed(), drawColor.getGreen(), drawColor.getBlue(), alpha);
-				} catch (NoSuchMethodError nsme) {
-					drawColor = new Color(drawColor.getRed(), alpha, drawColor.getBlue());
-				}
+				drawColor = new Color(drawColor.getRed(), drawColor.getGreen(), drawColor.getBlue(), alpha);
 			}
 			// Draw the background.
 			g.setColor(UIManager.getColor("control"));

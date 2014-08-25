@@ -7,7 +7,7 @@ import java.util.prefs.PreferenceChangeListener;
 /**
  * Manages queueing/starting/stopping of file-transfers.
  */
-public class TransferManager extends AbstractListModel implements TransferProgressListener {
+public class TransferManager extends AbstractListModel<AbstractTransfer> implements TransferProgressListener {
 	TransferList uploads;
 	TransferList downloads;
 
@@ -49,20 +49,21 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	/**
 	 * Returns the element at location in the combined list of queues
 	 */
-	public Object getElementAt(int index) {
+	@Override
+	public AbstractTransfer getElementAt(int index) {
 		if (index < downloads.size()) {
 			return downloads.get(index);
 		} else if (index > downloads.size() && (index < downloads.size() + uploads.size())) {
 			return uploads.get(index - downloads.size());
 		} else {
-			return "";
+			return null;
 		}
 	}
 
 	/**
 	 * Adds a Transfer To the appropriate Queue and registers this object to receive status change notifications.
 	 */
-	public void addTransfer(AbstractTransfer t) {
+	public void add(AbstractTransfer t) {
 		t.addTransferProgressListener(this);
 		if (t instanceof Download) {
 			downloads.add(t);
@@ -76,7 +77,7 @@ public class TransferManager extends AbstractListModel implements TransferProgre
 	/**
 	 * Removes the Transfer from the Queues, this will halt the transfer.
 	 */
-	public void removeTransfer(AbstractTransfer t) {
+	public void remove(AbstractTransfer t) {
 		if (t instanceof Download) {
 			downloads.remove(t);
 			fireIntervalRemoved(this, 0, getSize());

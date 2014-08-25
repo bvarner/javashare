@@ -12,6 +12,9 @@ import org.beShare.data.UserDataModel;
 import org.beShare.gui.AbstractDropMenuModel;
 import org.beShare.gui.ChatDocument;
 import org.beShare.gui.PrivateFrame;
+import org.beShare.gui.QueryTable;
+import org.beShare.gui.QueryTableModel;
+import org.beShare.gui.StringDropMenuModel;
 import org.beShare.gui.text.StyledString;
 
 import javax.swing.event.ListSelectionEvent;
@@ -103,6 +106,7 @@ public class JavaShareTransceiver implements MessageListener {
 	private boolean isAway = false;
 
 	private UserDataModel userDataModel = new UserDataModel();
+	private QueryTableModel queryTableModel = new QueryTableModel(userDataModel);
 	private List<ChatDocument> chatDocuments = new ArrayList<>();
 
 	private List<String> loginCommands = new ArrayList<>();
@@ -251,6 +255,15 @@ public class JavaShareTransceiver implements MessageListener {
 	}
 
 	/**
+	 * Gets the model for tracking current query status.
+	 *
+	 * @return
+	 */
+	public QueryTableModel getQueryTableModel() {
+		return queryTableModel;
+	}
+
+	/**
 	 * Sends our username
 	 */
 	private void sendUserName() {
@@ -341,7 +354,8 @@ public class JavaShareTransceiver implements MessageListener {
 		String temp = "SUBSCRIBE:/*/";
 		temp += sessionExpression;
 		temp += "/beshare/";
-		temp += preferences.getBoolean("firewalled", false) ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
+		temp +=
+				preferences.getBoolean("firewalled", false) ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
 		temp += fileExpression;
 
 		// Send the subscription!
@@ -361,6 +375,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 */
 	public void stopQuery() {
 		queryActive = false;
+		queryTableModel.clearTable();
 		// Remove the subscription
 		Message removeMsg = new Message(PR_COMMAND_REMOVEPARAMETERS);
 		removeMsg.setString(PR_NAME_KEYS, "SUBSCRIBE:*beshare/fi*");
@@ -1113,8 +1128,7 @@ public class JavaShareTransceiver implements MessageListener {
 
 							Thread.yield(); // Force the query to play nice.
 
-							// TODO: Transfer query bits.
-							// transferPanel.addResult(holder);
+							queryTableModel.addResult(holder);
 						} // FILE_INFO_DEPTH
 					} // B_MESSAGE_TYPE
 				} // Next field name
@@ -1364,26 +1378,6 @@ public class JavaShareTransceiver implements MessageListener {
 					reconnectBackoff *= 2;
 				}
 			}
-		}
-	}
-
-	private class StringDropMenuModel extends AbstractDropMenuModel<String> {
-		StringDropMenuModel() {
-			super();
-		}
-
-		StringDropMenuModel(int size) {
-			super(size);
-		}
-
-		@Override
-		public String elementToString(String obj) {
-			return obj;
-		}
-
-		@Override
-		public String elementFromString(String obj) {
-			return obj;
 		}
 	}
 }

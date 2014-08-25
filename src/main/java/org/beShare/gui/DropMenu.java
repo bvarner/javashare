@@ -150,6 +150,15 @@ public class DropMenu<T> extends JPanel {
 	}
 
 	/**
+	 * Gets the drop menu model in use by the DropMenu
+	 *
+	 * @return
+	 */
+	public DropMenuModel<T> getModel() {
+		return model;
+	}
+
+	/**
 	 * Gets the current text label of the button.
 	 *
 	 * @return the Text label of the Menu button.
