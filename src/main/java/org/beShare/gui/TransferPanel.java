@@ -3,9 +3,7 @@
 */
 package org.beShare.gui;
 
-import org.beShare.data.BeShareUser;
 import org.beShare.data.SharedFile;
-import org.beShare.gui.prefPanels.SharePrefsListener;
 import org.beShare.gui.swingAddons.TableSorter;
 import org.beShare.network.AbstractTransfer;
 import org.beShare.network.Download;
@@ -13,13 +11,28 @@ import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ShareFileMaintainer;
 import org.beShare.network.TransferManager;
 
-import javax.swing.*;
-import javax.swing.border.Border;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
@@ -32,7 +45,7 @@ import java.util.Vector;
  *
  * @author Bryan Varner
  */
-public class TransferPanel extends JPanel implements SharePrefsListener, ActionListener {
+public class TransferPanel extends JPanel implements ActionListener {
 	ShareFileMaintainer sharedFileLister;
 
 	JPanel pnlQuery;
@@ -41,7 +54,7 @@ public class TransferPanel extends JPanel implements SharePrefsListener, ActionL
 
 	QueryProgressIndicator pnlInProgress;
 	JPanel pnlQueryControl;
-//	DropMenu recentQueryMenu;
+	//	DropMenu recentQueryMenu;
 	JTextField txtQuery;
 	JButton btnStartQuery;
 	JButton btnStopQuery;

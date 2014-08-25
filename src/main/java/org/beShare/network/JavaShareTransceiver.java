@@ -197,7 +197,9 @@ public class JavaShareTransceiver implements MessageListener {
 		preferences.node("bandwidth").addPreferenceChangeListener(new PreferenceChangeListener() {
 			@Override
 			public void preferenceChange(PreferenceChangeEvent evt) {
-				sendUploadBandwidth();
+				if (evt.getKey().equals("bps")) {
+					sendUploadBandwidth();
+				}
 			}
 		});
 

@@ -1,50 +1,69 @@
-/* Change-Log
-	1.0 - 6.5.2002 - Initial Class creation.
-*/
 package org.beShare.gui.prefPanels;
 
-import com.meyer.muscle.message.Message;
-
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.util.prefs.Preferences;
 
 /**
  * Connection Preferences panel.
  */
-public class ConnectionPrefs extends JPanel implements ActionListener,
-		                                                       FocusListener {
-	JavaSharePrefListener target;
-	Message prefs;
-
-	JTextField txtServer;
-	JTextField txtPort;
-
-	JComboBox cmboBandwidth;
-
-	public ConnectionPrefs(JavaSharePrefListener prefHandler, Message prefMessage) {
+public class ConnectionPrefs extends JPanel {
+	public ConnectionPrefs(final Preferences preferences) {
 		super(new GridLayout(7, 1, 3, 3));
 
-		target = prefHandler;
-		prefs = prefMessage;
+		final DefaultComboBoxModel<BandwidthSetting> comboBoxModel = new DefaultComboBoxModel<>();
 
-		String[] bwLabels = {"300 Baud", "14.4 kbps", "28.8 kbps", "33.6 kbps",
-		                     "57.6 kbps", "ISDN-64k", "ISDN-128k", "DSL",
-		                     "Cable", "T1", "T3", "OC-3", "OC-12"};
-		cmboBandwidth = new JComboBox(bwLabels);
+		comboBoxModel.addElement(new BandwidthSetting(14400, "14.4 kbps"));
+		comboBoxModel.addElement(new BandwidthSetting(28800, "28.8 kbps"));
+		comboBoxModel.addElement(new BandwidthSetting(33600, "33.6 kbps"));
+		comboBoxModel.addElement(new BandwidthSetting(57600, "56.6 kbps"));
+		comboBoxModel.addElement(new BandwidthSetting(64000, "ISDN-64k"));
+		comboBoxModel.addElement(new BandwidthSetting(128000, "ISDN-128k"));
+		comboBoxModel.addElement(new BandwidthSetting(384000, "DSL"));
+		comboBoxModel.addElement(new BandwidthSetting(768000, "Cable"));
+		comboBoxModel.addElement(new BandwidthSetting(1500000, "T1"));
+		comboBoxModel.addElement(new BandwidthSetting(4500000, "T3"));
+		comboBoxModel.addElement(new BandwidthSetting(4500000, "OC-3"));
+		comboBoxModel.addElement(new BandwidthSetting(4500000, "OC-12"));
+		comboBoxModel.addElement(new BandwidthSetting(0, "?"));
+
+		JComboBox<BandwidthSetting> cmboBandwidth = new JComboBox<>(comboBoxModel);
+		cmboBandwidth.setRenderer(new DefaultListCellRenderer() {
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+				DefaultListCellRenderer c =
+						(DefaultListCellRenderer) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+				c.setText(((BandwidthSetting)value).label);
+				return c;
+			}
+		});
 		JLabel conSpeedLbl = new JLabel("Upload Bandwidth: ");
 		JPanel conSpeedPanel = new JPanel();
 		conSpeedPanel.setLayout(new BoxLayout(conSpeedPanel, BoxLayout.X_AXIS));
 		conSpeedPanel.add(conSpeedLbl);
 		conSpeedPanel.add(cmboBandwidth);
 
+		cmboBandwidth.setSelectedItem(new BandwidthSetting(preferences.node("bandwidth").getInt("bps", 0), ""));
+
 		JPanel socksSvrPanel = new JPanel(new BorderLayout());
 		JPanel socksPrtPanel = new JPanel(new BorderLayout());
-		txtServer = new JTextField();
-		txtPort = new JTextField();
+		final JTextField txtServer = new JTextField(preferences.get("socksServer", ""));
+		final JTextField txtPort = new JTextField(preferences.get("socksPort", ""));
 		socksSvrPanel.add(new JLabel("Socks Server: "), BorderLayout.WEST);
 		socksSvrPanel.add(txtServer, BorderLayout.CENTER);
 		socksPrtPanel.add(new JLabel("Socks Port: "), BorderLayout.WEST);
@@ -54,101 +73,53 @@ public class ConnectionPrefs extends JPanel implements ActionListener,
 		add(socksSvrPanel);
 		add(socksPrtPanel);
 		add(new JLabel("SOCKS Settings take effect", JLabel.CENTER));
-		add(new JLabel("next time you run JavaShare2", JLabel.CENTER));
+		add(new JLabel("the next time you run JavaShare", JLabel.CENTER));
 
 		setBorder(BorderFactory.createTitledBorder("Connection Preferences"));
 
-		// Set the values from the Message.
-		if (prefs.hasField("uploadBw")) {
-			try {
-				cmboBandwidth.setSelectedIndex(prefs.getInt("uploadBw"));
-			} catch (Exception e) {
-				cmboBandwidth.setSelectedIndex(4);
-			}
-		}
-
-		if (prefs.hasField("socksServer") && prefs.hasField("socksPort")) {
-			try {
-				txtServer.setText(prefs.getString("socksServer"));
-				if (prefs.getInt("socksPort") != -1) {
-					txtPort.setText("" + prefs.getInt("socksPort"));
-				}
-			} catch (Exception e) {
-				txtServer.setText("");
-				txtPort.setText("");
-			}
-		} else {
-			txtServer.setText("");
-			txtPort.setText("");
-		}
-
 		// Register the listener.
-		cmboBandwidth.addActionListener(this);
-		txtServer.addFocusListener(this);
-		txtPort.addFocusListener(this);
-	}
-
-	public void actionPerformed(ActionEvent ae) {
-		if (ae.getSource() == cmboBandwidth) {
-			int speed = 0;
-			switch (cmboBandwidth.getSelectedIndex()) {
-				case 0:
-					speed = 300;
-					break;
-				case 1:
-					speed = 14400;
-					break;
-				case 2:
-					speed = 28800;
-					break;
-				case 3:
-					speed = 33600;
-					break;
-				case 4:
-					speed = 57600;
-					break;
-				case 5:
-					speed = 64000;
-					break;
-				case 6:
-					speed = 128000;
-					break;
-				case 7:
-					speed = 384000;
-					break;
-				case 8:
-					speed = 768000;
-					break;
-				case 9:
-					speed = 1500000;
-					break;
-				case 10:
-					speed = 4500000;
-					break;
-				case 11:
-					speed = 4500000;
-					break;
-				case 12:
-					speed = 4500000;
-					break;
-				default:
-					speed = 0;
-					break;
+		cmboBandwidth.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Preferences bwNode = preferences.node("bandwidth");
+				BandwidthSetting bw = (BandwidthSetting)comboBoxModel.getSelectedItem();
+				bwNode.put("label", bw.label);
+				bwNode.putInt("bps", bw.bps);
 			}
-			String label = (String) cmboBandwidth.getItemAt(
-					                                               cmboBandwidth.getSelectedIndex());
-			target.bandwidthChange(label, speed, cmboBandwidth.getSelectedIndex());
+		});
+
+		FocusListener socksFocusListener = new FocusAdapter() {
+			@Override
+			public void focusLost(FocusEvent e) {
+					preferences.put("socksServer", txtServer.getText().trim());
+					preferences.put("socksPort", txtPort.getText().trim());
+			}
+		};
+
+		txtServer.addFocusListener(socksFocusListener);
+		txtPort.addFocusListener(socksFocusListener);
+	}
+
+	public class BandwidthSetting {
+		public String label;
+		public Integer bps;
+
+		public BandwidthSetting(int bps, String label) {
+			this.bps = bps;
+			this.label = label;
 		}
-	}
 
-	public void focusGained(FocusEvent e) {
-	}
-
-	public void focusLost(FocusEvent e) {
-		try {
-			target.socksChange(txtServer.getText(), Integer.parseInt(txtPort.getText()));
-		} catch (NumberFormatException nfe) {
-			target.socksChange(txtServer.getText(), -1);
+		public boolean equals(Object other) {
+			if (this == other) {
+				return true;
+			} else if (other instanceof BandwidthSetting) {
+				return ((BandwidthSetting) other).bps.equals(bps);
+			} else if (other instanceof Integer) {
+				return ((Integer) other).intValue() == bps;
+			} else {
+				return false;
+			}
 		}
 	}
 }
+

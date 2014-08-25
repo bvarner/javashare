@@ -57,6 +57,14 @@ public class Application {
 			}
 		}
 
+		// Apply the socks proxy support.
+		String socksProxy = prefs.get("socksServer", "").trim();
+		String socksPort = prefs.get("socksPort", "").trim();
+		if (!"".equals(socksProxy) && !"".equals(socksPort)) {
+			System.setProperty("socksProxyHost", socksProxy);
+			System.setProperty("socksProxyPort", socksPort);
+		}
+
 		long installId =
 				prefs.getLong("installId", (((long) (Math.random() * Integer.MAX_VALUE)) << 32) | ((long) (Math.random() * Integer.MAX_VALUE)));
 		prefs.putLong("installId", installId);
