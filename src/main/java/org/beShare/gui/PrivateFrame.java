@@ -3,8 +3,10 @@ package org.beShare.gui;
 import org.beShare.Application;
 import org.beShare.network.JavaShareTransceiver;
 
+import javax.swing.BorderFactory;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.border.Border;
 
 /**
  * A simple wrapper for private chats.
@@ -23,6 +25,7 @@ public class PrivateFrame extends JFrame {
 		setJMenuBar(new MenuBar(this, transceiver, chatterPanel));
 
 		setContentPane(chatterPanel);
+		chatterPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		pack();
 	}

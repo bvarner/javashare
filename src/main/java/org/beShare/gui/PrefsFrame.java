@@ -22,13 +22,8 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
+import java.util.prefs.Preferences;
 
-/**
- * PrefsFrame - A Preference Frame. This is basically a dummy class, used to create an interface.
- * It registers the various prefsPanels with the PrefsListener, and allows a user to
- * cleanly switch between panels. That's it. No more, no less. We now let the panels do
- * all the hard work.
- */
 public class PrefsFrame extends JDialog {
 	JPanel mainPanel;
 
@@ -41,7 +36,7 @@ public class PrefsFrame extends JDialog {
 	// Create a card layout, and panels matching the above strings.
 	// Create objects on those panels, and register the listener to change the value in the hashtable.
 
-	public PrefsFrame(final JFrame owner) {
+	public PrefsFrame(final JFrame owner, final Preferences preferences) {
 		super(owner, "JavaShare Preferences");
 
 		ImageIcon JavaShareIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/BeShare.gif"));
@@ -88,7 +83,7 @@ public class PrefsFrame extends JDialog {
 
 		this.setContentPane(mainPanel);
 
-		prefHolder.add(new GeneralPrefs(), "General");
+		prefHolder.add(new GeneralPrefs(preferences), "General");
 //		prefHolder.add(new ConnectionPrefs(), "Connection");
 //		prefHolder.add(new DisplayPrefs(), "Display");
 //		prefHolder.add(new AppearancePrefs(), "Appearance");

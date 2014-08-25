@@ -6,7 +6,6 @@ import com.apple.eawt.AppEvent;
 import com.apple.eawt.PreferencesHandler;
 import com.apple.eawt.QuitHandler;
 import com.apple.eawt.QuitResponse;
-import com.apple.eawt.QuitStrategy;
 import org.beShare.Application;
 import org.beShare.network.JavaShareTransceiver;
 
@@ -33,6 +32,8 @@ class MenuBar extends JMenuBar {
 	private final static String JAVASHARE_COMMAND = "JavaShareCommand";
 	private final static String JAVASHARE_WINDOW = "JavaShareWindow";
 
+	private static boolean osXInstalled = false;
+
 	private JFrame owner;
 	private JavaShareTransceiver transceiver;
 	private ChatMessagingPanel chatterPanel;
@@ -50,32 +51,38 @@ class MenuBar extends JMenuBar {
 		boolean macOS = false;
 		if (System.getProperty("os.name").toLowerCase().startsWith("mac os")) {
 			macOS = true;
-			platformMask = ActionEvent.META_MASK;
-			editOptsMask = ActionEvent.META_MASK;
+			if (!osXInstalled) {
+				osXInstalled = true;
+				platformMask = ActionEvent.META_MASK;
+				editOptsMask = ActionEvent.META_MASK;
 
-			try {
-				com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
-				application.setPreferencesHandler(new PreferencesHandler() {
-					@Override
-					public void handlePreferences(AppEvent.PreferencesEvent preferencesEvent) {
-						doPrefs();
-					}
-				});
-				application.setAboutHandler(new AboutHandler() {
-					@Override
-					public void handleAbout(AppEvent.AboutEvent aboutEvent) {
-						doAbout();
-					}
-				});
-				application.setQuitHandler(new QuitHandler() {
-					@Override
-					public void handleQuitRequestWith(AppEvent.QuitEvent quitEvent, QuitResponse quitResponse) {
-						quitResponse.cancelQuit();
-						owner.dispatchEvent(new WindowEvent(owner, WindowEvent.WINDOW_CLOSING));
-					}
-				});
-			} catch (Exception ex) {
-			} catch (Error error) {
+				try {
+					com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
+					application.setPreferencesHandler(new PreferencesHandler() {
+						@Override
+						public void handlePreferences(AppEvent.PreferencesEvent preferencesEvent) {
+							doPrefs();
+						}
+					});
+					application.setAboutHandler(new AboutHandler() {
+						@Override
+						public void handleAbout(AppEvent.AboutEvent aboutEvent) {
+							doAbout();
+						}
+					});
+					application.setQuitHandler(new QuitHandler() {
+						@Override
+						public void handleQuitRequestWith(AppEvent.QuitEvent quitEvent, QuitResponse quitResponse) {
+							quitResponse.cancelQuit();
+							for (int i = Application.FRAMES.size() - 1; i >= 0; i--) {
+								Frame f = Application.FRAMES.get(i);
+								f.dispatchEvent(new WindowEvent(f, WindowEvent.WINDOW_CLOSING));
+							}
+						}
+					});
+				} catch (Exception ex) {
+				} catch (Error error) {
+				}
 			}
 		}
 
@@ -100,7 +107,10 @@ class MenuBar extends JMenuBar {
 			file.add(new AbstractGUIAction("Quit", KeyEvent.VK_Q, KeyStroke.getKeyStroke(KeyEvent.VK_Q, platformMask)) {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					owner.dispatchEvent(new WindowEvent(owner, WindowEvent.WINDOW_CLOSING));
+					for (int i = Application.FRAMES.size() - 1; i >= 0; i--) {
+						Frame f = Application.FRAMES.get(i);
+						f.dispatchEvent(new WindowEvent(f, WindowEvent.WINDOW_CLOSING));
+					}
 				}
 			});
 		}
@@ -166,7 +176,7 @@ class MenuBar extends JMenuBar {
 		                      "Version " + Application.VERSION,
 		                      "",
 		                      "Code Contributions by:",
-							  "     bvarner (Bryan Varner)",
+		                      "     bvarner (Bryan Varner)",
 		                      "     waddlesplash (Augustin Cavalier)",
 		                      "",
 		                      "Special Thanks to:",
@@ -195,7 +205,7 @@ class MenuBar extends JMenuBar {
 	}
 
 	private void doPrefs() {
-		PrefsFrame preferences = new PrefsFrame(owner);
+		PrefsFrame preferences = new PrefsFrame(owner, transceiver.getPreferences());
 		preferences.pack();
 		preferences.setVisible(true);
 	}

@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.prefs.BackingStoreException;
+import java.util.prefs.PreferenceChangeEvent;
+import java.util.prefs.PreferenceChangeListener;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
 
@@ -85,7 +87,6 @@ public class JavaShareTransceiver implements MessageListener {
 	private long installId;
 	private boolean connectInProgress = false;
 	private boolean connected = false;
-	private boolean firewalled = false;
 
 	private int pingCount = 0;
 
@@ -97,7 +98,6 @@ public class JavaShareTransceiver implements MessageListener {
 	private int reconnectBackoff = -1;
 	private int connectionTimeout = 300; // in seconds = 5 Minutes
 
-	private int awayTimeout = 300;
 	private transient String restoreStatus = "";
 	private String awayStatus = "";
 	private boolean isAway = false;
@@ -120,7 +120,7 @@ public class JavaShareTransceiver implements MessageListener {
 		this.preferences = preferences;
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
-		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel));
+		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel, preferences));
 
 		serverModel.addListSelectionListener(new ListSelectionListener() {
 			@Override
@@ -157,8 +157,8 @@ public class JavaShareTransceiver implements MessageListener {
 		this.statusModel.loadFrom(preferences, "status", "Here|Away");
 
 		this.awayStatus = preferences.get("awayStatus", "Away");
+		this.restoreStatus = preferences.get("restoreStatus", "");
 		this.installId = preferences.getLong("installId", 0l);
-		this.awayTimeout = preferences.getInt("awayTimeout", 300);
 
 		Preferences prefNode = preferences.node("loginCommands");
 		for (int i = 0; i < prefNode.getInt("count", 0); i++) {
@@ -182,7 +182,30 @@ public class JavaShareTransceiver implements MessageListener {
 			}
 		}
 
+		// Listen to the 'firewalled' preferences and change our behavior based upon those settings.
+		preferences.addPreferenceChangeListener(new PreferenceChangeListener() {
+			@Override
+			public void preferenceChange(PreferenceChangeEvent evt) {
+				if (evt.getKey().equals("firewalled")) {
+					// TODO: Upload file listing bits.
+					//uploadFileListing();
+				}
+			}
+		});
+
+		// Listen to bandwidth setting changes...
+		preferences.node("bandwidth").addPreferenceChangeListener(new PreferenceChangeListener() {
+			@Override
+			public void preferenceChange(PreferenceChangeEvent evt) {
+				sendUploadBandwidth();
+			}
+		});
+
 		Runtime.getRuntime().addShutdownHook(new Thread(new PreferenceSaver()));
+	}
+
+	public Preferences getPreferences() {
+		return preferences;
 	}
 
 	public boolean isConnected() {
@@ -316,8 +339,7 @@ public class JavaShareTransceiver implements MessageListener {
 		String temp = "SUBSCRIBE:/*/";
 		temp += sessionExpression;
 		temp += "/beshare/";
-		temp +=
-				getFirewalled() ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
+		temp += preferences.getBoolean("firewalled", false) ? "files/" : "fi*/";  // If we're firewalled, we can only get non-firewalled files; else both types
 		temp += fileExpression;
 
 		// Send the subscription!
@@ -362,21 +384,6 @@ public class JavaShareTransceiver implements MessageListener {
 		cbackMsg.setInt("port", port);
 		beShareTransceiver.sendOutgoingMessage(cbackMsg);
 		System.out.println("JavaShareTransceiver: Connectback request Sent.");
-	}
-
-	/**
-	 * Returns the current stats of the firewall setting.
-	 */
-	public boolean getFirewalled() {
-		return firewalled;
-	}
-
-	/**
-	 * Sets weather or not we should behave as if we are firewalled.
-	 * If we aren't, peachy! If we are, who gives a crap?!
-	 */
-	public void setFirewalled(boolean firewall) {
-		firewalled = firewall;
 	}
 
 	/**
@@ -780,15 +787,14 @@ public class JavaShareTransceiver implements MessageListener {
 
 	/**
 	 * Uploads Bandwidth information to the MUSCLE server
-	 *
-	 * @param lbl String label 'T1', 'Cable', ...
-	 * @param bps The speed of the connection.
 	 */
-	public void setUploadBandwidth(String lbl, int bps) {
+	public void sendUploadBandwidth() {
 		if (connected) {
+			Preferences prefNode = preferences.node("bandwidth");
+
 			Message bwMessage = new Message();
-			bwMessage.setString("label", lbl);
-			bwMessage.setInt("bps", bps);
+			bwMessage.setString("label", prefNode.get("label", "?"));
+			bwMessage.setInt("bps", prefNode.getInt("bps", 0));
 			setDataNodeValue("beshare/bandwidth", bwMessage);
 		}
 	}
@@ -816,7 +822,7 @@ public class JavaShareTransceiver implements MessageListener {
 			infoMessage.setString("beshare:Kind", ((SharedFile) fileListing.elementAt(x)).getKind());
 
 			String filePath = "";
-			if (getFirewalled()) {
+			if (preferences.getBoolean("firewalled", false)) {
 				filePath += "beshare/fires/";
 			} else {
 				filePath += "beshare/files/";
@@ -875,7 +881,7 @@ public class JavaShareTransceiver implements MessageListener {
 			beShareSubscribe();
 			sendUserName();
 			sendUserStatus();
-			setUploadBandwidth("?", 0);
+			sendUploadBandwidth();
 
 			if (!chatDocuments.isEmpty()) {
 				for (String command : loginCommands) {
@@ -1216,8 +1222,8 @@ public class JavaShareTransceiver implements MessageListener {
 	private class PreferenceSaver implements Runnable {
 		public void run() {
 			preferences.put("awayStatus", awayStatus);
+			preferences.put("restoreStatus", restoreStatus);
 			preferences.putLong("installId", installId);
-			preferences.putInt("awayTimeout", awayTimeout);
 
 			Preferences prefNode = preferences.node("loginCommands");
 			try {
@@ -1310,9 +1316,11 @@ public class JavaShareTransceiver implements MessageListener {
 			while (true) {
 				try {
 					Thread.currentThread().sleep(1000);
-					// TODO: If auto-away is enabled....
-					if (connected && System.currentTimeMillis() - lastAction >= (awayTimeout * 1000) && !isAway) {
-						setAway();
+					int timeout = preferences.getInt("awayTimeout", -1);
+					if (timeout >= 0) {
+						if (connected && (System.currentTimeMillis() - lastAction >= timeout) && !isAway) {
+							setAway();
+						}
 					}
 				} catch (InterruptedException ie) {
 				}

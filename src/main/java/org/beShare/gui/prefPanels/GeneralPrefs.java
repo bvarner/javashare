@@ -4,118 +4,118 @@
 */
 package org.beShare.gui.prefPanels;
 
-import com.meyer.muscle.message.Message;
-
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import java.awt.Component;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.prefs.Preferences;
 
-public class GeneralPrefs extends JPanel implements ActionListener {
-	final int oneSecond = 1000;
-	final int oneMinute = 60 * oneSecond;
-	JComboBox autoAway;
-	JCheckBox chkAutoUpdateServers;
-	JCheckBox chkFirewall;
-	JCheckBox chkLogin;
-	JCheckBox chkSaveUserSort;
+public class GeneralPrefs extends JPanel {
 
-	public GeneralPrefs() {
+	public GeneralPrefs(final Preferences preferences) {
 		super(new GridLayout(7, 1, 3, 3));
 
-		String[] autoAwayTimes = {"Disabled", "2 Minutes", "5 Minutes",
-		                          "10 Minutes", "15 Minutes", "20 Minutes", "30 Minutes", "1 Hour",
-		                          "2 Hours"};
-		autoAway = new JComboBox(autoAwayTimes);
-		autoAway.setSelectedIndex(2);
+		DefaultComboBoxModel comboBoxModel = new DefaultComboBoxModel();
+		comboBoxModel.addElement(-1);
+		comboBoxModel.addElement(2 * 60 * 1000);
+		comboBoxModel.addElement(5 * 60 * 1000);
+		comboBoxModel.addElement(10 * 60 * 1000);
+		comboBoxModel.addElement(15 * 60 * 1000);
+		comboBoxModel.addElement(20 * 60 * 1000);
+		comboBoxModel.addElement(30 * 60 * 1000);
+		comboBoxModel.addElement(1 * 60 * 60 * 1000);
+		comboBoxModel.addElement(2 * 60 * 60 * 1000);
+
+		final JComboBox autoAway = new JComboBox(comboBoxModel);
+		autoAway.setRenderer(new DefaultListCellRenderer() {
+			@Override
+			public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+				DefaultListCellRenderer c =
+						(DefaultListCellRenderer) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+				switch (value.toString()) {
+					case "-1":
+						setText("Disabled");
+						break;
+					case "120000":
+						setText("2 Minutes");
+						break;
+					case "300000":
+						setText("5 Minutes");
+						break;
+					case "600000":
+						setText("10 Minutes");
+						break;
+					case "900000":
+						setText("15 Minutes");
+						break;
+					case "1200000":
+						setText("20 Minutes");
+						break;
+					case "1800000":
+						setText("30 Minutes");
+						break;
+					case "3600000":
+						setText("1 Hour");
+						break;
+					case "7200000":
+						setText("2 Hours");
+						break;
+				}
+				return c;
+			}
+		});
+		autoAway.setSelectedItem(preferences.getInt("awayTimeout", -1));
+		autoAway.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				preferences.putInt("awayTimeout", Integer.parseInt(autoAway.getSelectedItem().toString()));
+			}
+		});
 
 		JLabel autoAwayLabel = new JLabel("Auto-Away: ");
-
 		JPanel autoAwayPanel = new JPanel();
 		autoAwayPanel.setLayout(new BoxLayout(autoAwayPanel, BoxLayout.X_AXIS));
 		autoAwayPanel.add(autoAwayLabel);
 		autoAwayPanel.add(autoAway);
 
-		chkAutoUpdateServers = new JCheckBox("Auto-Update Server List", true);
+		final JCheckBox chkAutoUpdateServers =
+				new JCheckBox("Auto-Update Server List", preferences.getBoolean("autoUpdateServers", true));
+		chkAutoUpdateServers.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				preferences.putBoolean("autoUpdateServers", chkAutoUpdateServers.isSelected());
+			}
+		});
 
-		chkFirewall = new JCheckBox("I'm Firewalled", false);
-
-		chkLogin = new JCheckBox("Login on startup", true);
-		chkSaveUserSort = new JCheckBox("Save User Table Sort Column", false);
+		final JCheckBox chkLogin = new JCheckBox("Login on startup", preferences.getBoolean("autoLogin", false));
+		chkLogin.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				preferences.putBoolean("autoLogin", chkLogin.isSelected());
+			}
+		});
+		final JCheckBox chkFirewall = new JCheckBox("I'm Firewalled", preferences.getBoolean("firewalled", false));
+		chkFirewall.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				preferences.putBoolean("firewalled", chkFirewall.isSelected());
+			}
+		});
 
 		add(autoAwayPanel);
-		add(chkFirewall);
 		add(chkAutoUpdateServers);
 		add(chkLogin);
-		add(chkSaveUserSort);
+		add(chkFirewall);
 
 		setBorder(BorderFactory.createTitledBorder("General Preferences"));
-
-		// Set the values from the Message.
-//		chkAutoUpdateServers.setSelected(prefs.getBoolean("autoUpdServers"), true);
-//		autoAway.setSelectedIndex(prefs.getInt("awayTimeIndex"));
-//		chkFirewall.setSelected(prefs.getBoolean("firewalled"));
-//		chkLogin.setSelected(prefs.getBoolean("autoLogin"));
-//		chkSaveUserSort.setSelected(prefs.getBoolean("userSort"));
-
-		// Register the listener.
-		autoAway.addActionListener(this);
-		chkAutoUpdateServers.addActionListener(this);
-		chkFirewall.addActionListener(this);
-		chkLogin.addActionListener(this);
-		chkSaveUserSort.addActionListener(this);
-	}
-
-	public void actionPerformed(ActionEvent ae) {
-		if (ae.getSource() == autoAway) {
-			int time = -1;
-			switch (autoAway.getSelectedIndex()) {
-				case 0: {
-					time = -1;
-					break;
-				}
-				case 1: {
-					time = 120 * oneSecond;
-					break;
-				}
-				case 2: {
-					time = 300 * oneSecond;
-					break;
-				}
-				case 3: {
-					time = 10 * oneMinute;
-					break;
-				}
-				case 4: {
-					time = 15 * oneMinute;
-					break;
-				}
-				case 5: {
-					time = 20 * oneMinute;
-					break;
-				}
-				case 6: {
-					time = 30 * oneMinute;
-					break;
-				}
-				case 7: {
-					time = 60 * oneMinute;
-					break;
-				}
-				case 8: {
-					time = 120 * oneMinute;
-					break;
-				}
-			}
-//			target.autoAwayTimerChange(time, autoAway.getSelectedIndex());
-		} else if (ae.getSource() == chkAutoUpdateServers) {
-//			target.autoUpdateServerChange(chkAutoUpdateServers.isSelected());
-		} else if (ae.getSource() == chkFirewall) {
-//			target.firewallSettingChange(chkFirewall.isSelected());
-		} else if (ae.getSource() == chkLogin) {
-//			target.loginOnStartupChange(chkLogin.isSelected());
-		} else if (ae.getSource() == chkSaveUserSort) {
-//			target.userSortChange(chkSaveUserSort.isSelected());
-		}
 	}
 }

@@ -84,7 +84,7 @@ public class ChatMessagingPanel extends JPanel {
 	public ChatMessagingPanel(final JavaShareTransceiver transceiver, final String[] sessionIds) {
 		super(new BorderLayout(5, 5));
 		this.transceiver = transceiver;
-		setPreferredSize(new Dimension(400, 150));
+		setPreferredSize(new Dimension(600, 450));
 
 		chatDoc = new ChatDocument(new FilteredUserDataModel(this.transceiver.getUserDataModel()));
 
@@ -276,7 +276,7 @@ public class ChatMessagingPanel extends JPanel {
 		});
 		userTableSorter.addMouseListenerToHeaderInTable(userTable);
 		userTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		userTable.setPreferredScrollableViewportSize(new Dimension(150, 300));
+		userTable.setPreferredScrollableViewportSize(new Dimension(150, 450));
 
 
 		// Final setup for the panel

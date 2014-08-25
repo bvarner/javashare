@@ -76,6 +76,9 @@ public class ShareFrame extends JFrame {
 		if (b) {
 			if (!Application.FRAMES.contains(this)) {
 				Application.FRAMES.add(this);
+				if (transceiver.getPreferences().getBoolean("autoLogin", false)) {
+					transceiver.command("/CONNECT", chatterPanel.chatDoc);
+				}
 			}
 		} else {
 			Application.FRAMES.remove(this);
