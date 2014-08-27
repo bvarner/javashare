@@ -46,32 +46,7 @@ public class QueryTableModel extends DefaultTableModel {
 			size = ((double) (newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
 		}
 
-		ImageIcon fileIcon = new ImageIcon();
-
-		if (!icons.containsKey(newFile.getKind())) {
-			if (newFile.getKind().equals("")) {
-				// Load the generic file icon.
-				fileIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
-				icons.put(newFile.getKind(), fileIcon);
-			} else {
-				// Replace / with ^ and . with &
-				String fileName = newFile.getKind();
-				fileName = fileName.replace('/', '^');
-				fileName = fileName.replace('.', '&');
-				fileName = fileName.concat(".gif");
-				try {
-					fileIcon =
-							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/" + fileName));
-					icons.put(newFile.getKind(), fileIcon);
-				} catch (NullPointerException npe) {
-					fileIcon =
-							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
-					icons.put(newFile.getKind(), fileIcon);
-				}
-			}
-		} else {
-			fileIcon = icons.get(newFile.getKind());
-		}
+		ImageIcon fileIcon = getFileIcon(newFile.getKind());
 
 		BeShareUser user = userDataModel.getUser(newFile.getSessionID());
 		Object[] fileData = {fileIcon, // Icon image name here later!
@@ -82,6 +57,35 @@ public class QueryTableModel extends DefaultTableModel {
 		                     newFile.getKind(),
 		                     user.getBandwidthLabel()};
 		insertRow(0, fileData);
+	}
+
+	public ImageIcon getFileIcon(final String kind) {
+		ImageIcon fileIcon;
+		if (!icons.containsKey(kind)) {
+			if ("".equals(kind)) {
+				// Load the generic file icon.
+				fileIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
+				icons.put(kind, fileIcon);
+			} else {
+				// Replace / with ^ and . with &
+				String fileName = kind;
+				fileName = fileName.replace('/', '^');
+				fileName = fileName.replace('.', '&');
+				fileName = fileName.concat(".gif");
+				try {
+					fileIcon =
+							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/" + fileName));
+					icons.put(kind, fileIcon);
+				} catch (NullPointerException npe) {
+					fileIcon =
+							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
+					icons.put(kind, fileIcon);
+				}
+			}
+		} else {
+			fileIcon = icons.get(kind);
+		}
+		return fileIcon;
 	}
 
 	/**

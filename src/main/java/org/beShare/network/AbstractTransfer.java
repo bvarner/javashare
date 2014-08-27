@@ -115,7 +115,11 @@ public abstract class AbstractTransfer extends Thread implements MessageListener
 	 * @return the name of the currently transferring file.
 	 */
 	public String getFileName() {
-		return currentFile.getName();
+		if (currentFile != null) {
+			return currentFile.getName();
+		} else {
+			return "";
+		}
 	}
 
 	/**
@@ -130,7 +134,6 @@ public abstract class AbstractTransfer extends Thread implements MessageListener
 	 */
 	protected void setFileTransfered(long transfered) {
 		transferedSize = transfered;
-		fireProgressChange();
 	}
 
 	/**

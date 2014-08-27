@@ -12,30 +12,35 @@ import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ShareFileMaintainer;
 import org.beShare.network.TransferManager;
 
+import javax.activation.MimetypesFileTypeMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
+import javax.swing.ListCellRenderer;
+import javax.swing.SwingConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
-import java.util.Hashtable;
 
 /**
  * The panel in charge of querys, and file transfer queue viewing. This is a jack-of-all-trades
@@ -49,24 +54,18 @@ public class TransferPanel extends JPanel {
 	JPanel pnlQuery;
 	JPanel pnlTransfer;
 	JSplitPane transferSplit;
-
 	DropMenu<String> queryMenu = new DropMenu<>("Query: ", 15, new StringDropMenuModel(20));
-
 	QueryTable queryTable;
 	TableSorter querySorter;
 	JScrollPane tableScroller;
-
 	JButton btnDownloadFiles;
 	JButton btnRemoveDownload;
-
 	JavaShareTransceiver connection;
-
 	TransferManager transMan;
-
 	String session;
 	String files;
-
 	JList lstTransfers;
+	private JScrollPane lstTranScroller;
 
 	public TransferPanel(final JavaShareTransceiver connection) {
 		this.connection = connection;
@@ -196,9 +195,11 @@ public class TransferPanel extends JPanel {
 
 		//transferList = new DefaultListModel();
 		lstTransfers = new JList(transMan);
+		lstTransfers.setFocusable(false);
 		lstTransfers.addListSelectionListener(new TransferSelectionListener());
 		lstTransfers.setCellRenderer(new TransferProgressRenderer());
-		JScrollPane lstTranScroller = new JScrollPane(lstTransfers);
+		lstTranScroller =
+				new JScrollPane(lstTransfers, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
 		pnlTransfer.add(lstTranScroller, BorderLayout.CENTER);
 		pnlTransfer.add(btnRemoveDownload, BorderLayout.SOUTH);
@@ -255,103 +256,101 @@ public class TransferPanel extends JPanel {
 	/**
 	 * Renders a Transfers information in the list.
 	 */
-	private class TransferProgressRenderer extends DefaultListCellRenderer {
-		String status = "";
-		double progress = 0;
-		boolean selected = false;
-		Color selcolor = null;
-		Color progColor = null;
+	private class TransferProgressRenderer extends JPanel implements ListCellRenderer<AbstractTransfer> {
 		DecimalFormat progressFormatter = new DecimalFormat("####.##");
+		JLabel details;
+		JProgressBar progress;
+		JLabel status;
 
 		public TransferProgressRenderer() {
 			super();
-			setOpaque(false);
-			status = "";
+			setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+			setLayout(new BorderLayout());
+			details = new JLabel();
+			details.setFont(details.getFont().deriveFont(Font.PLAIN, 10.0f));
+			details.setHorizontalTextPosition(SwingConstants.TRAILING);
+			progress = new JProgressBar(0, 100);
+			status = new JLabel();
+			status.setFont(details.getFont());
+			add(details, BorderLayout.NORTH);
+			add(progress);
+			add(status, BorderLayout.SOUTH);
 		}
 
-		public Component getListCellRendererComponent(JList list, Object value, int index,
+		@Override
+		public Dimension getPreferredSize() {
+			Dimension d = super.getPreferredSize();
+			d.width = lstTranScroller.getViewport().getExtentSize().width;
+			return d;
+		}
+
+		@Override
+		public Component getListCellRendererComponent(JList<? extends AbstractTransfer> list, AbstractTransfer value, int index,
 		                                              boolean isSelected, boolean cellHasFocus) {
-			if (selcolor == null) {
-				Color old = list.getSelectionBackground();
-				selcolor = new Color(old.getRed(), old.getGreen(), old.getBlue(), 168);
-				progColor = new Color(0, old.getGreen(), 0, 54);
+			if (isSelected) {
+				setBackground(list.getSelectionBackground());
+			} else {
+				setBackground(list.getBackground());
 			}
 
-			// Initialize the defaults
-			progress = 0;
-			selected = isSelected;
-
-			String status = "<html>";
-			AbstractTransfer t = (AbstractTransfer) value;
-
+			// TODO: Refactor into AbstractTransfer.getDetails();
 			if (value instanceof Download) {
 				Download dwn = (Download) value;
-				status += "Downloading from " + dwn.getUserName() + "<br>";
+				details.setText("Downloading " + dwn.getFileName() + " from " + dwn.getUserName());
 			} else {
-				status += "Upload to " + "<br>";
+				details.setText("Uploading " + value.getFileName());
 			}
+			details.setIcon(connection.getQueryTableModel().getFileIcon(MimetypesFileTypeMap.getDefaultFileTypeMap().getContentType(value.getFileName())));
+			progress.setValue(0);
 
-			if (t.getStatus() == AbstractTransfer.ACTIVE) {
-				status += "File: " + t.getFileName() + "<br>";
-			}
-
-			switch (t.getStatus()) {
+			switch (value.getStatus()) {
 				case AbstractTransfer.CONNECTING:
-					status += "Connecting<br>";
+					status.setText("Connecting");
 					break;
 				case AbstractTransfer.AWAITING_CALLBACK:
-					status += "Awaiting Callback<br>";
+					status.setText("Awaiting Callback");
 					break;
 				case AbstractTransfer.ACTIVE:
-					progress = ((double) t.getFileTransfered() / t.getFileSize());
-					if (t.getFileSize() > (1024 * 1024)) {
-						status +=
-								"Transfered: " + progressFormatter.format((double) t.getFileTransfered() / (1024 * 1024)) + "MB of " + progressFormatter.format((double) t.getFileSize() / (1024 * 1024)) + "MB<br>";
-					} else if (t.getFileSize() > 1024) {
-						status +=
-								"Transfered: " + progressFormatter.format((double) t.getFileTransfered() / 1024) + "k of " + progressFormatter.format((double) t.getFileSize() / 1024) + "k<br>";
+					progress.setIndeterminate(false);
+					progress.setValue((int) (((double) value.getFileTransfered() / value.getFileSize()) * 100));
+
+					if (value.getFileSize() > (1024 * 1024)) {
+						status.setText(progressFormatter.format((double) value.getFileTransfered() / (1024 * 1024)) + "MB of " + progressFormatter.format((double) value.getFileSize() / (1024 * 1024)) + "MB");
+					} else if (value.getFileSize() > 1024) {
+						status.setText(progressFormatter.format((double) value.getFileTransfered() / 1024) + "k of " + progressFormatter.format((double) value.getFileSize() / 1024) + "k");
 					} else {
-						status += "Transfered: " + t.getFileTransfered() + " of " + t.getFileSize() + " bytes<br>";
+						status.setText(value.getFileTransfered() + " of " + value.getFileSize() + " bytes");
 					}
 					break;
 				case AbstractTransfer.REMOTE_QUEUED:
-					status += "Remotely Queued<br>";
+					progress.setIndeterminate(false);
+					status.setText("Remotely Queued");
 					break;
 				case AbstractTransfer.EXAMINING:
-					status += "Examining...<br>";
+					status.setText("Examining...");
 					break;
 				case AbstractTransfer.FINISHED:
-					status += "Completed<br>";
-					progress = 1.0;
+					status.setText("Completed");
+					progress.setIndeterminate(false);
+					progress.setValue(100);
 					break;
 				case AbstractTransfer.LOCALLY_QUEUED:
-					status += "Locally Queued<br>";
+					status.setText("Locally Queued");
+					progress.setIndeterminate(false);
 					break;
 				case AbstractTransfer.ERROR:
-					status += "An Error Has Occured<br>";
+					status.setText("An Error Has Occurred");
+					progress.setIndeterminate(false);
 					break;
 				default:
-					status += "";
+					status.setText("");
 			}
-			status += "</html>";
-			setText(status);
-
 			return this;
 		}
 
 		public void paint(Graphics g) {
-			// Draw the background.
-			if (progress > 0) {
-				g.setColor(progColor);
-				g.fillRect(0, 0, (int) (getWidth() * progress), getHeight());
-			}
-
-			if (selected) {
-				g.setColor(selcolor);
-				g.fillRect(0, 0, getWidth(), getHeight());
-			}
-
-			// Paint the Mo-FO.
+			Graphics2D g2d = ((Graphics2D) g);
+			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			super.paint(g);
 		}
 	}

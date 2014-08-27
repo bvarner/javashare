@@ -101,8 +101,7 @@ public class TransferManager extends AbstractListModel<AbstractTransfer> impleme
 				index += downloads.size();
 			} else {
 				// Couldn't figure out what changed.
-				fireContentsChanged(this, 0, getSize());
-				index = 0;
+				return;
 			}
 		}
 
