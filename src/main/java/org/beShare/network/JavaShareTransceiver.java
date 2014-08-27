@@ -1,6 +1,8 @@
 package org.beShare.network;
 
 import com.meyer.muscle.client.MessageTransceiver;
+import com.meyer.muscle.iogateway.AbstractMessageIOGateway;
+import com.meyer.muscle.iogateway.JZLibMessageIOGateway;
 import com.meyer.muscle.message.Message;
 import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
@@ -12,13 +14,14 @@ import org.beShare.data.UserDataModel;
 import org.beShare.gui.AbstractDropMenuModel;
 import org.beShare.gui.ChatDocument;
 import org.beShare.gui.PrivateFrame;
-import org.beShare.gui.QueryTable;
 import org.beShare.gui.QueryTableModel;
 import org.beShare.gui.StringDropMenuModel;
 import org.beShare.gui.text.StyledString;
 
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -53,6 +56,7 @@ import static com.meyer.muscle.support.TypeConstants.B_BOOL_TYPE;
 import static com.meyer.muscle.support.TypeConstants.B_INT32_TYPE;
 import static com.meyer.muscle.support.TypeConstants.B_INT64_TYPE;
 import static com.meyer.muscle.support.TypeConstants.B_MESSAGE_TYPE;
+import static com.meyer.muscle.support.TypeConstants.B_RAW_TYPE;
 import static com.meyer.muscle.support.TypeConstants.B_STRING_TYPE;
 
 
@@ -82,7 +86,8 @@ public class JavaShareTransceiver implements MessageListener {
 	private static final Object serverConnect = new Object();
 	private static final Object serverDisconnect = new Object();
 	private int serverPort = 2960;
-	private MessageTransceiver beShareTransceiver = new MessageTransceiver(new MessageQueue(this));
+	private JZLibMessageIOGateway messageIOGateway;
+	private MessageTransceiver beShareTransceiver;
 	private String localSessionID = "";
 	private AbstractDropMenuModel<String> serverModel = new StringDropMenuModel(10);
 	private AbstractDropMenuModel<String> nameModel = new StringDropMenuModel(5);
@@ -121,6 +126,9 @@ public class JavaShareTransceiver implements MessageListener {
 	 * Construct a new JavaShareTransceiver,
 	 */
 	public JavaShareTransceiver(final Preferences preferences) {
+		this.messageIOGateway = new JZLibMessageIOGateway(AbstractMessageIOGateway.MUSCLE_MESSAGE_ENCODING_ZLIB_6);
+		this.beShareTransceiver = new MessageTransceiver(new MessageQueue(this), messageIOGateway);
+
 		this.preferences = preferences;
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
@@ -1108,6 +1116,20 @@ public class JavaShareTransceiver implements MessageListener {
 							}
 						} else if (getPathDepth(fieldName) == FILE_INFO_DEPTH && queryActive) {
 							Message fileInfo = message.getMessage(fieldName);
+
+							// This probably should be handed in the MUSCLE JZLibMessageIOGateway....
+							// If the message has a field named "_zlib", then it's a Message compressed in a Message.
+							if (fileInfo.hasField("_zlib")) {
+								byte[] data = fileInfo.getBuffer("_zlib", B_RAW_TYPE, new byte[0]);
+								ByteBuffer buf = ByteBuffer.allocate(data.length + 8);
+								buf.order(ByteOrder.LITTLE_ENDIAN);
+								buf.putInt(data.length);
+								buf.putInt(AbstractMessageIOGateway.MUSCLE_MESSAGE_ENCODING_ZLIB_6);
+								buf.put(data);
+								buf.rewind();
+								fileInfo = messageIOGateway.unflattenMessage(buf);
+							}
+
 							SharedFile holder = new SharedFile();
 							holder.setSessionID(sessionIDFromNode(fieldName));
 

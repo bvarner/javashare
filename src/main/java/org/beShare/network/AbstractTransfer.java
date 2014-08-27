@@ -6,18 +6,17 @@ import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 
 import java.io.File;
-import java.util.Vector;
 
 /**
  * Defines an abstract class for transferring files.
  *
  * @author Bryan Varner
  */
-public abstract class AbstractTransfer extends Thread implements MessageListener {
-
+public abstract class AbstractTransfer implements Runnable, MessageListener {
 	// Status flags.
 	public final static int NO_STATUS = -1;
 	int status = NO_STATUS;
+
 	public final static int CONNECTING = 1000;
 	public final static int AWAITING_CALLBACK = 1001;
 	public final static int ACTIVE = 1002;
@@ -50,12 +49,12 @@ public abstract class AbstractTransfer extends Thread implements MessageListener
 	long totalFileSize = 0;
 	long transferedSize = 0;
 
-	Vector transferListenVect;
+	TransferModel managedBy = null;
 
 	protected AbstractTransfer() {
 		status = NO_STATUS;
 		started = false;
-		transferListenVect = new Vector();
+		managedBy = null;
 	}
 
 	/**
@@ -80,7 +79,7 @@ public abstract class AbstractTransfer extends Thread implements MessageListener
 	 */
 	public synchronized void setStatus(int s) {
 		status = s;
-		fireProgressChange();
+		statusChanged();
 	}
 
 	/**
@@ -157,7 +156,6 @@ public abstract class AbstractTransfer extends Thread implements MessageListener
 		disconnect();
 		setStatus(ERROR);
 		started = false;
-		System.out.println("ABORTED!");
 	}
 
 	/**
@@ -175,18 +173,11 @@ public abstract class AbstractTransfer extends Thread implements MessageListener
 	}
 
 	/**
-	 * Adds a Transfer Progress Listener to be notified when progress or status changes.
-	 */
-	public void addTransferProgressListener(TransferProgressListener l) {
-		transferListenVect.addElement(l);
-	}
-
-	/**
 	 * Sends a signal to all listeners that this transfer has had progress made.
 	 */
-	protected void fireProgressChange() {
-		for (int x = 0; x < transferListenVect.size(); x++) {
-			((TransferProgressListener) transferListenVect.elementAt(x)).transferStatusUpdate(this);
+	protected void statusChanged() {
+		if (managedBy != null) {
+			managedBy.statusChanged(this);
 		}
 	}
 }

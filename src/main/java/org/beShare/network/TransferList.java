@@ -105,7 +105,6 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 	 */
 	@Override
 	public boolean add(AbstractTransfer trans) {
-		trans.setName("Transfer" + size() + 1);
 		trans.setStatus(AbstractTransfer.LOCALLY_QUEUED);
 		boolean ret = super.add(trans);
 		checkQueue();

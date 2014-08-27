@@ -39,11 +39,11 @@ public class QueryTableModel extends DefaultTableModel {
 	public void addResult(SharedFile newFile) {
 		String size = (Long.toString(newFile.getSize()));
 		if (size.length() <= 3) {
-			size = size + "bytes";
+			size = size + " bytes";
 		} else if (size.length() <= 6) {
 			size = (newFile.getSize() / 1024) + " kb";
 		} else if (size.length() <= 9) {
-			size = ((double) (newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
+			size = (double) ((newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
 		}
 
 		ImageIcon fileIcon = getFileIcon(newFile.getKind());

@@ -7,23 +7,14 @@ import java.util.prefs.PreferenceChangeListener;
 /**
  * Manages queueing/starting/stopping of file-transfers.
  */
-public class TransferManager extends AbstractListModel<AbstractTransfer> implements TransferProgressListener {
+public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	TransferList uploads;
 	TransferList downloads;
-
-	String baseDownloadPath;
-	String baseSharedPath;
-
-	JavaShareTransceiver connection;
 
 	/**
 	 * Constructor - not much to see here, really.
 	 */
-	public TransferManager(final JavaShareTransceiver connection) {
-		this.connection = connection;
-		this.baseDownloadPath =
-				connection.getPreferences().get("downloadLocation", System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads");
-
+	public TransferModel(final JavaShareTransceiver connection) {
 		uploads = new TransferList(connection.getPreferences().getInt("concUploads", 2));
 		downloads = new TransferList(connection.getPreferences().getInt("concDownloads", 3));
 
@@ -64,7 +55,6 @@ public class TransferManager extends AbstractListModel<AbstractTransfer> impleme
 	 * Adds a Transfer To the appropriate Queue and registers this object to receive status change notifications.
 	 */
 	public void add(AbstractTransfer t) {
-		t.addTransferProgressListener(this);
 		if (t instanceof Download) {
 			downloads.add(t);
 			fireIntervalAdded(this, 0, getSize());
@@ -88,11 +78,10 @@ public class TransferManager extends AbstractListModel<AbstractTransfer> impleme
 	}
 
 	/**
-	 * Implements the TransferProgressListener.
-	 * This forces the List to update the transfer that fires off the change.
-	 * It also forces the Queues to check if they should start the next transfer.
+	 * AbstractTransfers can tell this model their state has been altered.
+	 * @param t
 	 */
-	public void transferStatusUpdate(AbstractTransfer t) {
+	void statusChanged(AbstractTransfer t) {
 		int index = downloads.indexOf(t);
 		if (index == -1) {
 			index = uploads.indexOf(t);
@@ -108,12 +97,5 @@ public class TransferManager extends AbstractListModel<AbstractTransfer> impleme
 		fireContentsChanged(this, index, index);
 		downloads.checkQueue();
 		uploads.checkQueue();
-	}
-
-	/**
-	 * @return the Path to Download files to.
-	 */
-	public String getDownloadPath() {
-		return baseDownloadPath;
 	}
 }

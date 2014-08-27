@@ -207,7 +207,7 @@ public class Download extends AbstractTransfer {
 					// Time to get this party started!
 					totalFileSize = message.getLong("beshare:File Size");
 					setFileTransfered(seekto);
-					fireProgressChange();
+					statusChanged();
 					// The usual debug info.
 				} catch (IOException ioe) {
 					abort();
@@ -235,7 +235,7 @@ public class Download extends AbstractTransfer {
 						}
 						setFileTransfered(transferedSize + data[i].length);
 					}
-					fireProgressChange();
+					statusChanged();
 				} catch (IOException ioe) {
 					System.err.println(ioe.toString());
 					abort();

@@ -10,7 +10,7 @@ import org.beShare.network.AbstractTransfer;
 import org.beShare.network.Download;
 import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ShareFileMaintainer;
-import org.beShare.network.TransferManager;
+import org.beShare.network.TransferModel;
 
 import javax.activation.MimetypesFileTypeMap;
 import javax.swing.BorderFactory;
@@ -61,7 +61,7 @@ public class TransferPanel extends JPanel {
 	JButton btnDownloadFiles;
 	JButton btnRemoveDownload;
 	JavaShareTransceiver connection;
-	TransferManager transMan;
+	TransferModel transMan;
 	String session;
 	String files;
 	JList lstTransfers;
@@ -70,7 +70,7 @@ public class TransferPanel extends JPanel {
 	public TransferPanel(final JavaShareTransceiver connection) {
 		this.connection = connection;
 
-		transMan = new TransferManager(connection);
+		transMan = new TransferModel(connection);
 
 		this.setLayout(new BorderLayout());
 		pnlQuery = new JPanel(new BorderLayout(5, 5));
@@ -111,11 +111,12 @@ public class TransferPanel extends JPanel {
 						// Create the new file info.
 						filenames[x] = queryTable.getModel().getValueAt(selected[x], 1).toString();
 					}
+
 					BeShareUser tempUser = connection.getQueryTableModel().getUser(selected[0]);
 					Download fileTransfer = new Download(filenames,
 							                                    tempUser.getIPAddress(),
 							                                    tempUser.getPort(),
-							                                    transMan.getDownloadPath(),
+							                                    connection.getPreferences().get("downloadLocation", System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads"),
 							                                    tempUser.getName(),
 							                                    tempUser.getSessionID(),
 							                                    tempUser.getFirewall(),
