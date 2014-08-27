@@ -112,15 +112,14 @@ public class Download extends AbstractTransfer {
 			try {
 				setStatus(EXAMINING);
 				MessageDigest md = MessageDigest.getInstance("MD5");
-				File testFile = null;
+				File file;
 				long offsets[] = new long[files.length];
 				byte digests[][] = new byte[files.length][md.getDigestLength()];
 				for (int x = 0; x < files.length; x++) {
-					testFile = null;
-					testFile = new File(localFileBasePath, files[x]);
-					offsets[x] = testFile.length(); // Returns 0 if the file dosen't exist.
-					if (testFile.exists()) {
-						DigestInputStream digestReader = new DigestInputStream(new FileInputStream(testFile), md);
+					file = new File(localFileBasePath, files[x]);
+					offsets[x] = file.length(); // Returns 0 if the file dosen't exist.
+					if (file.exists()) {
+						DigestInputStream digestReader = new DigestInputStream(new FileInputStream(file), md);
 
 						byte[] input = new byte[128];
 						int readbytes = 0;
@@ -174,7 +173,7 @@ public class Download extends AbstractTransfer {
 			} catch (Exception ex) {
 			}
 		}
-		// If we were going to listen for multiple incomming connections on the given port, we'd enable this.
+		// If we were going to listen for multiple incoming connections on the given port, we'd enable this.
 		// But since we're doing a one-shot deal with a download -- forget it. I'll leave it here as a nice
 		// discussion piece.
 		// ---------------------------------------------------------------------------------------------------

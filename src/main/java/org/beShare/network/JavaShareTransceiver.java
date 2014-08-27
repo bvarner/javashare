@@ -71,23 +71,23 @@ public class JavaShareTransceiver implements MessageListener {
 	public static final int startingPortNumber = 7000;
 	// Connection Management
 	private int localUserPort = startingPortNumber;
-	private static final int ROOT_DEPTH = 0;    // root node
-	private static final int HOST_NAME_DEPTH = 1;
-	private static final int SESSION_ID_DEPTH = 2;
-	private static final int BESHARE_HOME_DEPTH = 3;
-	// used to separate our stuff from other (non-BeShare) data on the same server
+
 	private static final int USER_NAME_DEPTH = 4;    // user's handle node would be found here
 	private static final int FILE_INFO_DEPTH = 5;    //This is where file names are
 	private static final int NET_CLIENT_NEW_CHAT_TEXT = 2;
 	private static final int NET_CLIENT_CONNECT_BACK_REQUEST = 3;
 	private static final int NET_CLIENT_PING = 5;
 	private static final int NET_CLIENT_PONG = 6;
+
 	private static final String[] ALL_SESSIONS = new String[]{"*"};
+
 	private static final Object serverConnect = new Object();
 	private static final Object serverDisconnect = new Object();
 	private int serverPort = 2960;
+
 	private JZLibMessageIOGateway messageIOGateway;
 	private MessageTransceiver beShareTransceiver;
+
 	private String localSessionID = "";
 	private AbstractDropMenuModel<String> serverModel = new StringDropMenuModel(10);
 	private AbstractDropMenuModel<String> nameModel = new StringDropMenuModel(5);
@@ -104,7 +104,6 @@ public class JavaShareTransceiver implements MessageListener {
 	private long lastAction = System.currentTimeMillis();
 	private boolean disconnectExpected = false;
 	private int reconnectBackoff = -1;
-	private int connectionTimeout = 300; // in seconds = 5 Minutes
 
 	private transient String restoreStatus = "";
 	private String awayStatus = "";

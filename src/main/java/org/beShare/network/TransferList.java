@@ -4,6 +4,8 @@
 */
 package org.beShare.network;
 
+import com.meyer.muscle.thread.ThreadPool;
+
 import java.util.ArrayList;
 
 public class TransferList extends ArrayList<AbstractTransfer> {
@@ -75,7 +77,7 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 		while (shouldStart()) {
 			trans = getNextUnstarted();
 			if (trans != null) {
-				trans.run();
+				ThreadPool.getDefaultThreadPool().startThread(trans);
 			} else {
 				break;
 			}

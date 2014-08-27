@@ -57,6 +57,11 @@ public abstract class AbstractTransfer implements Runnable, MessageListener {
 		managedBy = null;
 	}
 
+
+	void managedBy(TransferModel model) {
+		this.managedBy = model;
+	}
+
 	/**
 	 * Performs an XOR on the data in the byte array.
 	 */

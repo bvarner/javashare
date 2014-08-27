@@ -55,6 +55,7 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	 * Adds a Transfer To the appropriate Queue and registers this object to receive status change notifications.
 	 */
 	public void add(AbstractTransfer t) {
+		t.managedBy(this);
 		if (t instanceof Download) {
 			downloads.add(t);
 			fireIntervalAdded(this, 0, getSize());
@@ -68,6 +69,7 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	 * Removes the Transfer from the Queues, this will halt the transfer.
 	 */
 	public void remove(AbstractTransfer t) {
+		t.managedBy(null);
 		if (t instanceof Download) {
 			downloads.remove(t);
 			fireIntervalRemoved(this, 0, getSize());
