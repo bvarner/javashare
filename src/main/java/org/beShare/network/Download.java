@@ -2,262 +2,225 @@ package org.beShare.network;
 
 import com.meyer.muscle.message.FieldTypeMismatchException;
 import com.meyer.muscle.message.Message;
-import com.meyer.muscle.message.MessageException;
+import org.beShare.data.BeShareUser;
 
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
 
 import static com.meyer.muscle.support.TypeConstants.B_RAW_TYPE;
 
 /**
- * A Download Transfer - Read Jeremy Friesner's BeShare File Transfer Descriptions to really understand this.
- * This class implements the Download functionality of a transfer. It fully complies with _all_
- * current (2.1.8) BeShare options.
+ * A Download Transfer - Read Jeremy Friesner's BeShare File Transfer Descriptions if you need further documentation.
+ * <p/>
+ * This class implements the Download functionality of a transfer. It fully complies with the BeShare(2.1.8) options.
  *
  * @author Bryan Varner
  */
 public class Download extends AbstractTransfer {
 	// Local stuff we need for various things.
-	String[] files;
-	String hostIP;
-	int port;
-	String remoteUserName;
-	String remoteSessionID;
-	boolean firewalledTransfer;
-	boolean firewallSocketBound;
-	int firewallListenPort;
-	JavaShareTransceiver network;
+	BeShareUser remoteUser;
 
-	// Local file information.
-	String localFileBasePath;
+	private boolean firewallSocketBound;
 
-	// Current file - this tracks our progress.
-	RandomAccessFile fileSlave;
-
-	/**
-	 * Creates a new download thread to do some work.
-	 */
-	public Download(String[] files, String hostIP, int port, String localFileBasePath, String remoteUserName, String remoteSessionID, boolean firewalled, JavaShareTransceiver network) {
-		super();
-		this.files = files;
-		this.hostIP = hostIP;
-		this.port = port;
-		this.remoteUserName = remoteUserName;
-		this.remoteSessionID = remoteSessionID;
-		this.localFileBasePath = localFileBasePath;
-		this.network = network;
-		this.firewalledTransfer = firewalled;
-		firewallListenPort = JavaShareTransceiver.startingPortNumber;
-		fileSlave = null;
+	public Download(final JavaShareTransceiver transceiver, final Collection<TransferItem> items, final BeShareUser remoteUser) {
+		super(transceiver, items);
+		this.remoteUser = remoteUser;
+		this.firewallSocketBound = false;
 	}
 
 	/**
 	 * Connects to MUSCLE server.
 	 */
-	public void connect() {
-		beShareTransceiver.disconnect();
-		setStatus(CONNECTING);
-		if (!firewalledTransfer) {
-			beShareTransceiver.connect(hostIP, port, serverConnect, serverDisconnect);
+	@Override
+	public boolean start() {
+		// If the remote user is not firewalled, we can connect directly to them.
+		if (!remoteUser.isFirewalled()) {
+			transferTransceiver.connect(remoteUser.getIPAddress(), remoteUser.getPort(), serverConnect, serverDisconnect);
+			return true;
 		} else {
-			setStatus(AWAITING_CALLBACK);
-			// Bind to the port, then listen.
-			ServerSocketChannel socketChannel = null;
-			do {
-				try {
-					socketChannel = ServerSocketChannel.open();
-					socketChannel.socket().bind(new InetSocketAddress(firewallListenPort));
-				} catch (IOException ioe) {
-					socketChannel = null;
-					firewallListenPort++;
-				}
-			} while (socketChannel == null);
-			beShareTransceiver.listen(socketChannel, serverConnect, serverDisconnect, false);
-			network.sendConnectBackRequestMessage(remoteSessionID, firewallListenPort);
-		}
-	}
+			// We need to bind to a port, and listen for incoming connections (The remote user will connect back to us).
+			setStatus(TransferStatus.AWAITING_CALLBACK);
 
-	/**
-	 * Disconnects from MUSCLE server
-	 */
-	public void disconnect() {
-		connected = false;
-		beShareTransceiver.disconnect();
-		setStatus(FINISHED);
-		started = false;
-	}
-
-	/**
-	 * Messages comming from our tranceiver are sent here.
-	 */
-	public synchronized void messageReceived(Object message, int numleft) {
-		if (message == serverConnect) {
-			setStatus(CONNECTING);
-			connected = true;
-			Message gimmeList = new Message(TRANSFER_COMMAND_FILE_LIST);
-			// TODO Refactor so we send these from the Transceiver.
-			gimmeList.setString("beshare:FromSession", network.getLocalSessionID());
-			// Add the data munging instruction for BeShare clients that support this.
-			gimmeList.setInt("mm", MUNGE_MODE_XOR);
-
-			//CHECK FOR existing files, and MD5's.
-			try {
-				setStatus(EXAMINING);
-				MessageDigest md = MessageDigest.getInstance("MD5");
-				File file;
-				long offsets[] = new long[files.length];
-				byte digests[][] = new byte[files.length][md.getDigestLength()];
-				for (int x = 0; x < files.length; x++) {
-					file = new File(localFileBasePath, files[x]);
-					offsets[x] = file.length(); // Returns 0 if the file dosen't exist.
-					if (file.exists()) {
-						DigestInputStream digestReader = new DigestInputStream(new FileInputStream(file), md);
-
-						byte[] input = new byte[128];
-						int readbytes = 0;
-						while (!(digestReader.read(input, 0, 128) < 128)) {
-							;
-						}
-						digests[x] = digestReader.getMessageDigest().digest();
+			this.firewallSocketBound = false;
+			int firewallListenPort = mainTransceiver.LOCAL_PORT_START;
+			try (ServerSocketChannel channel = ServerSocketChannel.open()) {
+				do {
+					try {
+						channel.bind(new InetSocketAddress(firewallListenPort));
+						firewallSocketBound = true;
+					} catch (IOException e) {
+						firewallListenPort++; // Increment the port number.
 					}
 				}
-				gimmeList.setLongs("offsets", offsets);
-				gimmeList.setByteBuffers("md5", B_RAW_TYPE, digests);
+				while (!firewallSocketBound && firewallListenPort < mainTransceiver.LOCAL_PORT_START + mainTransceiver.LOCAL_PORT_RANGE);
 
-				setStatus(CONNECTING);
-				System.out.println("Files To Download:");
-				for (int x = 0; x < files.length; x++) {
-					System.out.println(files[x] + " start offset: " + offsets[x] + " hash: " + digests[x]);
-				}
-
-			} catch (NoSuchAlgorithmException nsae) {
-				System.err.println("MD5 Algorithm not supported!");
-			} catch (FileNotFoundException fnfe) {
-				System.err.println("File " + fnfe.getMessage() + " wasn't found.");
-			} catch (FieldTypeMismatchException ftme) {
-				System.err.println("Field Type Mismatch adding the Digests to the file list message.");
-			} catch (IOException ioe) {
-				System.err.println("IOException while hashing file");
-			}
-
-			// Add the file list, send the friggen list off.
-			gimmeList.setStrings("files", files);
-			beShareTransceiver.sendOutgoingMessage(gimmeList);
-		} else if (message == serverDisconnect) {
-			if (connected) {
-				beShareTransceiver.disconnect();
-			}
-			setStatus(FINISHED);
-			// Close our last opened file. We're a dead thread.
-			try {
-				if (fileSlave != null) {
-					fileSlave.close();
+				if (firewallSocketBound) {
+					transferTransceiver.listen(channel, serverConnect, serverDisconnect, false);
+					mainTransceiver.sendConnectBackRequestMessage(remoteUser, firewallListenPort);
+					return true;
 				}
 			} catch (IOException ioe) {
-				// just screw it.
-				fileSlave = null;
+				// Could not open() a socket channel.
 			}
-			connected = false;
-		} else if (message instanceof Message) {
-			// We got a muscle message (YEAH!) time to handle it.
-			try {
-				muscleMessageReceived((Message) message);
-			} catch (Exception ex) {
+
+			if (!firewallSocketBound) {
+				setStatus(TransferStatus.ERROR);
+				mainTransceiver.logError("Unable to bind a local port between " + mainTransceiver.LOCAL_PORT_START + " and " + (mainTransceiver.LOCAL_PORT_RANGE + mainTransceiver.LOCAL_PORT_START) + " for firewalled download");
 			}
 		}
-		// If we were going to listen for multiple incoming connections on the given port, we'd enable this.
-		// But since we're doing a one-shot deal with a download -- forget it. I'll leave it here as a nice
-		// discussion piece.
-		// ---------------------------------------------------------------------------------------------------
-		// else if (message instanceof Socket) {
-		//	System.out.println("Got the Socket -- Connection Open!");
-		//	beShareTransceiver = new MessageTransceiver(new MessageQueue(this), (Socket)message, serverConnect, serverDisconnect);
-		//	System.out.println("New Transceiver created, awaiting serverConnect object.");
-		//}
+		return false;
 	}
 
+	@Override
+	protected void connected() {
+		setStatus(TransferStatus.EXAMINING);
+
+		// Setup and examine existing files.
+		MessageDigest md = null;
+		try {
+			md = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException nsae) {
+			md = new MessageDigest("NILL") {
+				@Override
+				protected void engineUpdate(byte input) {
+					return;
+				}
+
+				@Override
+				protected void engineUpdate(byte[] input, int offset, int len) {
+					return;
+				}
+
+				@Override
+				protected byte[] engineDigest() {
+					return new byte[0];
+				}
+
+				@Override
+				protected void engineReset() {
+					return;
+				}
+			};
+		}
+
+		String[] fileNames = new String[items.size()];
+		long[] offsets = new long[items.size()];
+		byte[][] digests = new byte[items.size()][md.getDigestLength()];
+
+		// Reset then calculate a proper resume (if there is a resumable file) for each item.
+		for (int i = 0; i < items.size(); i++) {
+			TransferItem item = items.get(i);
+			item.setResumeInfo(0, new byte[0]);
+			if (md.getDigestLength() > 0) {
+				if (item.getFile().exists()) {
+					try (FileInputStream inStream = new FileInputStream(item.getFile())) {
+						DigestInputStream digester = new DigestInputStream(inStream, md);
+						long bytesRead = 0;
+						byte[] buffer = new byte[4096];
+						int pass = 0;
+						do {
+							pass = digester.read(buffer, 0, buffer.length);
+							if (pass >= 0) {
+								bytesRead += pass;
+							}
+						} while (!(pass < buffer.length));
+						item.setResumeInfo(bytesRead, digester.getMessageDigest().digest());
+					} catch (IOException ioe) {
+						mainTransceiver.logError("Error inspecting existing download for potential resume: " + item.getFile().getName());
+					}
+				}
+			}
+
+			fileNames[i] = item.getFile().getName();
+			offsets[i] = item.getTransferred();
+			digests[i] = item.getDigest();
+		}
+
+		// Build the outgoing message.
+		Message fileRequest = new Message(TRANSFER_COMMAND_FILE_LIST);
+		fileRequest.setString("beshare:FromSession", mainTransceiver.localSessionID);
+		fileRequest.setInt("mm", MUNGE_MODE_XOR);
+		fileRequest.setStrings("files", fileNames);
+		try {
+			fileRequest.setByteBuffers("md5", B_RAW_TYPE, digests);
+			fileRequest.setLongs("offsets", offsets);
+		} catch (FieldTypeMismatchException ftme) {
+			mainTransceiver.logError("Error attempting to resume downloaded files.");
+		}
+
+		transferTransceiver.sendOutgoingMessage(fileRequest);
+	}
+
+	@Override
+	protected void disconnected() {
+		if (connected) {
+			if (firewallSocketBound) {
+				transferTransceiver.stopListening();
+			}
+			transferTransceiver.disconnect();
+		}
+		if (!getStatus().equals(TransferStatus.ERROR)) {
+			setStatus(TransferStatus.COMPLETE);
+		}
+	}
 
 	/**
 	 * We got a muscle message, time to see what it's for, and respond.
 	 */
+	@Override
 	public void muscleMessageReceived(Message message) {
 		switch (message.what) {
+			// Signals that we're going to start getting data for a file.
 			case TRANSFER_COMMAND_FILE_HEADER: {
-				// Close the file
-				try {
-					if (fileSlave != null) {
-						fileSlave.close();
+				setStatus(TransferStatus.ACTIVE);
+				String filename = message.getString("beshare:File Name", "");
+				for (int i = 0; i < items.size(); i++) {
+					if (items.get(i).getFile().getName().equals(filename)) {
+						setCurrentItem(i);
+						break;
 					}
-					currentFile = new File(localFileBasePath, message.getString("beshare:File Name"));
-					fileSlave = new RandomAccessFile(currentFile, "rw");
+				}
 
-					long seekto = message.getLong("beshare:StartOffset", 0);
-					System.out.println("Writing to file at offset: " + seekto);
-					fileSlave.seek(seekto);
-
-					// Time to get this party started!
-					totalFileSize = message.getLong("beshare:File Size");
-					setFileTransfered(seekto);
-					statusChanged();
-					// The usual debug info.
-				} catch (IOException ioe) {
+				try {
+					if (getCurrentItem().openFile()) {
+						getCurrentItem().seekTo(message.getLong("beshare:StartOffset", 0));
+					}
+				} catch (IOException | NullPointerException ex) {
 					abort();
-					setStatus(ERROR);
-				} catch (MessageException me) {
-					abort();
-					setStatus(ERROR);
+					setStatus(TransferStatus.ERROR);
 				}
 			}
 			break;
 
 			case TRANSFER_COMMAND_FILE_DATA: {
-				setStatus(ACTIVE);
 				int mungeMode = message.getInt("mm", MUNGE_MODE_OFF);
 				byte[][] data = (byte[][]) message.getData("data", new byte[0][0]);
-
 				try {
-					for (int i = 0; i < data.length; i++) {
-						switch (mungeMode) {
-							case MUNGE_MODE_XOR:
-								fileSlave.write(AbstractTransfer.XORData(data[i]));
-								break;
-							default: // No Munging
-								fileSlave.write(data[i]);
+					for (byte[] line : data) {
+						if (mungeMode == MUNGE_MODE_XOR) {
+							line = XORData(line);
 						}
-						setFileTransfered(transferedSize + data[i].length);
+						getCurrentItem().write(line);
 					}
-					statusChanged();
+					setStatus(TransferStatus.ACTIVE);
 				} catch (IOException ioe) {
-					System.err.println(ioe.toString());
 					abort();
-					setStatus(ERROR);
+					setStatus(TransferStatus.ERROR);
 				}
 			}
 			break;
 
 			case TRANSFER_COMMAND_NOTIFY_QUEUED: {
-				setStatus(REMOTE_QUEUED);
+				setStatus(TransferStatus.REMOTELY_QUEUED);
 			}
 			break;
-
-			default:
-				System.out.println(message);
 		}
-	}
-
-	/**
-	 * Returns who we're downloading from.
-	 */
-	public String getUserName() {
-		return remoteUserName;
 	}
 
 	/**
@@ -266,12 +229,23 @@ public class Download extends AbstractTransfer {
 	 * @overrides Transfer.abort();
 	 */
 	public void abort() {
-		if (fileSlave != null) {
-			try {
-				fileSlave.close();
-			} catch (Exception e) {
-			}
+		for (TransferItem item : items) {
+			item.closeFile();
 		}
-		super.abort();
+		if (firewallSocketBound) {
+			transferTransceiver.stopListening();
+		}
+		transferTransceiver.disconnect();
+
+	}
+
+	@Override
+	public String toString() {
+		TransferItem item = getCurrentItem();
+		if (item != null) {
+			return "Downloading " + item.getFile().getName() + " from " + remoteUser.getName();
+		} else {
+			return "Downloading from " + remoteUser.getName();
+		}
 	}
 }

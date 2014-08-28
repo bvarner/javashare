@@ -16,6 +16,8 @@ import java.util.HashMap;
  * QueryTableModel - A model for displaying and storing data for <code>JTable
  * </code> views.
  *
+ * TODO: Remove the userDataModel from this class.
+ *
  * @author Bryan Varner
  * @version 2.0
  */
@@ -37,21 +39,21 @@ public class QueryTableModel extends DefaultTableModel {
 	 * Adds a new file to the result list
 	 */
 	public void addResult(SharedFile newFile) {
-		String size = (Long.toString(newFile.getSize()));
-		if (size.length() <= 3) {
-			size = size + " bytes";
-		} else if (size.length() <= 6) {
-			size = (newFile.getSize() / 1024) + " kb";
-		} else if (size.length() <= 9) {
-			size = (double) ((newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
-		}
+//		String size = (Long.toString(newFile.getSize()));
+		//if (size.length() <= 3) {
+//			size = size + " bytes";
+		//} else if (size.length() <= 6) {
+//			size = (newFile.getSize() / 1024) + " kb";
+		//} else if (size.length() <= 9) {
+//			size = (double) ((newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
+		//}
 
 		ImageIcon fileIcon = getFileIcon(newFile.getKind());
 
 		BeShareUser user = userDataModel.getUser(newFile.getSessionID());
 		Object[] fileData = {fileIcon, // Icon image name here later!
 		                     newFile.getName(),
-		                     size,
+		                     newFile.getSize(),
 		                     user,
 		                     newFile.getPath(),
 		                     newFile.getKind(),
@@ -126,13 +128,6 @@ public class QueryTableModel extends DefaultTableModel {
 		} else {
 			return super.getValueAt(row, column);
 		}
-	}
-
-	/**
-	 * @return the BeShareUser object for the given row.
-	 */
-	public BeShareUser getUser(int row) {
-		return (BeShareUser) super.getValueAt(row, 3);
 	}
 
 	/**

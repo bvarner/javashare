@@ -20,7 +20,7 @@ import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
 
 /**
- * ShareFrame is a parent window of a connection to a BeShare (MUSCLE) server.
+ * ShareFrame is a parent window of a transceiver to a BeShare (MUSCLE) server.
  * It renders the state maintained by the JavaShareTransceiver and provides a GUI.
  *
  * @author Bryan Varner
@@ -68,7 +68,7 @@ public class ShareFrame extends JFrame {
 		this.setJMenuBar(new MenuBar(this, transceiver, chatterPanel));
 		this.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-		// TODO: monitor the connection status in the Transceiver...
+		// TODO: monitor the transceiver status in the Transceiver...
 	}
 
 	@Override

@@ -5,7 +5,6 @@
 package org.beShare.network;
 
 import com.meyer.muscle.thread.ThreadPool;
-
 import java.util.ArrayList;
 
 public class TransferList extends ArrayList<AbstractTransfer> {
@@ -41,28 +40,17 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 	 * @return if the Queue should start a transfer.
 	 */
 	private boolean shouldStart() {
-		if (size() > countRunning()) {
-			if (countRunning() < getMax()) {
-				return true;
-			}
-		}
-
-		return false;
+		return size() > getActive() && getActive() < getMax();
 	}
 
 	/**
-	 * @return The number of currently running transfers.
+	 * @return The number of currently active transfers.
 	 */
-	public int countRunning() {
+	private int getActive() {
 		int running = 0;
 		for (int x = 0; x < size(); x++) {
-			AbstractTransfer tran = get(x);
-			if (tran.isStarted()) {
-				if ((tran.getStatus() == AbstractTransfer.FINISHED) || (tran.getStatus() == AbstractTransfer.ERROR)) {
-					// Do nothing, it's not running.
-				} else {
-					running++;
-				}
+			if (get(x).isActive()) {
+				running++;
 			}
 		}
 
@@ -72,34 +60,26 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 	/**
 	 * Forces the Queue to check itself. Running any unstarted transfers up to <code>getMax</code>.
 	 */
-	public void checkQueue() {
-		AbstractTransfer trans = null;
-		while (shouldStart()) {
-			trans = getNextUnstarted();
-			if (trans != null) {
-				ThreadPool.getDefaultThreadPool().startThread(trans);
-			} else {
-				break;
-			}
+	void startNextPending() {
+		AbstractTransfer trans = getNextPending();
+		if (trans != null) {
+			ThreadPool.getDefaultThreadPool().startThread(trans);
 		}
 	}
 
 	/**
 	 * @return the next Transfer that has yet to start.
 	 */
-	public AbstractTransfer getNextUnstarted() {
+	public AbstractTransfer getNextPending() {
 		AbstractTransfer next = null;
 
-		int x = 0;
-		while (x < size() && next == null) {
-			if (!get(x).isStarted()) {
+		for (int x = 0; x < size() && next == null; x++) {
+			if (!get(x).hasRun()) {
 				next = get(x);
-				return next;
 			}
-			x++;
 		}
 
-		return null;
+		return next;
 	}
 
 	/**
@@ -107,17 +87,21 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 	 */
 	@Override
 	public boolean add(AbstractTransfer trans) {
-		trans.setStatus(AbstractTransfer.LOCALLY_QUEUED);
 		boolean ret = super.add(trans);
-		checkQueue();
+		startNextPending();
 		return ret;
 	}
 
 	@Override
 	public boolean remove(Object o) {
-		boolean ret = super.remove(o);
-		((AbstractTransfer) o).abort();
-		checkQueue();
+		AbstractTransfer transfer = (AbstractTransfer)o;
+		boolean ret = super.remove(transfer);
+		if (ret) {
+			if (transfer.isActive()) {
+				transfer.abort();
+			}
+		}
+		startNextPending();
 		return ret;
 	}
 }

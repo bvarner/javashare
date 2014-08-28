@@ -3,6 +3,7 @@ package org.beShare.network;
 import javax.swing.AbstractListModel;
 import java.util.prefs.PreferenceChangeEvent;
 import java.util.prefs.PreferenceChangeListener;
+import java.util.prefs.Preferences;
 
 /**
  * Manages queueing/starting/stopping of file-transfers.
@@ -14,17 +15,17 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	/**
 	 * Constructor - not much to see here, really.
 	 */
-	public TransferModel(final JavaShareTransceiver connection) {
-		uploads = new TransferList(connection.getPreferences().getInt("concUploads", 2));
-		downloads = new TransferList(connection.getPreferences().getInt("concDownloads", 3));
+	public TransferModel(final Preferences prefs) {
+		uploads = new TransferList(prefs.getInt("concUploads", 2));
+		downloads = new TransferList(prefs.getInt("concDownloads", 3));
 
-		connection.getPreferences().addPreferenceChangeListener(new PreferenceChangeListener() {
+		prefs.addPreferenceChangeListener(new PreferenceChangeListener() {
 			@Override
 			public void preferenceChange(PreferenceChangeEvent evt) {
 				if ("concUploads".equals(evt.getKey())) {
-					uploads.setMax(connection.getPreferences().getInt("concUploads", 2));
+					uploads.setMax(prefs.getInt("concUploads", 2));
 				} else if ("concDownloads".equals(evt.getKey())) {
-					downloads.setMax(connection.getPreferences().getInt("concDownloads", 3));
+					downloads.setMax(prefs.getInt("concDownloads", 3));
 				}
 			}
 		});
@@ -41,7 +42,7 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	 * Returns the element at location in the combined list of queues
 	 */
 	@Override
-	public AbstractTransfer getElementAt(int index) {
+	public synchronized AbstractTransfer getElementAt(int index) {
 		if (index < downloads.size()) {
 			return downloads.get(index);
 		} else if (index > downloads.size() && (index < downloads.size() + uploads.size())) {
@@ -54,8 +55,7 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	/**
 	 * Adds a Transfer To the appropriate Queue and registers this object to receive status change notifications.
 	 */
-	public void add(AbstractTransfer t) {
-		t.managedBy(this);
+	public synchronized void add(AbstractTransfer t) {
 		if (t instanceof Download) {
 			downloads.add(t);
 			fireIntervalAdded(this, 0, getSize());
@@ -68,22 +68,36 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	/**
 	 * Removes the Transfer from the Queues, this will halt the transfer.
 	 */
-	public void remove(AbstractTransfer t) {
-		t.managedBy(null);
+	public synchronized void remove(AbstractTransfer t) {
+		int oldSize = getSize();
 		if (t instanceof Download) {
 			downloads.remove(t);
-			fireIntervalRemoved(this, 0, getSize());
+			fireIntervalRemoved(this, 0, oldSize);
 //		} else if (t instanceof Upload) {
 //			uploads.remove(t);
-//			fireIntervalRemoved(this, 0, getSize());
+//			fireIntervalRemoved(this, 0, oldSize);
+		}
+	}
+
+	/**
+	 * Removes the Transfer at the given index.
+	 *
+	 * @param index
+	 */
+	public synchronized void remove(int index) {
+		if (index < downloads.size()) {
+			downloads.remove(index);
+		} else if (index - downloads.size() < uploads.size()) {
+			uploads.remove(index - downloads.size());
 		}
 	}
 
 	/**
 	 * AbstractTransfers can tell this model their state has been altered.
+	 *
 	 * @param t
 	 */
-	void statusChanged(AbstractTransfer t) {
+	void update(AbstractTransfer t) {
 		int index = downloads.indexOf(t);
 		if (index == -1) {
 			index = uploads.indexOf(t);
@@ -97,7 +111,10 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 		}
 
 		fireContentsChanged(this, index, index);
-		downloads.checkQueue();
-		uploads.checkQueue();
+
+		if (!t.isActive()) {
+			downloads.startNextPending();
+			uploads.startNextPending();
+		}
 	}
 }

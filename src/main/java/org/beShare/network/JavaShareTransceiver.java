@@ -67,10 +67,11 @@ import static com.meyer.muscle.support.TypeConstants.B_STRING_TYPE;
  * @author Bryan Varner
  */
 public class JavaShareTransceiver implements MessageListener {
-	public static final int portRange = 50;
-	public static final int startingPortNumber = 7000;
+	public static final int LOCAL_PORT_RANGE = 50;
+	public static final int LOCAL_PORT_START = 7000;
+
 	// Connection Management
-	private int localUserPort = startingPortNumber;
+	private int localUserPort = LOCAL_PORT_START;
 
 	private static final int USER_NAME_DEPTH = 4;    // user's handle node would be found here
 	private static final int FILE_INFO_DEPTH = 5;    //This is where file names are
@@ -85,13 +86,14 @@ public class JavaShareTransceiver implements MessageListener {
 	private static final Object serverDisconnect = new Object();
 	private int serverPort = 2960;
 
-	private JZLibMessageIOGateway messageIOGateway;
+	JZLibMessageIOGateway messageIOGateway;
 	private MessageTransceiver beShareTransceiver;
 
-	private String localSessionID = "";
+	String localSessionID = "";
 	private AbstractDropMenuModel<String> serverModel = new StringDropMenuModel(10);
 	private AbstractDropMenuModel<String> nameModel = new StringDropMenuModel(5);
 	private AbstractDropMenuModel<String> statusModel = new StringDropMenuModel(5);
+	private AbstractDropMenuModel<String> queryModel = new StringDropMenuModel(20);
 	private long installId;
 	private boolean connectInProgress = false;
 	private boolean connected = false;
@@ -109,9 +111,10 @@ public class JavaShareTransceiver implements MessageListener {
 	private String awayStatus = "";
 	private boolean isAway = false;
 
-	private UserDataModel userDataModel = new UserDataModel();
-	private QueryTableModel queryTableModel = new QueryTableModel(userDataModel);
-	private List<ChatDocument> chatDocuments = new ArrayList<>();
+	private UserDataModel userDataModel;
+	private QueryTableModel queryTableModel;
+	private TransferModel transferModel;
+	private List<ChatDocument> chatDocuments;
 
 	private List<String> loginCommands = new ArrayList<>();
 	private HashMap<String, String> aliases = new HashMap<>();
@@ -124,11 +127,16 @@ public class JavaShareTransceiver implements MessageListener {
 	/**
 	 * Construct a new JavaShareTransceiver,
 	 */
-	public JavaShareTransceiver(final Preferences preferences) {
+	public JavaShareTransceiver(final Preferences prefs) {
+		this.preferences = prefs;
+		this.userDataModel = new UserDataModel();
+		this.queryTableModel = new QueryTableModel(userDataModel);
+		this.transferModel = new TransferModel(preferences);
+		this.chatDocuments = new ArrayList<>();
+
 		this.messageIOGateway = new JZLibMessageIOGateway(AbstractMessageIOGateway.MUSCLE_MESSAGE_ENCODING_ZLIB_6);
 		this.beShareTransceiver = new MessageTransceiver(new MessageQueue(this), messageIOGateway);
 
-		this.preferences = preferences;
 		ThreadPool.getDefaultThreadPool().startThread(new ConnectionCheck());
 		ThreadPool.getDefaultThreadPool().startThread(new AutoAway());
 		ThreadPool.getDefaultThreadPool().startThread(new ServerAutoUpdate(serverModel, preferences));
@@ -262,12 +270,30 @@ public class JavaShareTransceiver implements MessageListener {
 	}
 
 	/**
+	 * Gets the model for tracking queries.
+	 *
+	 * @return
+	 */
+	public AbstractDropMenuModel<String> getQueryModel() {
+		return queryModel;
+	}
+
+	/**
 	 * Gets the model for tracking current query status.
 	 *
 	 * @return
 	 */
 	public QueryTableModel getQueryTableModel() {
 		return queryTableModel;
+	}
+
+	/**
+	 * Gets the model for doing file transfers.
+	 *
+	 * @return
+	 */
+	public TransferModel getTransferModel() {
+		return transferModel;
 	}
 
 	/**
@@ -303,16 +329,6 @@ public class JavaShareTransceiver implements MessageListener {
 			setDataNodeValue("beshare/userstatus", statusMessage);
 		}
 		logSystemMessage("Your status has been changed to " + localUserStatus);
-	}
-
-	/**
-	 * Gets the id of the local user.
-	 *
-	 * @return String the local SessionID of this user.
-	 */
-	@Deprecated
-	public String getLocalSessionID() {
-		return localSessionID;
 	}
 
 	/**
@@ -398,11 +414,11 @@ public class JavaShareTransceiver implements MessageListener {
 	 * Sends a message to the host at targetSessionID requesting they connect
 	 * to us on <code>port</code> so we can transfer a file from them.
 	 */
-	public void sendConnectBackRequestMessage(String targetSessionID, int port) {
+	public void sendConnectBackRequestMessage(final BeShareUser remoteUser, final int port) {
 		System.out.println("JavaShareTransceiver: Sending Connectback request");
 
 		Message cbackMsg = new Message(NET_CLIENT_CONNECT_BACK_REQUEST);
-		String target = "/*/" + targetSessionID + "/beshare";
+		String target = "/*/" + remoteUser.getSessionID() + "/beshare";
 		cbackMsg.setString(PR_NAME_KEYS, target);
 		cbackMsg.setString("session", localSessionID);
 		cbackMsg.setInt("port", port);

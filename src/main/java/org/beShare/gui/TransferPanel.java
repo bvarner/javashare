@@ -10,12 +10,14 @@ import org.beShare.network.AbstractTransfer;
 import org.beShare.network.Download;
 import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ShareFileMaintainer;
-import org.beShare.network.TransferModel;
+import org.beShare.network.TransferItem;
+import org.beShare.network.TransferStatus;
 
 import javax.activation.MimetypesFileTypeMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -41,6 +43,10 @@ import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The panel in charge of querys, and file transfer queue viewing. This is a jack-of-all-trades
@@ -54,23 +60,22 @@ public class TransferPanel extends JPanel {
 	JPanel pnlQuery;
 	JPanel pnlTransfer;
 	JSplitPane transferSplit;
-	DropMenu<String> queryMenu = new DropMenu<>("Query: ", 15, new StringDropMenuModel(20));
+	DropMenu<String> queryMenu;
 	QueryTable queryTable;
 	TableSorter querySorter;
 	JScrollPane tableScroller;
 	JButton btnDownloadFiles;
 	JButton btnRemoveDownload;
-	JavaShareTransceiver connection;
-	TransferModel transMan;
+	JavaShareTransceiver transceiver;
 	String session;
 	String files;
 	JList lstTransfers;
 	private JScrollPane lstTranScroller;
 
-	public TransferPanel(final JavaShareTransceiver connection) {
-		this.connection = connection;
+	public TransferPanel(final JavaShareTransceiver transceiver) {
+		this.transceiver = transceiver;
 
-		transMan = new TransferModel(connection);
+		queryMenu = new DropMenu<>("Query: ", 20, transceiver.getQueryModel());
 
 		this.setLayout(new BorderLayout());
 		pnlQuery = new JPanel(new BorderLayout(5, 5));
@@ -93,7 +98,7 @@ public class TransferPanel extends JPanel {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				btnStopQuery.setEnabled(false);
-				connection.stopQuery();
+				transceiver.stopQuery();
 				pnlInProgress.setQueryInProgress(false);
 			}
 		});
@@ -102,26 +107,27 @@ public class TransferPanel extends JPanel {
 		btnDownloadFiles.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// Find out what's selected.
+				HashMap<BeShareUser, Collection<TransferItem>> itemMap = new HashMap<>();
+
 				int[] selected = queryTable.getSelectedRows();
-				if (selected.length > 0) {
-					String filenames[] = new String[selected.length];
-
-					for (int x = 0; x < selected.length; x++) {
-						// Create the new file info.
-						filenames[x] = queryTable.getModel().getValueAt(selected[x], 1).toString();
+				for (int i = 0; i < selected.length; i++) {
+					BeShareUser remoteUser = transceiver.getUserDataModel().findByNameOrSession(queryTable.getValueAt(selected[i], 3).toString());
+					Collection<TransferItem> items = itemMap.get(remoteUser);
+					if (items == null) {
+						items = new ArrayList<TransferItem>();
 					}
+					items.add(new TransferItem(
+							                          transceiver.getPreferences().get("downloadLocation", (System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads")),
+							                          queryTable.getValueAt(selected[i], 1).toString(),
+							                          Long.parseLong(queryTable.getValueAt(selected[i], 2).toString()),
+							                          (Icon)queryTable.getValueAt(selected[i], 0)));
 
-					BeShareUser tempUser = connection.getQueryTableModel().getUser(selected[0]);
-					Download fileTransfer = new Download(filenames,
-							                                    tempUser.getIPAddress(),
-							                                    tempUser.getPort(),
-							                                    connection.getPreferences().get("downloadLocation", System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads"),
-							                                    tempUser.getName(),
-							                                    tempUser.getSessionID(),
-							                                    tempUser.getFirewall(),
-							                                    connection);
-					transMan.add(fileTransfer);
+					itemMap.put(remoteUser, items);
+				}
+
+				// Now create a download for each collection from each user.
+				for (Map.Entry<BeShareUser, Collection<TransferItem>> entry : itemMap.entrySet()) {
+					transceiver.getTransferModel().add(new Download(transceiver, entry.getValue(), entry.getKey()));
 				}
 			}
 		});
@@ -138,11 +144,11 @@ public class TransferPanel extends JPanel {
 				files = queryMenu.getModel().getSelectedItem();
 				if (files.lastIndexOf("@") > -1) {
 					session = files.substring(files.lastIndexOf("@") + 1).trim();
-					session = connection.getUserDataModel().findByNameOrSession(session).getSessionID();
+					session = transceiver.getUserDataModel().findByNameOrSession(session).getSessionID();
 
 					files = files.substring(0, files.lastIndexOf("@"));
 				}
-				connection.startQuery(session, files);
+				transceiver.startQuery(session, files);
 				pnlInProgress.setQueryInProgress(true);
 			}
 		});
@@ -157,7 +163,7 @@ public class TransferPanel extends JPanel {
 		pnlQueryControl.add(btnDownloadFiles);
 		pnlQueryControl.add(Box.createHorizontalStrut(3));
 
-		querySorter = new TableSorter(connection.getQueryTableModel());
+		querySorter = new TableSorter(transceiver.getQueryTableModel());
 		queryTable = new QueryTable(querySorter);
 
 		queryTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -186,16 +192,14 @@ public class TransferPanel extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 //			// clear the completed downloads from the list.
 				int[] selected = lstTransfers.getSelectedIndices();
-				if (selected != null) {
-					for (int x = selected.length; x > 0; x--) {
-						transMan.remove(transMan.getElementAt(selected[x - 1]));
-					}
+				for (int i = selected.length - 1; i >= 0; i--) {
+					transceiver.getTransferModel().remove(selected[i]);
 				}
 			}
 		});
 
 		//transferList = new DefaultListModel();
-		lstTransfers = new JList(transMan);
+		lstTransfers = new JList(transceiver.getTransferModel());
 		lstTransfers.setFocusable(false);
 		lstTransfers.addListSelectionListener(new TransferSelectionListener());
 		lstTransfers.setCellRenderer(new TransferProgressRenderer());
@@ -210,7 +214,7 @@ public class TransferPanel extends JPanel {
 		pnlQuery.add(tableScroller, BorderLayout.CENTER);
 
 		// Make and start the shared file upload thread.
-		sharedFileLister = new ShareFileMaintainer(connection);
+		sharedFileLister = new ShareFileMaintainer(transceiver);
 		Thread listThread = new Thread(sharedFileLister, "Mr. McFeely");
 		listThread.setPriority(Thread.MIN_PRIORITY);
 		listThread.start();
@@ -221,7 +225,7 @@ public class TransferPanel extends JPanel {
 	 */
 	public void removeResult(SharedFile killFile) {
 		//Get the name and session id of the file, remove it from the table.
-		connection.getQueryTableModel().removeFile(connection.getUserDataModel().findNameBySession(killFile.getSessionID()), killFile.getName());
+		transceiver.getQueryTableModel().removeFile(transceiver.getUserDataModel().findNameBySession(killFile.getSessionID()), killFile.getName());
 	}
 
 	/**
@@ -258,7 +262,6 @@ public class TransferPanel extends JPanel {
 	 * Renders a Transfers information in the list.
 	 */
 	private class TransferProgressRenderer extends JPanel implements ListCellRenderer<AbstractTransfer> {
-		DecimalFormat progressFormatter = new DecimalFormat("####.##");
 		JLabel details;
 		JProgressBar progress;
 		JLabel status;
@@ -286,7 +289,7 @@ public class TransferPanel extends JPanel {
 		}
 
 		@Override
-		public Component getListCellRendererComponent(JList<? extends AbstractTransfer> list, AbstractTransfer value, int index,
+		public Component getListCellRendererComponent(JList<? extends AbstractTransfer> list, AbstractTransfer transfer, int index,
 		                                              boolean isSelected, boolean cellHasFocus) {
 			if (isSelected) {
 				setBackground(list.getSelectionBackground());
@@ -294,58 +297,21 @@ public class TransferPanel extends JPanel {
 				setBackground(list.getBackground());
 			}
 
-			// TODO: Refactor into AbstractTransfer.getDetails();
-			if (value instanceof Download) {
-				Download dwn = (Download) value;
-				details.setText("Downloading " + dwn.getFileName() + " from " + dwn.getUserName());
+			details.setText(transfer.toString());
+			TransferItem currentItem = transfer.getCurrentItem();
+			if (currentItem != null) {
+				details.setIcon(currentItem.getIcon());
 			} else {
-				details.setText("Uploading " + value.getFileName());
+				details.setIcon(null);
 			}
-			details.setIcon(connection.getQueryTableModel().getFileIcon(MimetypesFileTypeMap.getDefaultFileTypeMap().getContentType(value.getFileName())));
 			progress.setValue(0);
-
-			switch (value.getStatus()) {
-				case AbstractTransfer.CONNECTING:
-					status.setText("Connecting");
-					break;
-				case AbstractTransfer.AWAITING_CALLBACK:
-					status.setText("Awaiting Callback");
-					break;
-				case AbstractTransfer.ACTIVE:
-					progress.setIndeterminate(false);
-					progress.setValue((int) (((double) value.getFileTransfered() / value.getFileSize()) * 100));
-
-					if (value.getFileSize() > (1024 * 1024)) {
-						status.setText(progressFormatter.format((double) value.getFileTransfered() / (1024 * 1024)) + "MB of " + progressFormatter.format((double) value.getFileSize() / (1024 * 1024)) + "MB");
-					} else if (value.getFileSize() > 1024) {
-						status.setText(progressFormatter.format((double) value.getFileTransfered() / 1024) + "k of " + progressFormatter.format((double) value.getFileSize() / 1024) + "k");
-					} else {
-						status.setText(value.getFileTransfered() + " of " + value.getFileSize() + " bytes");
-					}
-					break;
-				case AbstractTransfer.REMOTE_QUEUED:
-					progress.setIndeterminate(false);
-					status.setText("Remotely Queued");
-					break;
-				case AbstractTransfer.EXAMINING:
-					status.setText("Examining...");
-					break;
-				case AbstractTransfer.FINISHED:
-					status.setText("Completed");
-					progress.setIndeterminate(false);
-					progress.setValue(100);
-					break;
-				case AbstractTransfer.LOCALLY_QUEUED:
-					status.setText("Locally Queued");
-					progress.setIndeterminate(false);
-					break;
-				case AbstractTransfer.ERROR:
-					status.setText("An Error Has Occurred");
-					progress.setIndeterminate(false);
-					break;
-				default:
-					status.setText("");
+			String progressReport = transfer.updateProgress(progress);
+			if ("".equals(progressReport)) {
+				status.setText(transfer.getStatus().getText());
+			} else {
+				status.setText(progressReport);
 			}
+
 			return this;
 		}
 

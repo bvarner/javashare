@@ -295,7 +295,7 @@ public class BeShareUser {
 	 */
 	public String getFileCountString() {
 		if (filecount != -1) {
-			if (!getFirewall()) {
+			if (!isFirewalled()) {
 				return new String("" + filecount);
 			} else {
 				return new String("(" + filecount + ")");
@@ -344,7 +344,7 @@ public class BeShareUser {
 	/**
 	 * @return True if the user is Firewalled, Flase if not.
 	 */
-	public boolean getFirewall() {
+	public boolean isFirewalled() {
 		return fires;
 	}
 
@@ -369,7 +369,7 @@ public class BeShareUser {
 	 * @return The tableData value
 	 */
 	public Object[] getTableData() {
-		if (getFirewall()) {
+		if (isFirewalled()) {
 			Object[] data = {getName(),
 			                 getSessionID(),
 			                 getStatus(),
