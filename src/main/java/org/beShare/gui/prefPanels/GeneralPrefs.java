@@ -24,7 +24,7 @@ public class GeneralPrefs extends JPanel {
 	public GeneralPrefs(final Preferences preferences) {
 		super(new GridLayout(7, 1, 3, 3));
 
-		DefaultComboBoxModel comboBoxModel = new DefaultComboBoxModel();
+		DefaultComboBoxModel<Integer> comboBoxModel = new DefaultComboBoxModel<>();
 		comboBoxModel.addElement(-1);
 		comboBoxModel.addElement(2 * 60 * 1000);
 		comboBoxModel.addElement(5 * 60 * 1000);

@@ -229,10 +229,6 @@ public class JavaShareTransceiver implements MessageListener {
 		return preferences;
 	}
 
-	public boolean isConnected() {
-		return connected;
-	}
-
 	/**
 	 * Provides access to the global UserDataModel for the main JavaShare Conneciton.
 	 *
@@ -389,7 +385,7 @@ public class JavaShareTransceiver implements MessageListener {
 		// Send a ping to the server.  When we get it back, we know the
 		// initial scan of the query is done!
 		Message ping = new Message(PR_COMMAND_PING);
-		ping.setInt("count", pingCount);
+		ping.setInt("count", pingCount++);
 		beShareTransceiver.sendOutgoingMessage(ping);
 	}
 
@@ -500,7 +496,8 @@ public class JavaShareTransceiver implements MessageListener {
 		checkAwayStatus();
 		String[] sessions = ALL_SESSIONS;
 		if (chatDoc.getFilteredUserDataModel().isFiltering()) {
-			sessions = chatDoc.getFilteredUserDataModel().getSessionIds().toArray(new String[0]);
+			java.util.Set<String> var = chatDoc.getFilteredUserDataModel().getSessionIds();
+			sessions = var.toArray(new String[var.size()]);
 		}
 
 		// A privateSessionIds param overrides the defaults for the chatDoc (/msg to another user from a frame / panel)
@@ -619,7 +616,7 @@ public class JavaShareTransceiver implements MessageListener {
 				if (names.equals("all")) {
 					StringBuilder removeAll = new StringBuilder("/unalias ");
 					for (String name : aliases.keySet()) {
-						removeAll.append(name + " ");
+						removeAll.append(name).append(" ");
 					}
 					command(removeAll.toString(), chatDoc);
 				} else {
@@ -757,7 +754,6 @@ public class JavaShareTransceiver implements MessageListener {
 			if (remove.equals("")) {
 				command("/onlogin", chatDoc); // Show all current commands.
 			} else if (remove.equals("all")) {
-				StringBuilder sb = new StringBuilder("/unonlogin ");
 				loginCommands.clear();
 				chatDoc.addSystemMessage("All startup commands removed.");
 			} else {
@@ -1177,7 +1173,7 @@ public class JavaShareTransceiver implements MessageListener {
 	/**
 	 * @return the name of the last node element.
 	 */
-	private final String lastNodeElement(String node) {
+	private String lastNodeElement(String node) {
 		return node.substring(node.lastIndexOf('/') + 1);
 	}
 
@@ -1186,7 +1182,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 * @param element the name of the node containing the data. ex. "/files"
 	 * @return the contents of the last node element
 	 */
-	private final String lastNodeElement(String node, String element) {
+	private String lastNodeElement(String node, String element) {
 		return node.substring(node.lastIndexOf(element) + element.length(), node.length());
 	}
 
@@ -1194,7 +1190,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 * @param node a node to get the session ID from.
 	 * @return the session ID where this node originates from
 	 */
-	private final String sessionIDFromNode(String node) {
+	private String sessionIDFromNode(String node) {
 		int start = node.indexOf('/', 1) + 1;
 		return node.substring(start, node.indexOf('/', start));
 	}
@@ -1203,7 +1199,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 * @param node a node to get the IPAddress from
 	 * @return the IP address of the originating host.
 	 */
-	private final String ipFromNode(String node) {
+	private String ipFromNode(String node) {
 		return node.substring(1, node.indexOf('/', 1));
 	}
 
@@ -1347,7 +1343,8 @@ public class JavaShareTransceiver implements MessageListener {
 		 * Runs the thread connection test
 		 */
 		public void run() {
-			while (true) {
+			boolean terminate = false;
+			while (!terminate) {
 				if (connected && System.currentTimeMillis() - lastEvent >= timeoutMillis) {
 					beShareTransceiver.sendOutgoingMessage(new Message(PR_COMMAND_NOOP));
 				}
@@ -1355,7 +1352,8 @@ public class JavaShareTransceiver implements MessageListener {
 				// Sleep 2.5 minutes.
 				try {
 					Thread.currentThread().sleep(timeoutMillis);
-				} catch (InterruptedException ie) {
+				} catch (InterruptedException ignored) {
+					terminate = true;
 				}
 			}
 		}
@@ -1366,7 +1364,8 @@ public class JavaShareTransceiver implements MessageListener {
 	 */
 	private class AutoAway implements Runnable {
 		public void run() {
-			while (true) {
+			boolean terminate = false;
+			while (!terminate) {
 				try {
 					Thread.currentThread().sleep(1000);
 					int timeout = preferences.getInt("awayTimeout", -1);
@@ -1375,7 +1374,8 @@ public class JavaShareTransceiver implements MessageListener {
 							setAway();
 						}
 					}
-				} catch (InterruptedException ie) {
+				} catch (InterruptedException ignored) {
+					terminate = true;
 				}
 			}
 		}
@@ -1407,7 +1407,7 @@ public class JavaShareTransceiver implements MessageListener {
 				connect();
 				try {
 					Thread.currentThread().sleep(reconnectBackoff * 1000);
-				} catch (InterruptedException ie) {
+				} catch (InterruptedException ignored) {
 				}
 				if (reconnectBackoff == 0) {
 					reconnectBackoff = 30;

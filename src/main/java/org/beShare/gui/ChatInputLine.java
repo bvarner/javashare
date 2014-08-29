@@ -12,13 +12,6 @@ import java.awt.event.KeyEvent;
  */
 public class ChatInputLine extends JTextField {
 	/**
-	 * Default constructor
-	 */
-	public ChatInputLine() {
-		this(0);
-	}
-
-	/**
 	 * Constructor that takes a column size.
 	 *
 	 * @param size The number of columns display.
@@ -46,11 +39,7 @@ public class ChatInputLine extends JTextField {
 	 */
 	public boolean isManagingFocus() {
 		try {
-			if (getText().equals("")) {
-				return false;
-			} else {
-				return true;
-			}
+			return !"".equals(getText());
 		} catch (Exception e) {
 			return true;
 		}

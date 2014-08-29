@@ -107,13 +107,6 @@ public class QueryTableModel extends DefaultTableModel {
 		}
 	}
 
-	/**
-	 * Makes it so that the table will scroll horizontally, instead of
-	 * resizing.
-	 *
-	 * @return false
-	 * @overrides DefaultTableModel.getScrollableTracksViewportWidth()
-	 */
 	public boolean getScrollableTracksViewportWidth() {
 		return false;
 	}

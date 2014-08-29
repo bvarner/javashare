@@ -11,7 +11,7 @@ import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 
 /**
- * Created by bvarner on 8/27/14.
+ * Renders an icon for a 'downward' triangle.
  */
 public class DownTriangleIcon implements Icon {
 	private double width;
@@ -83,10 +83,8 @@ public class DownTriangleIcon implements Icon {
 	}
 
 	protected void setFillSettings(final Graphics2D g) {
-		return;
 	}
 
 	protected void setStrokeSettings(final Graphics2D g) {
-		return;
 	}
 }

@@ -42,7 +42,7 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	 * Returns the element at location in the combined list of queues
 	 */
 	@Override
-	public synchronized AbstractTransfer getElementAt(int index) {
+	public AbstractTransfer getElementAt(int index) {
 		if (index < downloads.size()) {
 			return downloads.get(index);
 		} else if (index > downloads.size() && (index < downloads.size() + uploads.size())) {
@@ -55,10 +55,11 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	/**
 	 * Adds a Transfer To the appropriate Queue and registers this object to receive status change notifications.
 	 */
-	public synchronized void add(AbstractTransfer t) {
+	public void add(AbstractTransfer t) {
 		if (t instanceof Download) {
+			int index = downloads.size();
 			downloads.add(t);
-			fireIntervalAdded(this, 0, getSize());
+			fireIntervalAdded(this, index, index);
 //		} else if (t instanceof Upload) {
 //			uploads.add(t);
 //			fireIntervalAdded(this, 0, getSize());
@@ -66,30 +67,48 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	}
 
 	/**
-	 * Removes the Transfer from the Queues, this will halt the transfer.
+	 * Removes the Transfer
 	 */
-	public synchronized void remove(AbstractTransfer t) {
-		int oldSize = getSize();
-		if (t instanceof Download) {
-			downloads.remove(t);
-			fireIntervalRemoved(this, 0, oldSize);
-//		} else if (t instanceof Upload) {
-//			uploads.remove(t);
-//			fireIntervalRemoved(this, 0, oldSize);
+	public void remove(AbstractTransfer t) {
+		int index = indexOf(t);
+
+		boolean removed = downloads.remove(t);
+		if (!removed) {
+			removed = uploads.remove(t);
+		}
+
+		if (index >= 0) {
+			fireIntervalRemoved(this, index, index);
 		}
 	}
 
-	/**
-	 * Removes the Transfer at the given index.
-	 *
-	 * @param index
-	 */
-	public synchronized void remove(int index) {
+
+	public AbstractTransfer remove(int index) {
+		AbstractTransfer removed;
 		if (index < downloads.size()) {
-			downloads.remove(index);
-		} else if (index - downloads.size() < uploads.size()) {
-			uploads.remove(index - downloads.size());
+			removed = downloads.remove(index);
+		} else {
+			removed = uploads.remove(index - downloads.size());
 		}
+		fireIntervalRemoved(this, index, index);
+		return removed;
+	}
+
+	/**
+	 * Gets the index of the given transfer.
+	 *
+	 * @param t
+	 * @return
+	 */
+	public int indexOf(AbstractTransfer t) {
+		int index = downloads.indexOf(t);
+		if (index == -1) {
+			index = uploads.indexOf(t);
+			if (index != -1) {
+				index += downloads.size();
+			}
+		}
+		return index;
 	}
 
 	/**
@@ -98,23 +117,14 @@ public class TransferModel extends AbstractListModel<AbstractTransfer> {
 	 * @param t
 	 */
 	void update(AbstractTransfer t) {
-		int index = downloads.indexOf(t);
-		if (index == -1) {
-			index = uploads.indexOf(t);
-			if (index != -1) {
-				// Upload changed
-				index += downloads.size();
-			} else {
-				// Couldn't figure out what changed.
-				return;
+		int index = indexOf(t);
+		if (index != -1) {
+			fireContentsChanged(this, index, index);
+
+			if (!t.isActive()) {
+				downloads.startNextPending();
+				uploads.startNextPending();
 			}
-		}
-
-		fireContentsChanged(this, index, index);
-
-		if (!t.isActive()) {
-			downloads.startNextPending();
-			uploads.startNextPending();
 		}
 	}
 }

@@ -87,7 +87,7 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 		try {
 			updateList();
 			updateTimer.start();
-		} catch (Exception e) {
+		} catch (Exception ignored) {
 		}
 	}
 
@@ -262,23 +262,23 @@ public class ShareFileMaintainer implements Runnable, ActionListener {
 	 * Does a live match against the current mime-type database.
 	 */
 	private void setMimeTypes() {
-		for (int x = 0; x < fileList.size(); x++) {
-			// set the Mime-type of that last element you added.
-			// Find the .extension of the file.
-			SharedFile childFile = (SharedFile) fileList.elementAt(x);
-
-			int extensionOffset = childFile.getName().lastIndexOf(".");
-			if (extensionOffset > -1) {
-				String extension = childFile.getName().substring(
-						                                                childFile.getName().lastIndexOf("."),
-						                                                childFile.getName().length());
+//		for (int x = 0; x < fileList.size(); x++) {
+//			// set the Mime-type of that last element you added.
+//			// Find the .extension of the file.
+//			SharedFile childFile = (SharedFile) fileList.elementAt(x);
+//
+//			int extensionOffset = childFile.getName().lastIndexOf(".");
+//			if (extensionOffset > -1) {
+//				String extension = childFile.getName().substring(
+//						                                                childFile.getName().lastIndexOf("."),
+//						                                                childFile.getName().length());
 //				if (prefs.hasField(extension)) {
 //					try {
 //						((SharedFileInfoHolder) fileList.elementAt(x)).setKind(prefs.getString(extension));
 //					} catch (Exception e) {
 //					}
 //				}
-			}
-		}
+//			}
+//		}
 	}
 }

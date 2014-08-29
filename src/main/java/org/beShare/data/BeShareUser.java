@@ -35,9 +35,7 @@ public class BeShareUser {
 	// filecount node
 	private int filecount;
 	// firewall?
-	private boolean fires;
-	// files - no firewall
-	private boolean files;
+	private boolean firewalled;
 
 	/**
 	 * Creates a new BeShareUser with Session ID = cn
@@ -58,8 +56,7 @@ public class BeShareUser {
 		this.label = "";
 		this.bps = -1;
 		this.filecount = -1;
-		this.fires = false;
-		this.files = true;
+		this.firewalled = false;
 	}
 
 	/**
@@ -264,9 +261,9 @@ public class BeShareUser {
 	 */
 	public String getLoadString() {
 		if (getUploadMax() == -1) {
-			return new String("?");
+			return "?";
 		} else {
-			return new String("" + (double) (getUploadCurrent() / getUploadMax()));
+			return "" + (double) (getUploadCurrent() / getUploadMax());
 		}
 	}
 
@@ -296,12 +293,12 @@ public class BeShareUser {
 	public String getFileCountString() {
 		if (filecount != -1) {
 			if (!isFirewalled()) {
-				return new String("" + filecount);
+				return "" + filecount;
 			} else {
-				return new String("(" + filecount + ")");
+				return "(" + filecount + ")";
 			}
 		} else {
-			return new String("?");
+			return "?";
 		}
 	}
 
@@ -345,22 +342,16 @@ public class BeShareUser {
 	 * @return True if the user is Firewalled, Flase if not.
 	 */
 	public boolean isFirewalled() {
-		return fires;
+		return firewalled;
 	}
 
 	/**
 	 * Sets weather this user is fire-walled or not
 	 *
-	 * @param b boolean representing their firewalled status
+	 * @param firewalled boolean representing their firewalled status
 	 */
-	public void setFirewall(boolean b) {
-		if (b) {
-			fires = true;
-			files = false;
-		} else {
-			fires = false;
-			files = true;
-		}
+	public void setFirewall(boolean firewalled) {
+		this.firewalled = firewalled;
 	}
 
 	/**
@@ -369,8 +360,9 @@ public class BeShareUser {
 	 * @return The tableData value
 	 */
 	public Object[] getTableData() {
+		Object[] data;
 		if (isFirewalled()) {
-			Object[] data = {getName(),
+			data = new Object[]{getName(),
 			                 getSessionID(),
 			                 getStatus(),
 			                 "(" + getFileCountString() + ")",
@@ -378,9 +370,8 @@ public class BeShareUser {
 			                 getLoadString(),
 			                 getClient()
 			};
-			return data;
 		} else {
-			Object[] data = {getName(),
+			data = new Object[]{getName(),
 			                 getSessionID(),
 			                 getStatus(),
 			                 getFileCountString(),
@@ -388,8 +379,8 @@ public class BeShareUser {
 			                 getLoadString(),
 			                 getClient()
 			};
-			return data;
 		}
+		return data;
 	}
 
 	/**

@@ -5,24 +5,18 @@ import com.meyer.muscle.message.Message;
 import com.meyer.muscle.thread.MessageListener;
 import com.meyer.muscle.thread.MessageQueue;
 
-import javax.swing.BoundedRangeModel;
 import javax.swing.JProgressBar;
 import java.net.Socket;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * AbstractTransfer contains some of the utility and common functionality needed to download and share files.
  *
  * @author Bryan Varner
  */
-public abstract class AbstractTransfer implements Runnable {
-	private boolean hasRun;
-	private TransferStatus status;
-
+public abstract class AbstractTransfer implements Runnable, MessageListener {
 	// Constants - translated from the BeShare source (where they were 'xxxx' style into their int equivalents.
 	final static int TRANSFER_COMMAND_CONNECTED_TO_PEER = 1953720434; // a.k.a. 'tshr'
 	final static int TRANSFER_COMMAND_DISCONNECTED_FROM_PEER = 1953720435;
@@ -30,27 +24,24 @@ public abstract class AbstractTransfer implements Runnable {
 	final static int TRANSFER_COMMAND_FILE_HEADER = 1953720437; // contains filename, attributes, etc.
 	final static int TRANSFER_COMMAND_FILE_DATA = 1953720438; // a chunk of the file's contents
 	final static int TRANSFER_COMMAND_DEPRECATED = 1953720439; // was the on-empty message
-	final static int TRANSFER_COMMAND_NOTIFY_QUEUED = 1953720440; // tells the receiving session he's being put on a wait list to download
-
+	final static int TRANSFER_COMMAND_NOTIFY_QUEUED = 1953720440;
+	// tells the receiving session he's being put on a wait list to download
 	// Data Munging
 	final static int MUNGE_MODE_OFF = 0;
 	final static int MUNGE_MODE_XOR = 1;
-
 	// Objects that signal when we get connected / disconnected.
-	static final Object serverConnect = new Object();
-	static final Object serverDisconnect = new Object();
-
+	final static Object SERVER_CONNECT = new Object();
+	final static Object SERVER_DISCONNECT = new Object();
 	// A transceiver for communicating directly with the remote client for the transfer
 	protected MessageTransceiver transferTransceiver;
-
 	// The main transceiver for communicating with the main MUSCLE server.
 	protected JavaShareTransceiver mainTransceiver;
-
 	// Items to transfer, and the current item index.
 	protected ArrayList<TransferItem> items;
-	private int currentItem = -1;
 	protected boolean connected = false;
-
+	private boolean hasRun;
+	private TransferStatus status;
+	private int currentItem = -1;
 	private DecimalFormat progressFormatter = new DecimalFormat("####.##");
 
 	/**
@@ -62,23 +53,34 @@ public abstract class AbstractTransfer implements Runnable {
 		this.hasRun = false;
 		this.items = new ArrayList<>(items);
 		this.mainTransceiver = mainTransceiver;
-		this.transferTransceiver = new MessageTransceiver(new MessageQueue(new MessageListener() {
-			@Override
-			public synchronized void messageReceived(Object message, int numLeftInQueue) throws Exception {
-				if (message instanceof Message) {
-					muscleMessageReceived((Message) message);
-				} else if (message instanceof Socket) {
-					socketConnected((Socket) message);
-				} else if (message == serverConnect) {
-					connected = true;
-					connected();
-				} else if (message == serverDisconnect) {
-					disconnected();
-					connected = false;
-				}
-			}
-		}));
+		this.transferTransceiver = new MessageTransceiver(new MessageQueue(this));
 		this.status = TransferStatus.LOCALLY_QUEUED;
+	}
+
+	/**
+	 * Performs an XOR on the data in the byte array.
+	 */
+	protected static byte[] XORData(byte[] data) {
+		for (int x = 0; x < data.length; x++) {
+			data[x] ^= 0xFF;
+		}
+		return data;
+	}
+
+
+	@Override
+	public synchronized void messageReceived(Object message, int numLeftInQueue) throws Exception {
+		if (message instanceof Message) {
+			muscleMessageReceived((Message) message);
+		} else if (message instanceof Socket) {
+			socketConnected((Socket) message);
+		} else if (message == SERVER_CONNECT) {
+			connected = true;
+			connected();
+		} else if (message == SERVER_DISCONNECT) {
+			disconnected();
+			connected = false;
+		}
 	}
 
 	/**
@@ -97,25 +99,6 @@ public abstract class AbstractTransfer implements Runnable {
 	 */
 	public boolean hasRun() {
 		return hasRun;
-	}
-
-	/**
-	 * Performs an XOR on the data in the byte array.
-	 */
-	protected static byte[] XORData(byte[] data) {
-		for (int x = 0; x < data.length; x++) {
-			data[x] ^= 0xFF;
-		}
-		return data;
-	}
-
-	/**
-	 * Returns a read-only view of the Items to transfer.
-	 *
-	 * @return
-	 */
-	public List<TransferItem> getItems() {
-		return Collections.unmodifiableList(items);
 	}
 
 	/**
@@ -163,28 +146,30 @@ public abstract class AbstractTransfer implements Runnable {
 	 * Starts this transfer as a thread.
 	 */
 	public final void run() {
-		hasRun = true;
-		setStatus(TransferStatus.CONNECTING);
+		if (hasRun == false) {
+			setStatus(TransferStatus.CONNECTING);
+			hasRun = true;
 
-		// If we can't connect, set an error.
-		if (!start()) {
-			setStatus(TransferStatus.ERROR);
+			transferTransceiver.disconnect();
+
+			// If we can't connect, set an error.
+			if (!start()) {
+				setStatus(TransferStatus.ERROR);
+			}
 		}
 	}
 
 
 	/**
-	 *  Invoked when the muscle transciever sends a connected signal.
+	 * Invoked when the muscle transciever sends a connected signal.
 	 */
 	protected void connected() {
-		return;
 	}
 
 	/**
 	 * Invoked when the muscle transceiver sends a disconnected signal.
 	 */
 	protected void disconnected() {
-		return;
 	}
 
 	/**
@@ -193,7 +178,6 @@ public abstract class AbstractTransfer implements Runnable {
 	 * @param socket The socket which has accept()ed a connection.
 	 */
 	protected void socketConnected(final Socket socket) {
-		return;
 	}
 
 	/**

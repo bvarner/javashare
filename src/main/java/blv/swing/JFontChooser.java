@@ -23,7 +23,7 @@ public class JFontChooser extends JDialog implements ActionListener, ListSelecti
 	JPanel buttonPanel;
 	JPanel listPanel;
 
-	JList lstFams;
+	JList<String> lstFams;
 	JLabel lblPreview;
 	JCheckBox chkBold;
 	JCheckBox chkItalic;
@@ -62,7 +62,7 @@ public class JFontChooser extends JDialog implements ActionListener, ListSelecti
 		GraphicsEnvironment currentGE = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		String[] fontFams = currentGE.getAvailableFontFamilyNames();
 
-		lstFams = new JList(fontFams);
+		lstFams = new JList<>(fontFams);
 		if (useStyles) {
 			lstFams.setCellRenderer(new DefaultListCellRenderer() {
 				public Component getListCellRendererComponent(JList list, Object value,

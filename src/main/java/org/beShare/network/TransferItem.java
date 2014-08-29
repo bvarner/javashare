@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
- * A TransferItem
+ * An item involved in a transfer.
  */
 public class TransferItem {
 	private File file;
@@ -17,9 +17,9 @@ public class TransferItem {
 
 	private RandomAccessFile rw;
 
-	public TransferItem(final String directory, final String name, final long size, final Icon icon) {
+	public TransferItem(final String directory, final String name, final Icon icon) {
 		this.file = new File(directory, name);
-		this.size = size;
+		this.size = 0;
 		this.transferred = 0;
 		this.digest = new byte[0];
 		this.rw = null;
@@ -53,7 +53,12 @@ public class TransferItem {
 
 	public boolean openFile() throws IOException {
 		if (rw == null) {
-			rw = new RandomAccessFile(file, "rw");
+			try {
+				rw = new RandomAccessFile(file, "rw");
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+				rw = null;
+			}
 		}
 
 		return rw != null;
@@ -65,14 +70,16 @@ public class TransferItem {
 				rw.close();
 			}
 		} catch (IOException ioe) {
+			ioe.printStackTrace();
 			// can't do anything.
 		} finally {
 			rw = null;
 		}
 	}
 
-	public void seekTo(long position) throws IOException {
-		transferred = position;
+	public void seekTo(long position, long size) throws IOException {
+		this.transferred = position;
+		this.size = size;
 		if (openFile()) {
 			rw.seek(position);
 		}

@@ -2,6 +2,7 @@ package org.beShare.network;
 
 import com.meyer.muscle.message.FieldTypeMismatchException;
 import com.meyer.muscle.message.Message;
+import com.meyer.muscle.message.MessageException;
 import org.beShare.data.BeShareUser;
 
 import java.io.FileInputStream;
@@ -41,14 +42,14 @@ public class Download extends AbstractTransfer {
 	public boolean start() {
 		// If the remote user is not firewalled, we can connect directly to them.
 		if (!remoteUser.isFirewalled()) {
-			transferTransceiver.connect(remoteUser.getIPAddress(), remoteUser.getPort(), serverConnect, serverDisconnect);
+			transferTransceiver.connect(remoteUser.getIPAddress(), remoteUser.getPort(), SERVER_CONNECT, SERVER_DISCONNECT);
 			return true;
 		} else {
 			// We need to bind to a port, and listen for incoming connections (The remote user will connect back to us).
 			setStatus(TransferStatus.AWAITING_CALLBACK);
 
 			this.firewallSocketBound = false;
-			int firewallListenPort = mainTransceiver.LOCAL_PORT_START;
+			int firewallListenPort = JavaShareTransceiver.LOCAL_PORT_START;
 			try (ServerSocketChannel channel = ServerSocketChannel.open()) {
 				do {
 					try {
@@ -58,10 +59,10 @@ public class Download extends AbstractTransfer {
 						firewallListenPort++; // Increment the port number.
 					}
 				}
-				while (!firewallSocketBound && firewallListenPort < mainTransceiver.LOCAL_PORT_START + mainTransceiver.LOCAL_PORT_RANGE);
+				while (!firewallSocketBound && firewallListenPort < JavaShareTransceiver.LOCAL_PORT_START + JavaShareTransceiver.LOCAL_PORT_RANGE);
 
 				if (firewallSocketBound) {
-					transferTransceiver.listen(channel, serverConnect, serverDisconnect, false);
+					transferTransceiver.listen(channel, SERVER_CONNECT, SERVER_DISCONNECT, false);
 					mainTransceiver.sendConnectBackRequestMessage(remoteUser, firewallListenPort);
 					return true;
 				}
@@ -71,7 +72,7 @@ public class Download extends AbstractTransfer {
 
 			if (!firewallSocketBound) {
 				setStatus(TransferStatus.ERROR);
-				mainTransceiver.logError("Unable to bind a local port between " + mainTransceiver.LOCAL_PORT_START + " and " + (mainTransceiver.LOCAL_PORT_RANGE + mainTransceiver.LOCAL_PORT_START) + " for firewalled download");
+				mainTransceiver.logError("Unable to bind a local port between " + JavaShareTransceiver.LOCAL_PORT_START + " and " + (JavaShareTransceiver.LOCAL_PORT_RANGE + JavaShareTransceiver.LOCAL_PORT_START) + " for firewalled download");
 			}
 		}
 		return false;
@@ -82,31 +83,11 @@ public class Download extends AbstractTransfer {
 		setStatus(TransferStatus.EXAMINING);
 
 		// Setup and examine existing files.
-		MessageDigest md = null;
+		MessageDigest md;
 		try {
 			md = MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException nsae) {
-			md = new MessageDigest("NILL") {
-				@Override
-				protected void engineUpdate(byte input) {
-					return;
-				}
-
-				@Override
-				protected void engineUpdate(byte[] input, int offset, int len) {
-					return;
-				}
-
-				@Override
-				protected byte[] engineDigest() {
-					return new byte[0];
-				}
-
-				@Override
-				protected void engineReset() {
-					return;
-				}
-			};
+			md = new NillDigest();
 		}
 
 		String[] fileNames = new String[items.size()];
@@ -123,7 +104,7 @@ public class Download extends AbstractTransfer {
 						DigestInputStream digester = new DigestInputStream(inStream, md);
 						long bytesRead = 0;
 						byte[] buffer = new byte[4096];
-						int pass = 0;
+						int pass;
 						do {
 							pass = digester.read(buffer, 0, buffer.length);
 							if (pass >= 0) {
@@ -164,9 +145,13 @@ public class Download extends AbstractTransfer {
 				transferTransceiver.stopListening();
 			}
 			transferTransceiver.disconnect();
+
+			if (!getStatus().equals(TransferStatus.ERROR)) {
+				setStatus(TransferStatus.COMPLETE);
+			}
 		}
-		if (!getStatus().equals(TransferStatus.ERROR)) {
-			setStatus(TransferStatus.COMPLETE);
+		for (TransferItem item : items) {
+			item.closeFile();
 		}
 	}
 
@@ -189,7 +174,7 @@ public class Download extends AbstractTransfer {
 
 				try {
 					if (getCurrentItem().openFile()) {
-						getCurrentItem().seekTo(message.getLong("beshare:StartOffset", 0));
+						getCurrentItem().seekTo(message.getLong("beshare:StartOffset", 0), message.getLong("beshare:File Size", 0));
 					}
 				} catch (IOException | NullPointerException ex) {
 					abort();
@@ -200,8 +185,8 @@ public class Download extends AbstractTransfer {
 
 			case TRANSFER_COMMAND_FILE_DATA: {
 				int mungeMode = message.getInt("mm", MUNGE_MODE_OFF);
-				byte[][] data = (byte[][]) message.getData("data", new byte[0][0]);
 				try {
+					byte[][] data = message.getBuffers("data", B_RAW_TYPE);
 					for (byte[] line : data) {
 						if (mungeMode == MUNGE_MODE_XOR) {
 							line = XORData(line);
@@ -209,9 +194,9 @@ public class Download extends AbstractTransfer {
 						getCurrentItem().write(line);
 					}
 					setStatus(TransferStatus.ACTIVE);
-				} catch (IOException ioe) {
-					abort();
+				} catch (MessageException | IOException ex) {
 					setStatus(TransferStatus.ERROR);
+					abort();
 				}
 			}
 			break;
@@ -220,6 +205,9 @@ public class Download extends AbstractTransfer {
 				setStatus(TransferStatus.REMOTELY_QUEUED);
 			}
 			break;
+
+			default:
+				mainTransceiver.logSystemMessage("What is this?\n" + message.toString());
 		}
 	}
 
@@ -228,15 +216,12 @@ public class Download extends AbstractTransfer {
 	 *
 	 * @overrides Transfer.abort();
 	 */
+	@Override
 	public void abort() {
-		for (TransferItem item : items) {
-			item.closeFile();
-		}
 		if (firewallSocketBound) {
 			transferTransceiver.stopListening();
 		}
 		transferTransceiver.disconnect();
-
 	}
 
 	@Override
@@ -246,6 +231,29 @@ public class Download extends AbstractTransfer {
 			return "Downloading " + item.getFile().getName() + " from " + remoteUser.getName();
 		} else {
 			return "Downloading from " + remoteUser.getName();
+		}
+	}
+
+	private static class NillDigest extends MessageDigest {
+		NillDigest() {
+			super("NILL");
+		}
+
+		@Override
+		protected void engineUpdate(byte input) {
+		}
+
+		@Override
+		protected void engineUpdate(byte[] input, int offset, int len) {
+		}
+
+		@Override
+		protected byte[] engineDigest() {
+			return new byte[0];
+		}
+
+		@Override
+		protected void engineReset() {
 		}
 	}
 }

@@ -80,8 +80,8 @@ public class MenuBar extends JMenuBar {
 							}
 						}
 					});
-				} catch (Exception ex) {
-				} catch (Error error) {
+				} catch (Exception ignored) {
+				} catch (Error ignored) {
 				}
 			}
 		}

@@ -9,4 +9,9 @@ public class QueryTable extends JTable {
 		super(dm);
 		setFocusable(false);
 	}
+
+	@Override
+	public boolean getScrollableTracksViewportWidth() {
+		return false;
+	}
 }

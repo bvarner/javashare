@@ -37,27 +37,6 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 	}
 
 	/**
-	 * @return if the Queue should start a transfer.
-	 */
-	private boolean shouldStart() {
-		return size() > getActive() && getActive() < getMax();
-	}
-
-	/**
-	 * @return The number of currently active transfers.
-	 */
-	private int getActive() {
-		int running = 0;
-		for (int x = 0; x < size(); x++) {
-			if (get(x).isActive()) {
-				running++;
-			}
-		}
-
-		return running;
-	}
-
-	/**
 	 * Forces the Queue to check itself. Running any unstarted transfers up to <code>getMax</code>.
 	 */
 	void startNextPending() {
@@ -103,5 +82,15 @@ public class TransferList extends ArrayList<AbstractTransfer> {
 		}
 		startNextPending();
 		return ret;
+	}
+
+	@Override
+	public AbstractTransfer remove(int index) {
+		AbstractTransfer removed =  super.remove(index);
+		if (removed != null && removed.isActive()) {
+			removed.abort();
+		}
+		startNextPending();
+		return removed;
 	}
 }

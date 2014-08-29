@@ -4,7 +4,8 @@ import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 
 /**
- * Created by bvarner on 8/18/14.
+ * Defines a model for a DropMenu, which extends ListModel, ListSelectionModel,
+ * and exposes some additional behavior specific to drop menus.
  */
 public interface DropMenuModel<E> extends ListModel<E>, ListSelectionModel {
 

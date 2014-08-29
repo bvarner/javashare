@@ -156,22 +156,4 @@ public class DropMenu<T> extends JPanel {
 	public DropMenuModel<T> getModel() {
 		return model;
 	}
-
-	/**
-	 * Gets the current text label of the button.
-	 *
-	 * @return the Text label of the Menu button.
-	 */
-	public String getText() {
-		return button.getText();
-	}
-
-	/**
-	 * Sets the visible text of the Menu button.
-	 *
-	 * @param label The String for the Button to display
-	 */
-	public void setText(String label) {
-		button.setText(label);
-	}
 }

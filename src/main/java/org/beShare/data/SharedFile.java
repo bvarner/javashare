@@ -106,12 +106,18 @@ public class SharedFile {
 	/**
 	 * Returns true if sfh is data-wise identical to this object.
 	 */
-	public boolean equals(SharedFile sfh) {
-		return (fileKind.equals(sfh.getKind()) &&
-				        fileName.equals(sfh.getName()) &&
-				        fullPath.equals(sfh.getPath()) &&
-				        sizeInBytes == sfh.getSize() &&
-				        sessionID.equals(sfh.getSessionID()));
+	public boolean equals(Object other) {
+		if (other == this) {
+			return true;
+		} else if (other instanceof SharedFile) {
+			SharedFile sfh = (SharedFile) other;
+			return (fileKind.equals(sfh.getKind()) &&
+					        fileName.equals(sfh.getName()) &&
+					        fullPath.equals(sfh.getPath()) &&
+					        sizeInBytes == sfh.getSize() &&
+					        sessionID.equals(sfh.getSessionID()));
+		}
+		return false;
 	}
 
 	/**

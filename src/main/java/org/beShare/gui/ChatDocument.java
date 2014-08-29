@@ -127,10 +127,8 @@ public class ChatDocument extends DefaultStyledDocument {
 	private void appendString(StyledString textString) {
 		writeLock();
 		try {
-			if (true) { // Log timestamps.
-				insertString(getLength(), sdf.format(new Date()), StyledString.REMOTE_USER);
-			}
-
+			// Log the timestamp.
+			insertString(getLength(), sdf.format(new Date()), StyledString.REMOTE_USER);
 
 			Iterator<Map.Entry<String, SimpleAttributeSet>> segments = textString.entrySet().iterator();
 			while (segments.hasNext()) {

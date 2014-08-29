@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by bvarner on 8/28/14.
+ * Enumerations which represent the states of a Transfer.
  */
 public enum TransferStatus {
 	LOCALLY_QUEUED("Locally Queued"),

@@ -19,22 +19,23 @@ package org.beShare.gui.swingAddons;
  * @author Bryan Varner
  */
 
-import javax.swing.*;
+import javax.swing.JTable;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Vector;
+import java.util.List;
 
 // Imports for picking up mouse events from the JTable.
 
 public class TableSorter extends TableMap {
 	public int column = 0;
 	int indexes[];
-	Vector sortingColumns = new Vector();
+	List<Integer> sortingColumns = new ArrayList<>();
 	boolean ascending = false;
 	boolean autoSort = false;
 
@@ -148,7 +149,7 @@ public class TableSorter extends TableMap {
 
 	public int compare(int row1, int row2) {
 		for (int level = 0; level < sortingColumns.size(); level++) {
-			Integer col = (Integer) sortingColumns.elementAt(level);
+			Integer col = (Integer) sortingColumns.get(level);
 			int result = compareRowsByColumn(row1, row2, col.intValue());
 			if (result != 0) {
 				return ascending ? result : -result;
@@ -173,8 +174,8 @@ public class TableSorter extends TableMap {
 	public void tableChanged(TableModelEvent e) {
 		checkModel();
 		if (autoSort) {
-			if (e.getType() == e.INSERT || e.getType() == e.DELETE ||
-					    (e.getType() == e.UPDATE && (e.getColumn() == column || e.getColumn() == e.ALL_COLUMNS))) {
+			if (e.getType() == TableModelEvent.INSERT || e.getType() == TableModelEvent.DELETE ||
+					    (e.getType() == TableModelEvent.UPDATE && (e.getColumn() == column || e.getColumn() == TableModelEvent.ALL_COLUMNS))) {
 				sortByColumn(column, ascending);
 			}
 		}
@@ -226,9 +227,7 @@ public class TableSorter extends TableMap {
         order diminishes - it may drop very quickly.  */
 
 		if (high - low >= 4 && compare(from[middle - 1], from[middle]) <= 0) {
-			for (int i = low; i < high; i++) {
-				to[i] = from[i];
-			}
+			System.arraycopy(from, low, to, low, high - low);
 			return;
 		}
 
@@ -269,8 +268,8 @@ public class TableSorter extends TableMap {
 	public void sortByColumn(int column, boolean ascending) {
 		autoSort = true;
 		this.ascending = ascending;
-		sortingColumns.removeAllElements();
-		sortingColumns.addElement(new Integer(column));
+		sortingColumns.clear();
+		sortingColumns.get(new Integer(column));
 		sort(this);
 		super.tableChanged(new TableModelEvent(this));
 	}

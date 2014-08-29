@@ -53,11 +53,10 @@ public abstract class AbstractDropMenuModel<E> extends DefaultListModel<E> imple
 	@Override
 	public void addElement(E element) {
 		if (size() + 1 > maxSize) {
-			E removed;
 			if (getMinSelectionIndex() == 0) {
-				removed = remove(1);
+				remove(1);
 			} else {
-				removed = remove(0);
+				remove(0);
 			}
 		}
 		super.addElement(element);
@@ -87,7 +86,7 @@ public abstract class AbstractDropMenuModel<E> extends DefaultListModel<E> imple
 	public void saveTo(final Preferences prefs, final String baseKeyName) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < size(); i++) {
-			sb.append(elementToString(get(i)) + "|");
+			sb.append(elementToString(get(i))).append("|");
 		}
 		prefs.put(baseKeyName, sb.toString());
 		prefs.put(baseKeyName + "-selected", elementToString(getSelectedItem()));

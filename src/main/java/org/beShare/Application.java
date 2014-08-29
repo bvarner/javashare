@@ -75,7 +75,7 @@ public class Application {
 			public void run() {
 				try {
 					prefs.flush();
-				} catch (BackingStoreException e) {
+				} catch (BackingStoreException ignored) {
 				}
 			}
 		}));

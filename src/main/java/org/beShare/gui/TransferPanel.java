@@ -69,7 +69,7 @@ public class TransferPanel extends JPanel {
 	JavaShareTransceiver transceiver;
 	String session;
 	String files;
-	JList lstTransfers;
+	JList<AbstractTransfer> lstTransfers;
 	private JScrollPane lstTranScroller;
 
 	public TransferPanel(final JavaShareTransceiver transceiver) {
@@ -119,7 +119,6 @@ public class TransferPanel extends JPanel {
 					items.add(new TransferItem(
 							                          transceiver.getPreferences().get("downloadLocation", (System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads")),
 							                          queryTable.getValueAt(selected[i], 1).toString(),
-							                          Long.parseLong(queryTable.getValueAt(selected[i], 2).toString()),
 							                          (Icon)queryTable.getValueAt(selected[i], 0)));
 
 					itemMap.put(remoteUser, items);
@@ -190,8 +189,8 @@ public class TransferPanel extends JPanel {
 		btnRemoveDownload.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-//			// clear the completed downloads from the list.
 				int[] selected = lstTransfers.getSelectedIndices();
+				lstTransfers.getSelectionModel().clearSelection();
 				for (int i = selected.length - 1; i >= 0; i--) {
 					transceiver.getTransferModel().remove(selected[i]);
 				}
@@ -199,7 +198,7 @@ public class TransferPanel extends JPanel {
 		});
 
 		//transferList = new DefaultListModel();
-		lstTransfers = new JList(transceiver.getTransferModel());
+		lstTransfers = new JList<>(transceiver.getTransferModel());
 		lstTransfers.setFocusable(false);
 		lstTransfers.addListSelectionListener(new TransferSelectionListener());
 		lstTransfers.setCellRenderer(new TransferProgressRenderer());

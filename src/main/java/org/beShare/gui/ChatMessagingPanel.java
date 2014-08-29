@@ -64,7 +64,7 @@ public class ChatMessagingPanel extends JPanel {
 	ChatDocument chatDoc;
 	// User table
 	JTable userTable;
-	Stack recentLines;
+	Stack<String> recentLines;
 	int lineIndex;
 	JScrollPane logScrollPane;
 	Timer scrollTimer;
@@ -105,7 +105,7 @@ public class ChatMessagingPanel extends JPanel {
 
 		this.scrollUpAdjustments = 0;
 		this.previousScrollPosition = 0;
-		this.recentLines = new Stack();
+		this.recentLines = new Stack<>();
 		this.lineIndex = 0;
 
 		chatInput.setRequestFocusEnabled(true);
@@ -128,8 +128,6 @@ public class ChatMessagingPanel extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				String chatText = chatInput.getText();
 				if (chatText.length() > 0) {
-					String message = "";
-
 					transceiver.handleInput(chatInput.getText(), chatDoc);
 
 					recentLines.push(chatText);
@@ -160,7 +158,7 @@ public class ChatMessagingPanel extends JPanel {
 						chatInput.setText("");
 					}
 				} else if ((e.getKeyCode() == KeyEvent.VK_F1) || (e.getKeyCode() == KeyEvent.VK_TAB)) {
-					String completedName = "";
+					String completedName;
 					int lastSpace = chatInput.getText().lastIndexOf(" ");
 					if (lastSpace == -1) {
 						completedName =
@@ -367,19 +365,6 @@ public class ChatMessagingPanel extends JPanel {
 		}
 	}
 
-	/**
-	 * Sets the font used for the chat input and chatlog.
-	 */
-	public void setChatFont(Font chatFont) {
-		try {
-			chatLog.setFont(chatFont);
-			chatInput.setFont(chatFont);
-			// Invalidate Layout?
-		} catch (NullPointerException npe) {
-		}
-		this.validate();
-	}
-
 	private void updateUsers() {
 		String[] sessionsOrNames = chatWithSessions.getText().trim().split(" ");
 
@@ -411,12 +396,5 @@ public class ChatMessagingPanel extends JPanel {
 
 		// Trim the text.
 		chatWithSessions.setText(chatWithSessions.getText().trim());
-	}
-
-	/**
-	 * Forces a UI update.
-	 */
-	public void updateLafSetting() {
-		SwingUtilities.updateComponentTreeUI(this.getRootPane().getParent());
 	}
 }
