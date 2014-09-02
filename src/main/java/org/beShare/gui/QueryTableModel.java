@@ -9,85 +9,40 @@ import org.beShare.data.SharedFile;
 import org.beShare.data.UserDataModel;
 
 import javax.swing.ImageIcon;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.AbstractTableModel;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
- * QueryTableModel - A model for displaying and storing data for <code>JTable
- * </code> views.
- *
- * TODO: Remove the userDataModel from this class.
+ * Renders SharedFile query results.
  *
  * @author Bryan Varner
- * @version 2.0
  */
 
-public class QueryTableModel extends DefaultTableModel {
-	private HashMap<String, ImageIcon> icons = new HashMap<>();
-	private UserDataModel userDataModel;
+public class QueryTableModel extends AbstractTableModel {
+
+	private List<SharedFile> files = new ArrayList<>();
 
 	/**
 	 * Creates a new model with Column headers <code>cols</code> and data model
 	 * <code>data</code>
 	 */
-	public QueryTableModel(final UserDataModel userDataModel) {
-		super(new String[]{"", "File Name", "File Size", "User", "Path", "Kind", "Connection"}, 0);
-		this.userDataModel = userDataModel;
+	public QueryTableModel() {
+		super();
 	}
 
 	/**
 	 * Adds a new file to the result list
 	 */
-	public void addResult(SharedFile newFile) {
-//		String size = (Long.toString(newFile.getSize()));
-		//if (size.length() <= 3) {
-//			size = size + " bytes";
-		//} else if (size.length() <= 6) {
-//			size = (newFile.getSize() / 1024) + " kb";
-		//} else if (size.length() <= 9) {
-//			size = (double) ((newFile.getSize() / (1024 ^ 2))) / 1000 + " MB";
-		//}
-
-		ImageIcon fileIcon = getFileIcon(newFile.getKind());
-
-		BeShareUser user = userDataModel.getUser(newFile.getSessionID());
-		Object[] fileData = {fileIcon, // Icon image name here later!
-		                     newFile.getName(),
-		                     newFile.getSize(),
-		                     user,
-		                     newFile.getPath(),
-		                     newFile.getKind(),
-		                     user.getBandwidthLabel()};
-		insertRow(0, fileData);
+	public void add(SharedFile file) {
+		files.add(file);
+		int index = files.indexOf(file);
+		fireTableRowsInserted(index, index);
 	}
 
-	public ImageIcon getFileIcon(final String kind) {
-		ImageIcon fileIcon;
-		if (!icons.containsKey(kind)) {
-			if ("".equals(kind)) {
-				// Load the generic file icon.
-				fileIcon = new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
-				icons.put(kind, fileIcon);
-			} else {
-				// Replace / with ^ and . with &
-				String fileName = kind;
-				fileName = fileName.replace('/', '^');
-				fileName = fileName.replace('.', '&');
-				fileName = fileName.concat(".gif");
-				try {
-					fileIcon =
-							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/" + fileName));
-					icons.put(kind, fileIcon);
-				} catch (NullPointerException npe) {
-					fileIcon =
-							new ImageIcon(getClass().getClassLoader().getResource("Images/fileicons/notype.gif"));
-					icons.put(kind, fileIcon);
-				}
-			}
-		} else {
-			fileIcon = icons.get(kind);
-		}
-		return fileIcon;
+	public void remove(SharedFile file) {
+		files.remove(file);
 	}
 
 	/**
@@ -101,37 +56,63 @@ public class QueryTableModel extends DefaultTableModel {
 	/**
 	 * Clears all data from the table.
 	 */
-	public void clearTable() {
-		for (int x = (getRowCount() - 1); x >= 0; x--) {
-			this.removeRow(x);
+	public void clear() {
+		int size = files.size();
+		files.clear();
+
+		if (size > 0) {
+			fireTableRowsDeleted(0, size);
 		}
 	}
 
-	public boolean getScrollableTracksViewportWidth() {
-		return false;
+	@Override
+	public int getRowCount() {
+		return files.size();
 	}
 
-	/**
-	 * @overrides DefaultTableModel.getValueAt(int row, int column);
-	 */
+	@Override
+	public int getColumnCount() {
+		return 7;
+	}
+
+	@Override
+	public String getColumnName(int column) {
+		switch(column) {
+			case 1:
+				return "File Name";
+			case 2:
+				return "File Size";
+			case 3:
+				return "User";
+			case 4:
+				return "Path";
+			case 5:
+				return "Kind";
+			case 6:
+				return "Connection";
+		}
+		return "";
+	}
+
+	@Override
 	public Object getValueAt(int row, int column) {
-		// If it's the user column, return the users name, if it's not, forget it!
-		if (column == 3) {
-			return ((BeShareUser) super.getValueAt(row, column)).getName();
-		} else {
-			return super.getValueAt(row, column);
+		SharedFile sf = files.get(row);
+		switch (column) {
+			case 0:
+				return FileTypeIconCache.getIcon(sf.getKind());
+			case 1:
+				return sf.getName();
+			case 2:
+				return sf.getSize();
+			case 3:
+				return sf.getSessionID();
+			case 4:
+				return sf.getPath();
+			case 5:
+				return sf.getKind();
+			case 6:
+				return sf.getSessionID();
 		}
-	}
-
-	/**
-	 * Searches for and removes a file that matches the specified goodies.
-	 */
-	public void removeFile(String userName, String fileName) {
-		for (int x = 0; x < getRowCount(); x++) {
-			if (userName.equals(getValueAt(x, 3).toString()) &&
-					    fileName.equals(getValueAt(x, 1).toString())) {
-				removeRow(x);
-			}
-		}
+		return "";
 	}
 }

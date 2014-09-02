@@ -4,16 +4,13 @@
 package org.beShare.gui;
 
 import org.beShare.data.BeShareUser;
-import org.beShare.data.SharedFile;
 import org.beShare.gui.swingAddons.TableSorter;
 import org.beShare.network.AbstractTransfer;
 import org.beShare.network.Download;
 import org.beShare.network.JavaShareTransceiver;
 import org.beShare.network.ShareFileMaintainer;
 import org.beShare.network.TransferItem;
-import org.beShare.network.TransferStatus;
 
-import javax.activation.MimetypesFileTypeMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -42,7 +39,6 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -92,14 +88,13 @@ public class TransferPanel extends JPanel {
 
 		final JButton btnStopQuery = new JButton("Stop Query");
 		final QueryProgressIndicator pnlInProgress = new QueryProgressIndicator();
-		pnlInProgress.setPreferredSize(btnStopQuery.getPreferredSize());
 		btnStopQuery.setEnabled(false);
 		btnStopQuery.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				btnStopQuery.setEnabled(false);
 				transceiver.stopQuery();
-				pnlInProgress.setQueryInProgress(false);
+				pnlInProgress.setActive(false);
 			}
 		});
 		btnDownloadFiles = new JButton("Download Selected");
@@ -111,7 +106,8 @@ public class TransferPanel extends JPanel {
 
 				int[] selected = queryTable.getSelectedRows();
 				for (int i = 0; i < selected.length; i++) {
-					BeShareUser remoteUser = transceiver.getUserDataModel().findByNameOrSession(queryTable.getValueAt(selected[i], 3).toString());
+					BeShareUser remoteUser =
+							transceiver.getUserDataModel().findByNameOrSession(queryTable.getValueAt(selected[i], 3).toString());
 					Collection<TransferItem> items = itemMap.get(remoteUser);
 					if (items == null) {
 						items = new ArrayList<TransferItem>();
@@ -119,7 +115,7 @@ public class TransferPanel extends JPanel {
 					items.add(new TransferItem(
 							                          transceiver.getPreferences().get("downloadLocation", (System.getProperty("user.home") + System.getProperty("path.Separator") + "Downloads")),
 							                          queryTable.getValueAt(selected[i], 1).toString(),
-							                          (Icon)queryTable.getValueAt(selected[i], 0)));
+							                          (Icon) queryTable.getValueAt(selected[i], 0)));
 
 					itemMap.put(remoteUser, items);
 				}
@@ -148,7 +144,7 @@ public class TransferPanel extends JPanel {
 					files = files.substring(0, files.lastIndexOf("@"));
 				}
 				transceiver.startQuery(session, files);
-				pnlInProgress.setQueryInProgress(true);
+				pnlInProgress.setActive(true);
 			}
 		});
 
@@ -167,6 +163,8 @@ public class TransferPanel extends JPanel {
 
 		queryTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		queryTable.getColumn("").setCellRenderer(new IconCellRenderer());
+		queryTable.getColumn("User").setCellRenderer(new UserNameRenderer());
+		queryTable.getColumn("Connection").setCellRenderer(new BandwidthRenderer());
 		queryTable.getColumn("").setPreferredWidth(20);
 		queryTable.getColumn("").setMaxWidth(20);
 		queryTable.getColumn("").setResizable(false);
@@ -220,14 +218,6 @@ public class TransferPanel extends JPanel {
 	}
 
 	/**
-	 * Removes the file from the result set.
-	 */
-	public void removeResult(SharedFile killFile) {
-		//Get the name and session id of the file, remove it from the table.
-		transceiver.getQueryTableModel().removeFile(transceiver.getUserDataModel().findNameBySession(killFile.getSessionID()), killFile.getName());
-	}
-
-	/**
 	 * Sets the column widths for the table
 	 */
 	private void setQueryTableColumnWidths(int[] colWidths) {
@@ -244,16 +234,30 @@ public class TransferPanel extends JPanel {
 	 * The beautiful cell renderer that draws the beautiful BeOS file icons in the query results.
 	 */
 	private class IconCellRenderer extends DefaultTableCellRenderer {
-		public Component getTableCellRendererComponent(JTable table,
-		                                               Object value,
-		                                               boolean isSelected,
-		                                               boolean hasFocus,
-		                                               int row,
-		                                               int column) {
-			Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-			((IconCellRenderer) comp).setIcon((ImageIcon) value);
-			((IconCellRenderer) comp).setText("");
-			return comp;
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+			super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+			setIcon((ImageIcon) value);
+			setText("");
+			return this;
+		}
+	}
+
+	private class UserNameRenderer extends DefaultTableCellRenderer {
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+			super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+			setText(transceiver.getUserDataModel().getUser(value.toString()).getUserName());
+			return this;
+		}
+	}
+
+	private class BandwidthRenderer extends DefaultTableCellRenderer {
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+			super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+			BeShareUser user = transceiver.getUserDataModel().getUser(value.toString());
+			setText(user.getBandwidthLabel() + " @ " + user.getBandwidthBps());
+			return this;
 		}
 	}
 

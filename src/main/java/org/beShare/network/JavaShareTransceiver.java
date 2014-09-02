@@ -130,7 +130,7 @@ public class JavaShareTransceiver implements MessageListener {
 	public JavaShareTransceiver(final Preferences prefs) {
 		this.preferences = prefs;
 		this.userDataModel = new UserDataModel();
-		this.queryTableModel = new QueryTableModel(userDataModel);
+		this.queryTableModel = new QueryTableModel();
 		this.transferModel = new TransferModel(preferences);
 		this.chatDocuments = new ArrayList<>();
 
@@ -394,7 +394,7 @@ public class JavaShareTransceiver implements MessageListener {
 	 */
 	public void stopQuery() {
 		queryActive = false;
-		queryTableModel.clearTable();
+		queryTableModel.clear();
 		// Remove the subscription
 		Message removeMsg = new Message(PR_COMMAND_REMOVEPARAMETERS);
 		removeMsg.setString(PR_NAME_KEYS, "SUBSCRIBE:*beshare/fi*");
@@ -1158,10 +1158,7 @@ public class JavaShareTransceiver implements MessageListener {
 							} else {
 								holder.setName(lastNodeElement(fieldName, "fires/"));
 							}
-
-							Thread.yield(); // Force the query to play nice.
-
-							queryTableModel.addResult(holder);
+							queryTableModel.add(holder);
 						} // FILE_INFO_DEPTH
 					} // B_MESSAGE_TYPE
 				} // Next field name

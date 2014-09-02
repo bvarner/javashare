@@ -111,11 +111,8 @@ public class SharedFile {
 			return true;
 		} else if (other instanceof SharedFile) {
 			SharedFile sfh = (SharedFile) other;
-			return (fileKind.equals(sfh.getKind()) &&
-					        fileName.equals(sfh.getName()) &&
-					        fullPath.equals(sfh.getPath()) &&
-					        sizeInBytes == sfh.getSize() &&
-					        sessionID.equals(sfh.getSessionID()));
+			return (fullPath.equals(sfh.getPath()) &&
+			        sessionID.equals(sfh.getSessionID()));
 		}
 		return false;
 	}
