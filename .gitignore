@@ -20,3 +20,4 @@ nb*.xml
 
 # Always include everything in src/main/build-resources.
 !src/main/build-resources/**
+!lib/**
