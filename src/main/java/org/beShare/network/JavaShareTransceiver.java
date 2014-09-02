@@ -1051,7 +1051,7 @@ public class JavaShareTransceiver implements MessageListener {
 								holder.setName(lastNodeElement(removedNodes[x], "fires/"));
 							}
 							holder.setSessionID(sessionIDFromNode(removedNodes[x]));
-							// transferPanel.removeResult(holder);
+							queryTableModel.remove(holder);
 						}
 					} // next removed Node
 				} // done with removal
